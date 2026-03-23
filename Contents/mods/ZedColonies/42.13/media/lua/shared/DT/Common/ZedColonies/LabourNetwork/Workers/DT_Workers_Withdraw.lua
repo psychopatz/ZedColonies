@@ -1,0 +1,227 @@
+DT_Labour = DT_Labour or {}
+DT_Labour.Network = DT_Labour.Network or {}
+
+local Config = DT_Labour.Config
+local Registry = DT_Labour.Registry
+local Warehouse = DT_Labour.Warehouse
+local Network = DT_Labour.Network
+local Internal = Network.Internal or {}
+local Shared = (Network.Workers or {}).Shared or {}
+
+Network.Handlers = Network.Handlers or {}
+
+local function withdrawWorkerNutritionEntries(worker, inventory, indexes)
+    local moved = 0
+    table.sort(indexes or {}, function(a, b)
+        return (tonumber(a) or 0) > (tonumber(b) or 0)
+    end)
+    for _, index in ipairs(indexes or {}) do
+        local entry = worker and worker.nutritionLedger and worker.nutritionLedger[index] or nil
+        if entry and entry.fullType then
+            Internal.addInventoryItem(inventory, entry.fullType, 1)
+            table.remove(worker.nutritionLedger, index)
+            moved = moved + 1
+        end
+    end
+    if moved > 0 then
+        DT_Labour.Registry.Internal.MarkNutritionCacheDirty(worker)
+    end
+    return moved
+end
+
+local function withdrawWarehouseNutritionEntries(ownerUsername, inventory, indexes)
+    local moved = 0
+    for _, entry in ipairs(Warehouse.TakeProvisionEntries(ownerUsername, indexes) or {}) do
+        if entry and entry.fullType then
+            Internal.addInventoryItem(inventory, entry.fullType, 1)
+            moved = moved + 1
+        end
+    end
+    return moved
+end
+
+local function withdrawWorkerToolEntries(worker, inventory, indexes)
+    local moved = 0
+    table.sort(indexes or {}, function(a, b)
+        return (tonumber(a) or 0) > (tonumber(b) or 0)
+    end)
+    for _, index in ipairs(indexes or {}) do
+        local entry = worker and worker.toolLedger and worker.toolLedger[index] or nil
+        if entry and entry.fullType then
+            Internal.addInventoryItem(inventory, entry.fullType, 1)
+            table.remove(worker.toolLedger, index)
+            moved = moved + 1
+        end
+    end
+    if moved > 0 then
+        DT_Labour.Registry.Internal.MarkToolCacheDirty(worker)
+    end
+    return moved
+end
+
+local function withdrawWarehouseToolEntries(ownerUsername, inventory, indexes)
+    local moved = 0
+    for _, entry in ipairs(Warehouse.TakeEquipmentEntries(ownerUsername, indexes) or {}) do
+        if entry and entry.fullType then
+            Internal.addInventoryItem(inventory, entry.fullType, 1)
+            moved = moved + 1
+        end
+    end
+    return moved
+end
+
+local function withdrawWorkerOutputEntries(worker, inventory, indexes)
+    local moved = 0
+    table.sort(indexes or {}, function(a, b)
+        return (tonumber(a) or 0) > (tonumber(b) or 0)
+    end)
+    for _, index in ipairs(indexes or {}) do
+        local entry = worker and worker.outputLedger and worker.outputLedger[index] or nil
+        if entry and entry.fullType and (tonumber(entry.qty) or 0) > 0 then
+            Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+            table.remove(worker.outputLedger, index)
+            moved = moved + 1
+        end
+    end
+    if moved > 0 then
+        DT_Labour.Registry.Internal.MarkOutputCacheDirty(worker)
+    end
+    return moved
+end
+
+local function withdrawWarehouseOutputEntries(ownerUsername, inventory, indexes)
+    local moved = 0
+    for _, entry in ipairs(Warehouse.TakeOutputEntries(ownerUsername, indexes) or {}) do
+        if entry and entry.fullType and (tonumber(entry.qty) or 0) > 0 then
+            Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+            moved = moved + 1
+        end
+    end
+    return moved
+end
+
+Network.Handlers.CollectWorkerOutput = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    if not worker then return end
+
+    local collected = Registry.CollectOutput(worker)
+    local inventory = player and player:getInventory() or nil
+    if inventory then
+        for _, entry in ipairs(collected) do
+            if entry.fullType and (entry.qty or 0) > 0 then
+                Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+            end
+        end
+    end
+
+    Shared.saveAndRefreshBasic(player, worker)
+end
+
+Network.Handlers.CollectWarehouseOutput = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    if not worker then return end
+
+    local collected = Warehouse.CollectAllOutput(owner)
+    local inventory = player and player:getInventory() or nil
+    if inventory then
+        for _, entry in ipairs(collected) do
+            if entry.fullType and (entry.qty or 0) > 0 then
+                Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+            end
+        end
+    end
+
+    Shared.saveAndRefreshBasic(player, worker)
+end
+
+Network.Handlers.WithdrawWorkerSupplies = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    local inventory = player and player:getInventory() or nil
+    if not worker or not inventory then return end
+
+    local moved = withdrawWorkerNutritionEntries(worker, inventory, Shared.normalizeLedgerIndexes(args))
+    if moved <= 0 then return end
+
+    Shared.saveAndRefreshProcessed(player, worker)
+end
+
+Network.Handlers.WithdrawWarehouseSupplies = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    local inventory = player and player:getInventory() or nil
+    if not worker or not inventory then return end
+
+    local moved = withdrawWarehouseNutritionEntries(owner, inventory, Shared.normalizeLedgerIndexes(args))
+    if moved <= 0 then return end
+
+    Shared.saveAndRefreshProcessed(player, worker)
+end
+
+Network.Handlers.WithdrawWorkerTools = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    local inventory = player and player:getInventory() or nil
+    if not worker or not inventory then return end
+
+    local moved = withdrawWorkerToolEntries(worker, inventory, Shared.normalizeLedgerIndexes(args))
+    if moved <= 0 then return end
+
+    Shared.saveAndRefreshProcessed(player, worker)
+end
+
+Network.Handlers.WithdrawWarehouseTools = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    local inventory = player and player:getInventory() or nil
+    if not worker or not inventory then return end
+
+    local moved = withdrawWarehouseToolEntries(owner, inventory, Shared.normalizeLedgerIndexes(args))
+    if moved <= 0 then return end
+
+    Shared.saveAndRefreshProcessed(player, worker)
+end
+
+Network.Handlers.WithdrawWorkerOutput = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    local inventory = player and player:getInventory() or nil
+    if not worker or not inventory then return end
+
+    local moved = withdrawWorkerOutputEntries(worker, inventory, Shared.normalizeLedgerIndexes(args))
+    if moved <= 0 then return end
+
+    Shared.saveAndRefreshBasic(player, worker)
+end
+
+Network.Handlers.WithdrawWarehouseOutput = function(player, args)
+    if not args or not args.workerID then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    local inventory = player and player:getInventory() or nil
+    if not worker or not inventory then return end
+
+    local moved = withdrawWarehouseOutputEntries(owner, inventory, Shared.normalizeLedgerIndexes(args))
+    if moved <= 0 then return end
+
+    Shared.saveAndRefreshBasic(player, worker)
+end
+
+return Network

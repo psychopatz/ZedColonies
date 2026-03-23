@@ -1,0 +1,347 @@
+DT_Labour = DT_Labour or {}
+DT_Labour.Warehouse = DT_Labour.Warehouse or {}
+DT_Labour.Warehouse.Internal = DT_Labour.Warehouse.Internal or {}
+
+local Config = DT_Labour.Config
+local Nutrition = DT_Labour.Nutrition
+local Registry = DT_Labour.Registry
+local Warehouse = DT_Labour.Warehouse
+local Internal = Warehouse.Internal
+
+local function appendProvisionEntry(warehouse, entry)
+    if not warehouse or not entry or not entry.fullType then
+        return false
+    end
+
+    local weight = Internal.GetEntryWeight(entry.fullType, 1)
+    if weight > 0 and weight > Warehouse.GetRemainingCapacity(warehouse) then
+        return false
+    end
+
+    warehouse.ledgers.provisions[#warehouse.ledgers.provisions + 1] = {
+        fullType = entry.fullType,
+        displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
+        provisionType = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and "medical" or "nutrition",
+        caloriesRemaining = math.max(0, tonumber(entry.caloriesRemaining) or 0),
+        hydrationRemaining = math.max(0, tonumber(entry.hydrationRemaining) or 0),
+        treatmentUnitsRemaining = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0),
+        medicalUse = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and tostring(entry.medicalUse or "bandage") or nil
+    }
+    Warehouse.Recalculate(warehouse)
+    return true
+end
+
+local function appendEquipmentEntry(warehouse, entry)
+    if not warehouse or not entry or not entry.fullType then
+        return false
+    end
+
+    local weight = Internal.GetEntryWeight(entry.fullType, 1)
+    if weight > 0 and weight > Warehouse.GetRemainingCapacity(warehouse) then
+        return false
+    end
+
+    warehouse.ledgers.equipment[#warehouse.ledgers.equipment + 1] = {
+        fullType = entry.fullType,
+        displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
+        tags = entry.tags or (Config.GetItemCombinedTags and Config.GetItemCombinedTags(entry.fullType)) or {}
+    }
+    Warehouse.Recalculate(warehouse)
+    return true
+end
+
+local function mergeOutputEntry(warehouse, fullType, qty)
+    if not warehouse or not fullType or qty <= 0 then
+        return 0
+    end
+
+    local unitWeight = Internal.GetEntryWeight(fullType, 1)
+    local remainingCapacity = Warehouse.GetRemainingCapacity(warehouse)
+    local fitQty = qty
+
+    if unitWeight > 0 and remainingCapacity < (unitWeight * qty) then
+        fitQty = math.floor(remainingCapacity / unitWeight)
+    end
+
+    if fitQty <= 0 and unitWeight > 0 then
+        return 0
+    end
+    if fitQty <= 0 then
+        fitQty = qty
+    end
+
+    for _, existing in ipairs(warehouse.ledgers.output) do
+        if existing.fullType == fullType then
+            existing.qty = math.max(1, tonumber(existing.qty) or 1) + fitQty
+            Warehouse.Recalculate(warehouse)
+            return fitQty
+        end
+    end
+
+    warehouse.ledgers.output[#warehouse.ledgers.output + 1] = {
+        fullType = fullType,
+        qty = fitQty
+    }
+    Warehouse.Recalculate(warehouse)
+    return fitQty
+end
+
+local function buildProvisionEntryFromFullType(fullType)
+    if Config.IsMedicalProvisionFullType and Config.IsMedicalProvisionFullType(fullType) then
+        return {
+            fullType = fullType,
+            displayName = Registry.Internal.GetDisplayNameForFullType(fullType),
+            provisionType = "medical",
+            medicalUse = "bandage",
+            treatmentUnitsRemaining = Config.GetMedicalProvisionUnits and Config.GetMedicalProvisionUnits(fullType) or 0
+        }
+    end
+
+    local calories, hydration = 0, 0
+    local nutritionInternal = Nutrition and Nutrition.Internal or nil
+    if nutritionInternal and nutritionInternal.GetExpectedStaticNutritionForFullType then
+        calories, hydration = nutritionInternal.GetExpectedStaticNutritionForFullType(fullType)
+    end
+
+    calories = math.max(0, tonumber(calories) or 0)
+    hydration = math.max(0, tonumber(hydration) or 0)
+    if calories <= 0 and hydration <= 0 then
+        return nil
+    end
+
+    return {
+        fullType = fullType,
+        displayName = Registry.Internal.GetDisplayNameForFullType(fullType),
+        provisionType = "nutrition",
+        caloriesRemaining = calories,
+        hydrationRemaining = hydration
+    }
+end
+
+local function buildEquipmentEntryFromFullType(fullType)
+    if not fullType then
+        return nil
+    end
+
+    return {
+        fullType = fullType,
+        displayName = Registry.Internal.GetDisplayNameForFullType(fullType),
+        tags = (Config.GetItemCombinedTags and Config.GetItemCombinedTags(fullType)) or {}
+    }
+end
+
+function Warehouse.DepositProvisionEntry(ownerUsername, entry)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    return appendProvisionEntry(warehouse, entry)
+end
+
+function Warehouse.DepositEquipmentEntry(ownerUsername, entry)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    return appendEquipmentEntry(warehouse, entry)
+end
+
+function Warehouse.DepositOutputEntry(ownerUsername, entry)
+    if not entry or not entry.fullType then
+        return 0
+    end
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    return mergeOutputEntry(warehouse, entry.fullType, math.max(1, tonumber(entry.qty) or 1))
+end
+
+function Warehouse.DepositHaulEntry(ownerUsername, entry)
+    if not entry or not entry.fullType then
+        return 0, 0
+    end
+
+    local fullType = entry.fullType
+    local totalQty = math.max(1, tonumber(entry.qty) or 1)
+    local movedQty = 0
+    if Config.IsMedicalProvisionFullType and Config.IsMedicalProvisionFullType(fullType) then
+        local provisionEntry = buildProvisionEntryFromFullType(fullType)
+        if provisionEntry then
+            for _ = 1, totalQty do
+                if not Warehouse.DepositProvisionEntry(ownerUsername, provisionEntry) then
+                    break
+                end
+                movedQty = movedQty + 1
+            end
+        end
+    else
+        local calories, hydration = 0, 0
+        local nutritionInternal = Nutrition and Nutrition.Internal or nil
+        if nutritionInternal and nutritionInternal.GetExpectedStaticNutritionForFullType then
+            calories, hydration = nutritionInternal.GetExpectedStaticNutritionForFullType(fullType)
+        end
+
+        if math.max(0, tonumber(calories) or 0) > 0 or math.max(0, tonumber(hydration) or 0) > 0 then
+        local provisionEntry = buildProvisionEntryFromFullType(fullType)
+        if provisionEntry then
+            for _ = 1, totalQty do
+                if not Warehouse.DepositProvisionEntry(ownerUsername, provisionEntry) then
+                    break
+                end
+                movedQty = movedQty + 1
+            end
+        end
+        elseif Config.IsLabourToolFullType and Config.IsLabourToolFullType(fullType) then
+            local equipmentEntry = buildEquipmentEntryFromFullType(fullType)
+            if equipmentEntry then
+                for _ = 1, totalQty do
+                    if not Warehouse.DepositEquipmentEntry(ownerUsername, equipmentEntry) then
+                        break
+                    end
+                    movedQty = movedQty + 1
+                end
+            end
+        else
+            movedQty = Warehouse.DepositOutputEntry(ownerUsername, {
+                fullType = fullType,
+                qty = totalQty
+            })
+        end
+    end
+
+    return movedQty, math.max(0, totalQty - movedQty)
+end
+
+function Warehouse.DepositWorkerHaul(worker)
+    if not worker then
+        return 0, 0, 0, 0
+    end
+
+    local remainingEntries = {}
+    local movedStacks = 0
+    local movedCount = 0
+    local movedWeight = 0
+    local leftoverCount = 0
+
+    for _, entry in ipairs(worker.haulLedger or {}) do
+        local qty = math.max(1, tonumber(entry.qty) or 1)
+        local movedQty, leftoverQty = Warehouse.DepositHaulEntry(worker.ownerUsername, entry)
+        if movedQty > 0 then
+            movedStacks = movedStacks + 1
+            movedCount = movedCount + movedQty
+            movedWeight = movedWeight + Internal.GetEntryWeight(entry.fullType, movedQty)
+        end
+        if leftoverQty > 0 then
+            leftoverCount = leftoverCount + leftoverQty
+            remainingEntries[#remainingEntries + 1] = {
+                fullType = entry.fullType,
+                qty = leftoverQty
+            }
+        elseif movedQty <= 0 then
+            leftoverCount = leftoverCount + qty
+            remainingEntries[#remainingEntries + 1] = {
+                fullType = entry.fullType,
+                qty = qty
+            }
+        end
+    end
+
+    worker.haulLedger = remainingEntries
+    return movedStacks, movedCount, movedWeight, leftoverCount
+end
+
+local function takeEntries(ledger, indexes)
+    local entries = {}
+    table.sort(indexes or {}, function(a, b)
+        return a > b
+    end)
+
+    for _, index in ipairs(indexes or {}) do
+        local normalized = math.floor(tonumber(index) or 0)
+        local entry = ledger and ledger[normalized] or nil
+        if entry then
+            entries[#entries + 1] = Registry.Internal.CopyShallow(entry)
+            table.remove(ledger, normalized)
+        end
+    end
+
+    return entries
+end
+
+function Warehouse.TakeProvisionEntries(ownerUsername, indexes)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    local entries = takeEntries(warehouse.ledgers.provisions, indexes)
+    Warehouse.Recalculate(warehouse)
+    return entries
+end
+
+function Warehouse.TakeEquipmentEntries(ownerUsername, indexes)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    local entries = takeEntries(warehouse.ledgers.equipment, indexes)
+    Warehouse.Recalculate(warehouse)
+    return entries
+end
+
+function Warehouse.TakeOutputEntries(ownerUsername, indexes)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    local entries = takeEntries(warehouse.ledgers.output, indexes)
+    Warehouse.Recalculate(warehouse)
+    return entries
+end
+
+function Warehouse.CollectAllOutput(ownerUsername)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    local entries = Internal.CopyArray(warehouse.ledgers.output)
+    warehouse.ledgers.output = {}
+    Warehouse.Recalculate(warehouse)
+    return entries
+end
+
+function Warehouse.GetMedicalProvisionUnitTotal(ownerUsername)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    local totalUnits = 0
+    for _, entry in ipairs(warehouse and warehouse.ledgers and warehouse.ledgers.provisions or {}) do
+        if Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) then
+            totalUnits = totalUnits + math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0)
+        end
+    end
+    return totalUnits
+end
+
+function Warehouse.GetMedicalProvisionHourBudget(ownerUsername)
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    local totalHours = Warehouse.GetMedicalProvisionUnitTotal(ownerUsername) * 8
+    local reservedHours = math.max(0, tonumber(warehouse and warehouse.medicalProvisionCarryoverHours) or 0)
+    return math.max(0, totalHours - reservedHours)
+end
+
+function Warehouse.ConsumeMedicalProvisionHours(ownerUsername, usedHours)
+    local hours = math.max(0, tonumber(usedHours) or 0)
+    if hours <= 0 then
+        return 0
+    end
+
+    local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
+    local totalHours = math.max(0, tonumber(warehouse.medicalProvisionCarryoverHours) or 0) + hours
+    local unitsToConsume = math.floor(totalHours / 8)
+    warehouse.medicalProvisionCarryoverHours = totalHours - (unitsToConsume * 8)
+
+    if unitsToConsume <= 0 then
+        Warehouse.Recalculate(warehouse)
+        return 0
+    end
+
+    local consumedUnits = 0
+    for _, entry in ipairs(warehouse.ledgers.provisions or {}) do
+        if Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) then
+            local availableUnits = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0)
+            if availableUnits > 0 then
+                local takeUnits = math.min(availableUnits, unitsToConsume - consumedUnits)
+                if takeUnits > 0 then
+                    entry.treatmentUnitsRemaining = availableUnits - takeUnits
+                    consumedUnits = consumedUnits + takeUnits
+                    if consumedUnits >= unitsToConsume then
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    Warehouse.Recalculate(warehouse)
+    return consumedUnits
+end
+
+return Warehouse
