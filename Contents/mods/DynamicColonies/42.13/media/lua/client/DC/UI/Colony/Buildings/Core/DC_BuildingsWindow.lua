@@ -256,6 +256,19 @@ function DC_BuildingsWindow:onDestroyPlot(plot)
     })
 end
 
+function DC_BuildingsWindow:onDebugCompleteProject(plot)
+    if not plot or not plot.project then
+        return
+    end
+
+    local ownerWindow = self:getOwnerWindow()
+    if ownerWindow and ownerWindow.sendColonyCommand then
+        ownerWindow:sendColonyCommand("DebugCompleteBuildingProject", {
+            projectID = plot.project.projectID
+        })
+    end
+end
+
 function DC_BuildingsWindow:onRefresh()
     self:requestSnapshot()
 end
@@ -293,6 +306,9 @@ function DC_BuildingsWindow:createChildren()
         end,
         function(plot)
             self:onDestroyPlot(plot)
+        end,
+        function(plot)
+            self:onDebugCompleteProject(plot)
         end
     )
     self.detailsPanel:initialise()
@@ -328,7 +344,7 @@ function DC_BuildingsWindow:new(x, y, width, height, ownerWindow)
     local o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Buildings"
+    o.title = "Colony Map"
     o.resizable = true
     o.ownerWindow = ownerWindow
     o.autoRefreshFrames = 0

@@ -83,7 +83,7 @@ function DC_MainWindow:createChildren()
     self.btnWarehouse:setEnable(false)
     self:addChild(self.btnWarehouse)
 
-    self.btnBuildings = ISButton:new(370, buttonY, 120, 28, "Buildings", self, self.onOpenBuildings)
+    self.btnBuildings = ISButton:new(370, buttonY, 120, 28, "Colony Map", self, self.onOpenBuildings)
     self.btnBuildings:initialise()
     self:addChild(self.btnBuildings)
 

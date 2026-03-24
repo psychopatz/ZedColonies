@@ -453,6 +453,65 @@ Network.Handlers.DebugGiveProjectMaterials = function(player, args)
     end
 end
 
+Network.Handlers.DebugCompleteBuildingProject = function(player, args)
+    if not player or not canUseDebug(player) then
+        return
+    end
+
+    if not args or not args.projectID then
+        return
+    end
+
+    local owner = ColonyConfig.GetOwnerUsername(player)
+    local project = Buildings.GetProjectByID and Buildings.GetProjectByID(owner, args.projectID) or nil
+    if not project or tostring(project.status or "") ~= "Active" then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "That project is no longer active.", "error", true)
+        end
+        syncBuildingsSnapshot(player, owner)
+        return
+    end
+
+    local registry = DC_Colony and DC_Colony.Registry or nil
+    local worker = registry and registry.GetWorkerForOwner and registry.GetWorkerForOwner(owner, project.assignedBuilderID) or nil
+    local activityLabel = tostring(project.buildingType or "building")
+    if tostring(project.mode or "") == "install" then
+        local installDefinition = Config and Config.GetInstallDefinition and Config.GetInstallDefinition(project.buildingType, project.installKey) or nil
+        activityLabel = tostring(installDefinition and installDefinition.displayName or project.installKey or "installation") .. " installation"
+    else
+        activityLabel = activityLabel .. " level " .. tostring(project.targetLevel or 1)
+    end
+
+    Buildings.CompleteProject(project)
+    if tostring(project.status or "") ~= "Completed" then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, project.failureReason or "Unable to complete that project.", "error", true)
+        end
+        syncBuildingsSnapshot(player, owner)
+        return
+    end
+
+    if worker and Buildings.AssignNextReadyProjectToWorker then
+        Buildings.AssignNextReadyProjectToWorker(worker)
+    end
+
+    if worker and Shared.saveAndRefreshProcessed then
+        Shared.saveAndRefreshProcessed(player, worker, false)
+    elseif worker and Shared.saveAndRefreshBasic then
+        Shared.saveAndRefreshBasic(player, worker, false)
+    else
+        syncWorkerList(player)
+    end
+
+    if Internal.syncOwnedFactionStatus then
+        Internal.syncOwnedFactionStatus(player)
+    end
+    if Internal.syncNotice then
+        Internal.syncNotice(player, "Debug completed " .. activityLabel .. ".", "info", false)
+    end
+    syncBuildingsSnapshot(player, owner)
+end
+
 Network.Handlers.DestroyBuilding = function(player, args)
     if not args or args.plotX == nil or args.plotY == nil then
         return

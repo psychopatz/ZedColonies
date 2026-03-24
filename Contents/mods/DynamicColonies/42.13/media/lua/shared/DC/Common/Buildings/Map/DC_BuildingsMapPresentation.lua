@@ -67,6 +67,7 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
     local housing = Buildings.BuildHousingAssignment(owner)
     local territory = Buildings.GetTerritorySummary and Buildings.GetTerritorySummary(owner) or {
         headquartersLevel = 0,
+        securedPerimeterRing = 0,
         unlockedPlotCount = 0,
         activeBarricadeCount = 0,
         maxActiveBarricades = 0
@@ -110,7 +111,13 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
         local key = Buildings.GetPlotKey(x, y)
         local definition = building and Config.GetDefinition(building.buildingType) or nil
         local project = projectsByPlotKey[key]
+        local plotRing = Buildings.GetPlotRing and Buildings.GetPlotRing(x, y) or 0
         local isFrontierPlot = Buildings.IsFrontierPlot and Buildings.IsFrontierPlot(owner, x, y) or false
+        local isSafeTile = plot.unlocked == true
+            and project == nil
+            and building == nil
+            and tostring(plot.kind or "") == tostring(Buildings.MapConstants.PlotKinds.Standard)
+            and plotRing <= math.max(0, tonumber(territory.securedPerimeterRing) or 0)
         local canEvaluateBuildOptions = (tostring(state or "") == tostring(Buildings.MapConstants.PlotStates.Empty) and plot.unlocked == true)
             or (tostring(state or "") == tostring(Buildings.MapConstants.PlotStates.Locked) and isFrontierPlot)
         local buildOptions = canEvaluateBuildOptions and Buildings.BuildPlotBuildOptions and Buildings.BuildPlotBuildOptions(owner, x, y, sourcePlayer, availableCounts) or {}
@@ -119,8 +126,10 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
             key = key,
             x = x,
             y = y,
+            ring = plotRing,
             kind = plot.kind,
             unlocked = plot.unlocked == true,
+            safeTile = isSafeTile,
             frontierCandidate = isFrontierPlot,
             territory = shallowCopy(territory),
             state = state,
@@ -190,6 +199,7 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
         bounds = bounds,
         unlockedBounds = bounds,
         headquartersLevel = territory.headquartersLevel,
+        securedPerimeterRing = territory.securedPerimeterRing,
         unlockedPlotCount = territory.unlockedPlotCount,
         activeBarricadeCount = territory.activeBarricadeCount,
         maxActiveBarricades = territory.maxActiveBarricades,

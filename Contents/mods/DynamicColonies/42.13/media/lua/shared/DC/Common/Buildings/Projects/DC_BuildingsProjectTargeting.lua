@@ -868,7 +868,7 @@ function Buildings.BuildPlotBuildOptions(ownerUsername, plotX, plotY, sourcePlay
         local preview = Buildings.BuildProjectPreview(owner, "Barricade", "build", plotX, plotY, nil, nil, sourcePlayer, availableCounts)
         local effectLines = {
             "Secures this active perimeter tile and uses 1 slot on the current frontier ring.",
-            "Complete every barricade slot on the current ring to reveal the next ring."
+            "Complete every barricade slot on the current ring to convert that wall line into safe colony tiles and reveal the next ring."
         }
         if preview.effects and preview.effects.ringDistance then
             effectLines[#effectLines + 1] = "Ring Distance: " .. tostring(preview.effects.ringDistance)
@@ -884,7 +884,7 @@ function Buildings.BuildPlotBuildOptions(ownerUsername, plotX, plotY, sourcePlay
             enabled = preview.available == true,
             disabledReason = preview.available == true and nil or preview.reason,
             preview = preview,
-            description = "Secures one slot on the active perimeter ring. Older barricades unlock for removal once the next ring has taken over outside them.",
+            description = "Secures one slot on the active perimeter ring. Once the whole ring is finished, those barricade slots convert into safe buildable colony tiles.",
             effectLines = effectLines
         }
 

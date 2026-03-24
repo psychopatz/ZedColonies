@@ -68,7 +68,7 @@ function Renderer.Draw(panel, snapshot, viewportState, selectedPlotKey)
     local plots = snapshot and snapshot.map and snapshot.map.plots or {}
     local territory = snapshot and snapshot.map or {}
 
-    panel:drawText("Settlement Map", 10, 8, 1, 1, 1, 1, UIFont.Medium)
+    panel:drawText(tostring(DC_BuildingsUIUtils.GetColonyDisplayName()), 10, 8, 1, 1, 1, 1, UIFont.Medium)
     panel:drawText(
         "Unlocked " .. tostring(territory.unlockedPlotCount or 0)
             .. " | Ring "

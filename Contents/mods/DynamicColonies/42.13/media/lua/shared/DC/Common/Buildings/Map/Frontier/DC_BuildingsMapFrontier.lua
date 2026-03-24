@@ -48,6 +48,63 @@ local function isRingSecured(ownerUsername, ring)
     return #ringCoords > 0
 end
 
+local function retireBarricadeBuildingsForRing(ownerUsername, ring)
+    local safeOwner = getOwnerUsername(ownerUsername)
+    local safeRing = math.max(1, math.floor(tonumber(ring) or 1))
+    local buildings = Buildings.GetBuildingsForOwner(safeOwner) or {}
+    local removed = 0
+
+    for index = #buildings, 1, -1 do
+        local instance = buildings[index]
+        if tostring(instance and instance.buildingType or "") == "Barricade"
+            and Buildings.GetPlotRing
+            and Buildings.GetPlotRing(instance.plotX, instance.plotY) == safeRing
+            and math.floor(tonumber(instance and instance.level) or 0) > 0 then
+            table.remove(buildings, index)
+            removed = removed + 1
+        end
+    end
+
+    return removed
+end
+
+local function computeLegacySecuredRing(ownerUsername)
+    local safeOwner = getOwnerUsername(ownerUsername)
+    local ring = 1
+    local highestSecured = 0
+
+    while isRingSecured(safeOwner, ring) do
+        highestSecured = ring
+        ring = ring + 1
+    end
+
+    return highestSecured
+end
+
+local function getSecuredPerimeterRing(ownerUsername)
+    local safeOwner = getOwnerUsername(ownerUsername)
+    local mapData = Buildings.GetMapDataForOwner and Buildings.GetMapDataForOwner(safeOwner) or nil
+    local storedRing = mapData and mapData.securedRing
+
+    if storedRing ~= nil then
+        return math.max(0, math.floor(tonumber(storedRing) or 0))
+    end
+
+    local computedRing = computeLegacySecuredRing(safeOwner)
+    if mapData then
+        mapData.securedRing = computedRing
+    end
+
+    if computedRing > 0 then
+        for ring = 1, computedRing do
+            retireBarricadeBuildingsForRing(safeOwner, ring)
+        end
+        Buildings.Save()
+    end
+
+    return computedRing
+end
+
 local function hasUnlockedSupportingNeighbor(ownerUsername, plotX, plotY)
     local x = math.floor(tonumber(plotX) or 0)
     local y = math.floor(tonumber(plotY) or 0)
@@ -65,18 +122,36 @@ local function hasUnlockedSupportingNeighbor(ownerUsername, plotX, plotY)
 end
 
 local function getActiveFrontierRing(ownerUsername)
-    local safeOwner = getOwnerUsername(ownerUsername)
-    local ring = 1
-
-    while isRingSecured(safeOwner, ring) do
-        ring = ring + 1
-    end
-
-    return ring
+    return getSecuredPerimeterRing(ownerUsername) + 1
 end
 
 function Buildings.GetActiveFrontierRing(ownerUsername)
     return getActiveFrontierRing(ownerUsername)
+end
+
+function Buildings.GetSecuredPerimeterRing(ownerUsername)
+    return getSecuredPerimeterRing(ownerUsername)
+end
+
+function Buildings.TryFinalizeBarricadeRing(ownerUsername, ring)
+    local safeOwner = getOwnerUsername(ownerUsername)
+    local safeRing = math.max(1, math.floor(tonumber(ring) or 1))
+    local currentSecuredRing = getSecuredPerimeterRing(safeOwner)
+
+    if safeRing ~= (currentSecuredRing + 1) then
+        return false, 0
+    end
+    if not isRingSecured(safeOwner, safeRing) then
+        return false, 0
+    end
+
+    local removed = retireBarricadeBuildingsForRing(safeOwner, safeRing)
+    local mapData = Buildings.GetMapDataForOwner and Buildings.GetMapDataForOwner(safeOwner) or nil
+    if mapData then
+        mapData.securedRing = safeRing
+    end
+    Buildings.Save()
+    return true, removed
 end
 
 function Buildings.GetUnlockedPlotEntries(ownerUsername)
@@ -188,6 +263,7 @@ function Buildings.GetTerritorySummary(ownerUsername)
     local owner = getOwnerUsername(ownerUsername)
     local unlockedPlots = Buildings.GetUnlockedPlotEntries(owner)
     local headquartersLevel = Buildings.GetHeadquartersLevel(owner)
+    local securedPerimeterRing = getSecuredPerimeterRing(owner)
     local currentFrontierRing = getActiveFrontierRing(owner)
     local activeBarricades = Buildings.GetActiveBarricadeCount(owner)
     local maxBarricades = Buildings.GetMaxActiveBarricades(owner)
@@ -195,6 +271,7 @@ function Buildings.GetTerritorySummary(ownerUsername)
     return {
         ownerUsername = owner,
         headquartersLevel = headquartersLevel,
+        securedPerimeterRing = securedPerimeterRing,
         currentFrontierRing = currentFrontierRing,
         unlockedPlotCount = #unlockedPlots,
         activeBarricadeCount = activeBarricades,

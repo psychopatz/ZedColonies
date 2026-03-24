@@ -47,7 +47,7 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
         text = text .. " <RGB:0.72,0.72,0.72> Level: <RGB:1,1,1> " .. tostring(building.level or 0) .. " <LINE> "
 
         if building.buildingType == "Headquarters" and plot.territory then
-            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Unsafe Zone Control <LINE> "
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Perimeter Control <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Active Barricades: <RGB:1,1,1> "
                 .. tostring(plot.territory.activeBarricadeCount or 0)
                 .. " / "
@@ -56,7 +56,7 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
             text = text .. " <RGB:0.72,0.72,0.72> Frontier Ring: <RGB:1,1,1> " .. tostring(plot.territory.currentFrontierRing or 1) .. " <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Unlocked Plots: <RGB:1,1,1> " .. tostring(plot.territory.unlockedPlotCount or 0) .. " <LINE> "
         elseif building.buildingType == "Barricade" then
-            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Unsafe Zone Control <LINE> "
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Perimeter Control <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Role: <RGB:1,1,1> Secures one tile on the active frontier perimeter ring. <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Expansion: <RGB:1,1,1> Complete every barricade slot on the current ring to reveal the next ring. <LINE> "
             if building.barricadeHP then
@@ -123,9 +123,11 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
         else
             text = text .. " <RGB:0.72,0.62,0.62> " .. tostring(building.destroyReason or "This building cannot be destroyed.") .. " <LINE> "
         end
+    elseif plot.safeTile == true and plot.state == "Empty" then
+        text = text .. " <LINE> <RGB:0.72,0.86,0.94> This tile is secured colony space inside a completed barricade perimeter. <LINE> "
+        text = text .. " <RGB:0.82,0.82,0.82> It is now buildable like any other safe colony plot. <LINE> "
     elseif plot.state == "Empty" and plot.frontierCandidate == true and plot.buildOptions and plot.buildOptions[1] then
-        text = text .. " <LINE> <RGB:0.88,0.82,0.72> This perimeter tile must be secured with a Barricade before it can be treated as safe interior space. <LINE> "
-        text = text .. " <RGB:0.82,0.82,0.82> Complete the whole current ring with barricades to reveal the next ring. <LINE> "
+        text = text .. " <LINE> <RGB:0.88,0.82,0.72> This perimeter tile is part of the active wall line. Finish barricading the full ring to convert it into safe colony space. <LINE> "
         for _, line in ipairs(DC_BuildingsUIUtils.BuildRecipeLines(plot.buildOptions[1].preview and plot.buildOptions[1].preview.recipeAvailability and plot.buildOptions[1].preview.recipeAvailability.entries or {})) do
             text = text .. " " .. line .. " <LINE> "
         end
@@ -133,13 +135,13 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
         text = text .. " <LINE> <RGB:0.82,0.82,0.82> This plot is available for construction. <LINE> "
     elseif plot.state == "Locked" then
         if plot.frontierCandidate == true and plot.buildOptions and plot.buildOptions[1] then
-            text = text .. " <LINE> <RGB:0.88,0.82,0.72> This unsafe zone tile can be claimed by building a Barricade. <LINE> "
-            text = text .. " <RGB:0.82,0.82,0.82> Circular growth rule: complete the whole current frontier ring with barricades to reveal the next ring. <LINE> "
+            text = text .. " <LINE> <RGB:0.88,0.82,0.72> This unsafe plot is still outside the colony walls. <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Build a Barricade here to claim it and finish securing the current perimeter ring. <LINE> "
             for _, line in ipairs(DC_BuildingsUIUtils.BuildRecipeLines(plot.buildOptions[1].preview and plot.buildOptions[1].preview.recipeAvailability and plot.buildOptions[1].preview.recipeAvailability.entries or {})) do
                 text = text .. " " .. line .. " <LINE> "
             end
         else
-            text = text .. " <LINE> <RGB:0.72,0.62,0.62> Secure the current frontier ring first to reveal the next unsafe-zone ring. <LINE> "
+            text = text .. " <LINE> <RGB:0.72,0.62,0.62> Secure the current frontier ring first to reveal the next outer ring. <LINE> "
         end
     end
 

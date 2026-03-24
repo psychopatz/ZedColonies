@@ -5,12 +5,23 @@ DC_BuildingsUIUtils.Colors = {
     locked = { r = 0.12, g = 0.12, b = 0.12, a = 0.9 },
     frontierLocked = { r = 0.18, g = 0.1, b = 0.1, a = 0.92 },
     empty = { r = 0.18, g = 0.18, b = 0.18, a = 0.9 },
+    safe = { r = 0.14, g = 0.23, b = 0.30, a = 0.94 },
     queuedProject = { r = 0.22, g = 0.22, b = 0.22, a = 0.94 },
     reserved = { r = 0.85, g = 0.72, b = 0.15, a = 0.95 },
     built = { r = 0.26, g = 0.36, b = 0.24, a = 0.95 },
     selectedBorder = { r = 1, g = 0.95, b = 0.45, a = 0.95 },
     defaultBorder = { r = 0.85, g = 0.85, b = 0.85, a = 0.2 }
 }
+
+local function getOwnedFactionStatus()
+    if DC_System and DC_System.ownedFactionStatusCache then
+        return DC_System.ownedFactionStatusCache
+    end
+    if DC_MainWindow and DC_MainWindow.cachedOwnedFactionStatus then
+        return DC_MainWindow.cachedOwnedFactionStatus
+    end
+    return nil
+end
 
 function DC_BuildingsUIUtils.IsProjectStarted(plot)
     local project = plot and plot.project or nil
@@ -46,6 +57,9 @@ function DC_BuildingsUIUtils.GetPlotColor(plot)
     if plot.state == "Built" then
         return colors.built
     end
+    if plot.safeTile == true then
+        return colors.safe
+    end
     return colors.empty
 end
 
@@ -59,13 +73,28 @@ function DC_BuildingsUIUtils.GetPlotTitle(plot)
     if plot.project then
         return tostring(plot.project.displayName or plot.project.buildingType or "Building")
     end
+    if plot.safeTile == true then
+        return "Safe Plot"
+    end
     if plot.frontierCandidate == true then
-        return "Unsafe Zone"
+        if plot.state == "Locked" then
+            return "Unsafe Plot"
+        end
+        return "Perimeter Tile"
     end
     if plot.kind == "HQOnly" then
         return "HQ"
     end
     return ""
+end
+
+function DC_BuildingsUIUtils.GetColonyDisplayName()
+    local status = getOwnedFactionStatus()
+    local factionName = status and status.faction and tostring(status.faction.name or "") or ""
+    if factionName ~= "" then
+        return factionName .. " Colony"
+    end
+    return "Colony Map"
 end
 
 function DC_BuildingsUIUtils.GetPlotTexturePath(plot)

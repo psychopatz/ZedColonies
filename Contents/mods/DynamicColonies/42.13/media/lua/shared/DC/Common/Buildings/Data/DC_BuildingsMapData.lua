@@ -59,6 +59,9 @@ function Buildings.EnsureMapData(ownerData)
     ownerData.map = type(ownerData.map) == "table" and ownerData.map or {}
     ownerData.map.plots = type(ownerData.map.plots) == "table" and ownerData.map.plots or {}
     ownerData.map.currentRing = math.max(1, math.floor(tonumber(ownerData.map.currentRing) or 1))
+    if ownerData.map.securedRing ~= nil then
+        ownerData.map.securedRing = math.max(0, math.floor(tonumber(ownerData.map.securedRing) or 0))
+    end
     ownerData.map.nextUnlockDirection = Buildings.NormalizeDirection(ownerData.map.nextUnlockDirection)
 
     local centerKey = Buildings.GetPlotKey(0, 0)
