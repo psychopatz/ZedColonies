@@ -71,8 +71,109 @@ local function getWarehouseOutputCounts(ownerUsername)
     return counts
 end
 
-local function buildRecipeAvailability(ownerUsername, recipe)
-    local availableCounts = getWarehouseOutputCounts(ownerUsername)
+local function getInventoryItemQuantity(item)
+    if not item then
+        return 0
+    end
+
+    local count = item.getCount and item:getCount() or nil
+    count = math.floor(tonumber(count) or 0)
+    if count > 0 then
+        return count
+    end
+
+    return 1
+end
+
+local function collectInventoryCountsRecursive(container, counts)
+    if not container or not counts then
+        return
+    end
+
+    local items = container:getItems()
+    if not items then
+        return
+    end
+
+    for index = 0, items:size() - 1 do
+        local item = items:get(index)
+        if item then
+            local fullType = item.getFullType and item:getFullType() or nil
+            if fullType then
+                counts[fullType] = (counts[fullType] or 0) + getInventoryItemQuantity(item)
+            end
+
+            if instanceof(item, "InventoryContainer") then
+                collectInventoryCountsRecursive(item:getItemContainer(), counts)
+            end
+        end
+    end
+end
+
+local function canReadInventory(value)
+    local valueType = type(value)
+    return (valueType == "table" or valueType == "userdata") and value.getInventory ~= nil
+end
+
+local function resolveSourcePlayer(ownerUsername, sourcePlayer)
+    if canReadInventory(sourcePlayer) then
+        return sourcePlayer
+    end
+
+    if canReadInventory(ownerUsername) then
+        return ownerUsername
+    end
+
+    local colonyConfig = getColonyConfig()
+    local player = colonyConfig and colonyConfig.GetPlayerObject and colonyConfig.GetPlayerObject() or nil
+    if canReadInventory(player) then
+        local owner = getOwnerUsername(ownerUsername)
+        if getOwnerUsername(player) == owner then
+            return player
+        end
+    end
+
+    return nil
+end
+
+local function getPlayerInventoryCounts(ownerUsername, sourcePlayer)
+    local player = resolveSourcePlayer(ownerUsername, sourcePlayer)
+    local inventory = player and player.getInventory and player:getInventory() or nil
+    local counts = {}
+    if not inventory then
+        return counts
+    end
+
+    collectInventoryCountsRecursive(inventory, counts)
+    return counts
+end
+
+local function mergeCounts(baseCounts, extraCounts)
+    local merged = {}
+
+    for fullType, qty in pairs(baseCounts or {}) do
+        merged[fullType] = math.max(0, math.floor(tonumber(qty) or 0))
+    end
+
+    for fullType, qty in pairs(extraCounts or {}) do
+        local key = tostring(fullType or "")
+        if key ~= "" then
+            merged[key] = (merged[key] or 0) + math.max(0, math.floor(tonumber(qty) or 0))
+        end
+    end
+
+    return merged
+end
+
+local function getAvailableMaterialCounts(ownerUsername, sourcePlayer)
+    return mergeCounts(
+        getWarehouseOutputCounts(ownerUsername),
+        getPlayerInventoryCounts(ownerUsername, sourcePlayer)
+    )
+end
+
+local function buildRecipeAvailability(ownerUsername, recipe, sourcePlayer)
+    local availableCounts = getAvailableMaterialCounts(ownerUsername, sourcePlayer)
     local entries = {}
     local hasAll = true
 
@@ -190,11 +291,11 @@ local function pullProjectMaterialsFromWarehouse(project)
     return moved
 end
 
-local function buildProjectMaterialStatus(project)
+local function buildProjectMaterialStatus(project, sourcePlayer)
     ensureProjectMaterialTracking(project)
 
     local owner = project and getOwnerUsername(project.ownerUsername) or nil
-    local warehouseCounts = owner and getWarehouseOutputCounts(owner) or {}
+    local availableCounts = owner and getAvailableMaterialCounts(owner, sourcePlayer) or {}
     local entries = {}
     local hasAll = true
     local totalRequired = countRecipeUnits(project and project.recipe or {})
@@ -204,13 +305,13 @@ local function buildProjectMaterialStatus(project)
         local fullType = tostring(entry.fullType or "")
         local required = math.max(0, math.floor(tonumber(entry.count) or 0))
         local supplied = math.min(required, math.max(0, tonumber(project and project.materialCounts and project.materialCounts[fullType]) or 0))
-        local warehouseAvailable = math.max(0, warehouseCounts[fullType] or 0)
+        local available = math.max(0, availableCounts[fullType] or 0)
         local remaining = math.max(0, required - supplied)
         local recipeEntry = {
             fullType = fullType,
             displayName = getDisplayName(fullType),
             count = required,
-            available = warehouseAvailable,
+            available = available,
             supplied = supplied,
             remaining = remaining,
             satisfied = remaining <= 0
@@ -559,8 +660,8 @@ function Buildings.GetProjectByID(ownerUsername, projectID)
     return nil
 end
 
-function Buildings.GetProjectMaterialStatus(project)
-    return buildProjectMaterialStatus(project)
+function Buildings.GetProjectMaterialStatus(project, sourcePlayer)
+    return buildProjectMaterialStatus(project, sourcePlayer)
 end
 
 function Buildings.RefreshProjectMaterialState(project)
@@ -632,12 +733,12 @@ function Buildings.GetProjectDisplayState(ownerUsername, workerID)
     }
 end
 
-function Buildings.GetRecipeAvailability(ownerUsername, buildingType, targetLevel, mode, installKey)
+function Buildings.GetRecipeAvailability(ownerUsername, buildingType, targetLevel, mode, installKey, sourcePlayer)
     local projectDefinition = getProjectDefinition(buildingType, targetLevel, mode, installKey)
-    return buildRecipeAvailability(ownerUsername, projectDefinition and projectDefinition.recipe or {})
+    return buildRecipeAvailability(ownerUsername, projectDefinition and projectDefinition.recipe or {}, sourcePlayer)
 end
 
-function Buildings.BuildProjectPreview(ownerUsername, buildingType, mode, plotX, plotY, buildingID, installKey)
+function Buildings.BuildProjectPreview(ownerUsername, buildingType, mode, plotX, plotY, buildingID, installKey, sourcePlayer)
     local owner = getOwnerUsername(ownerUsername)
     local preview = buildBasePreview(owner, buildingType, mode, plotX, plotY, buildingID, installKey)
     local target, targetReason = Buildings.ResolveProjectTarget(owner, buildingType, mode, plotX, plotY, buildingID, installKey)
@@ -659,7 +760,7 @@ function Buildings.BuildProjectPreview(ownerUsername, buildingType, mode, plotX,
     preview.installKey = tostring(target.installKey or preview.installKey or "")
     preview.installDisplayName = normalizeMode(target.mode) == "install" and getProjectDisplayName(buildingType, target.mode, target.installKey) or nil
     preview.workPoints = math.max(1, math.floor(tonumber(projectDefinition.workPoints) or 1))
-    preview.recipeAvailability = buildRecipeAvailability(owner, projectDefinition.recipe)
+    preview.recipeAvailability = buildRecipeAvailability(owner, projectDefinition.recipe, sourcePlayer)
     preview.effects = Internal.CopyDeep(projectDefinition.effects or {})
     preview.currentInstallCount = math.max(0, math.floor(tonumber(target.currentInstallCount) or 0))
     preview.maxInstallCount = math.max(0, math.floor(tonumber(target.maxInstallCount) or 0))
@@ -669,10 +770,10 @@ function Buildings.BuildProjectPreview(ownerUsername, buildingType, mode, plotX,
     return preview
 end
 
-function Buildings.BuildPlotBuildOptions(ownerUsername, plotX, plotY)
+function Buildings.BuildPlotBuildOptions(ownerUsername, plotX, plotY, sourcePlayer)
     local options = {}
     for _, definition in ipairs(Config.GetDefinitionList and Config.GetDefinitionList() or {}) do
-        local preview = Buildings.BuildProjectPreview(ownerUsername, definition.buildingType, "build", plotX, plotY, nil)
+        local preview = Buildings.BuildProjectPreview(ownerUsername, definition.buildingType, "build", plotX, plotY, nil, nil, sourcePlayer)
         local description = "Placeholder building."
         local effectLines = {}
 
@@ -724,7 +825,7 @@ function Buildings.BuildPlotBuildOptions(ownerUsername, plotX, plotY)
     return options
 end
 
-function Buildings.BuildBuildingInstallOptions(ownerUsername, plotX, plotY, buildingID)
+function Buildings.BuildBuildingInstallOptions(ownerUsername, plotX, plotY, buildingID, sourcePlayer)
     local owner = getOwnerUsername(ownerUsername)
     local instance = Buildings.FindBuildingAtPlot(owner, plotX, plotY)
     local options = {}
@@ -733,7 +834,7 @@ function Buildings.BuildBuildingInstallOptions(ownerUsername, plotX, plotY, buil
     end
 
     for _, definition in ipairs(Config.GetInstallDefinitionList and Config.GetInstallDefinitionList(instance.buildingType) or {}) do
-        local preview = Buildings.BuildProjectPreview(owner, instance.buildingType, "install", plotX, plotY, buildingID, definition.installKey)
+        local preview = Buildings.BuildProjectPreview(owner, instance.buildingType, "install", plotX, plotY, buildingID, definition.installKey, sourcePlayer)
         local currentCount = Buildings.GetBuildingInstallCount(instance, definition.installKey)
         local maxCount = Config.GetInstallMaxCount and Config.GetInstallMaxCount(instance.buildingType, definition.installKey, instance.level)
             or math.max(0, math.floor(tonumber(definition.maxCount) or 0))

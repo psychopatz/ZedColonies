@@ -56,14 +56,14 @@ local function syncBuildingsSnapshot(player, ownerUsername)
         Buildings.EnsureInitialHeadquartersProject(owner)
     end
     sendResponse(player, ColonyConfig.COMMAND_MODULE, "SyncBuildingsSnapshot", {
-        snapshot = Buildings.BuildOwnerSnapshot(owner)
+        snapshot = Buildings.BuildOwnerSnapshot(owner, player)
     })
 end
 
 local function syncProjectPreview(player, ownerUsername, buildingType, mode, plotX, plotY, buildingID, installKey)
     local owner = ColonyConfig.GetOwnerUsername(ownerUsername or player)
     sendResponse(player, ColonyConfig.COMMAND_MODULE, "SyncBuildingProjectPreview", {
-        preview = Buildings.BuildProjectPreview(owner, buildingType, mode, plotX, plotY, buildingID, installKey),
+        preview = Buildings.BuildProjectPreview(owner, buildingType, mode, plotX, plotY, buildingID, installKey, player),
         buildingType = buildingType,
         mode = mode,
         plotX = plotX,
@@ -93,6 +93,32 @@ local function removeInventoryItem(item)
     if container then
         container:DoRemoveItem(item)
     end
+end
+
+local function addInventoryItem(container, fullType, count)
+    if not container or not fullType then
+        return nil
+    end
+
+    if Internal.addInventoryItem then
+        return Internal.addInventoryItem(container, fullType, count)
+    end
+
+    return container:AddItems(fullType, count or 1)
+end
+
+local function getInventoryItemQuantity(item)
+    if not item then
+        return 0
+    end
+
+    local count = item.getCount and item:getCount() or nil
+    count = math.floor(tonumber(count) or 0)
+    if count > 0 then
+        return count
+    end
+
+    return 1
 end
 
 local function collectInventoryItemsRecursive(container, into)
@@ -128,23 +154,41 @@ Network.Handlers.RequestBuildingProjectPreview = function(player, args)
 end
 
 Network.Handlers.StartBuildingProject = function(player, args)
-    if not args or not args.workerID or not args.buildingType then
+    if not args or not args.buildingType then
         return
     end
 
     local owner = ColonyConfig.GetOwnerUsername(player)
-    local ok, reason, project = Buildings.StartProject(
-        owner,
-        args.workerID,
-        args.buildingType,
-        args.mode,
-        args.plotX,
-        args.plotY,
-        args.buildingID,
-        args.installKey
-    )
+    local workerID = tostring(args.workerID or "")
+    if workerID == "" then
+        workerID = nil
+    end
+
+    local ok, reason, project
+    if workerID then
+        ok, reason, project = Buildings.StartProject(
+            owner,
+            workerID,
+            args.buildingType,
+            args.mode,
+            args.plotX,
+            args.plotY,
+            args.buildingID,
+            args.installKey
+        )
+    else
+        ok, reason, project = Buildings.QueueProject(
+            owner,
+            args.buildingType,
+            args.mode,
+            args.plotX,
+            args.plotY,
+            args.buildingID,
+            args.installKey
+        )
+    end
     local registry = DC_Colony and DC_Colony.Registry or nil
-    local worker = registry and registry.GetWorkerForOwner and registry.GetWorkerForOwner(owner, args.workerID) or nil
+    local worker = workerID and registry and registry.GetWorkerForOwner and registry.GetWorkerForOwner(owner, workerID) or nil
 
     if not ok then
         if Internal.syncNotice then
@@ -173,10 +217,21 @@ Network.Handlers.StartBuildingProject = function(player, args)
         else
             activityLabel = activityLabel .. " level " .. tostring(project.targetLevel or 1)
         end
+        local materialReady = tostring(project.materialState or "") ~= "Stalled"
+        local hasBuilder = tostring(project.assignedBuilderID or "") ~= ""
+        local noticeText = nil
+        if hasBuilder and materialReady then
+            noticeText = "Started " .. activityLabel .. "."
+        elseif hasBuilder then
+            noticeText = "Queued " .. activityLabel .. ". Waiting for materials."
+        elseif materialReady then
+            noticeText = "Queued " .. activityLabel .. ". Waiting for a builder assignment."
+        else
+            noticeText = "Queued " .. activityLabel .. ". Waiting for materials and a builder assignment."
+        end
         Internal.syncNotice(
             player,
-            (tostring(project.materialState or "") == "Stalled" and ("Queued " .. activityLabel .. ". Waiting for materials.")
-                or ("Started " .. activityLabel .. ".")),
+            noticeText,
             "info",
             false
         )
@@ -284,11 +339,17 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
         local fullType = item and item.getFullType and item:getFullType() or nil
         local needed = fullType and neededByType[fullType] or 0
         if needed and needed > 0 then
+            local available = getInventoryItemQuantity(item)
+            local movedUnits = math.min(available, needed)
+            local container = item:getContainer()
             project.materialCounts = type(project.materialCounts) == "table" and project.materialCounts or {}
-            project.materialCounts[fullType] = math.max(0, tonumber(project.materialCounts[fullType]) or 0) + 1
-            neededByType[fullType] = needed - 1
-            movedCount = movedCount + 1
+            project.materialCounts[fullType] = math.max(0, tonumber(project.materialCounts[fullType]) or 0) + movedUnits
+            neededByType[fullType] = needed - movedUnits
+            movedCount = movedCount + movedUnits
             removeInventoryItem(item)
+            if available > movedUnits and container then
+                addInventoryItem(container, fullType, available - movedUnits)
+            end
         end
     end
 

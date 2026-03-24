@@ -22,7 +22,7 @@ local function getDisplayName(fullType)
     return internal and internal.GetDisplayNameForFullType and internal.GetDisplayNameForFullType(fullType) or tostring(fullType or "Unknown")
 end
 
-function Buildings.BuildOwnerSnapshot(ownerUsername)
+function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     local owner = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
         and DC_Colony.Config.GetOwnerUsername(ownerUsername)
         or tostring(ownerUsername or "local")
@@ -100,7 +100,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername)
 
     local activeProjects = {}
     for _, project in ipairs(projectList) do
-        local materialStatus = Buildings.GetProjectMaterialStatus and Buildings.GetProjectMaterialStatus(project) or {
+        local materialStatus = Buildings.GetProjectMaterialStatus and Buildings.GetProjectMaterialStatus(project, sourcePlayer) or {
             hasAll = true,
             entries = {},
             progressRatio = 1
@@ -165,7 +165,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername)
             hasMedicalSupplies = medical.hasMedicalSupplies,
             buildings = medical.buildings
         } or nil,
-        map = Buildings.BuildMapSnapshot(owner)
+        map = Buildings.BuildMapSnapshot(owner, sourcePlayer)
     }
 end
 

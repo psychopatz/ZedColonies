@@ -11,6 +11,20 @@ local Shared = (Network.Workers or {}).Shared or {}
 
 Network.Handlers = Network.Handlers or {}
 
+local function getInventoryItemQuantity(item)
+    if not item then
+        return 0
+    end
+
+    local count = item.getCount and item:getCount() or nil
+    count = math.floor(tonumber(count) or 0)
+    if count > 0 then
+        return count
+    end
+
+    return 1
+end
+
 Network.Handlers.DepositWorkerSupplies = function(player, args)
     if not args or not args.workerID then return end
 
@@ -119,12 +133,21 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
                     end
                 else
                     eligibleCount = eligibleCount + 1
+                    local availableQty = getInventoryItemQuantity(invItem)
                     local movedQty = Warehouse.DepositOutputEntry(owner, {
                         fullType = fullType,
-                        qty = 1
+                        qty = availableQty
                     })
                     if movedQty > 0 then
+                        local container = invItem:getContainer()
                         Internal.removeInventoryItem(invItem)
+                        if availableQty > movedQty and container then
+                            if Internal.addInventoryItem then
+                                Internal.addInventoryItem(container, fullType, availableQty - movedQty)
+                            else
+                                container:AddItems(fullType, availableQty - movedQty)
+                            end
+                        end
                         movedCount = movedCount + movedQty
                     else
                         blockedCount = blockedCount + 1

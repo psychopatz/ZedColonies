@@ -105,6 +105,7 @@ function DC_BuildingsWindow:openReassignProjectModal(plot)
     DC_BuildingProjectModal.Open({
         title = "Swap Project Builder",
         confirmLabel = "Swap",
+        requireBuilder = true,
         preview = {
             projectID = project.projectID,
             buildingType = project.buildingType,

@@ -47,7 +47,7 @@ function DC_BuildingProjectModal:refreshBuilderOptions()
             allowedProjectID = self.preview and self.preview.projectID or nil
         }), worker)
     end
-    local selectedIndex = #(self.builderOptions or {}) > 0 and 1 or 0
+    local selectedIndex = self.requireBuilder == true and (#(self.builderOptions or {}) > 0 and 1 or 0) or 0
     local previewProjectID = tostring(self.preview and self.preview.projectID or "")
     local assignedBuilderID = tostring(self.preview and self.preview.assignedBuilderID or "")
     if previewProjectID ~= "" and assignedBuilderID ~= "" then
@@ -75,6 +75,9 @@ function DC_BuildingProjectModal:updateText()
     local builderState = DC_BuildingsClientSelectors.GetBuilderRequirementState(builder, {
         allowedProjectID = preview.projectID
     })
+    local requireBuilder = self.requireBuilder == true
+    local willStartImmediately = preview.canStart == true and builderState.ready == true
+    local willQueue = requireBuilder ~= true and willStartImmediately ~= true
     local text = ""
     text = text .. " <RGB:1,1,1> <SIZE:Medium> " .. tostring(preview.displayName or preview.buildingType or "Project") .. " <LINE> "
     text = text .. " <RGB:0.72,0.72,0.72> Mode: <RGB:1,1,1> " .. tostring(preview.mode or "build") .. " <LINE> "
@@ -120,8 +123,19 @@ function DC_BuildingProjectModal:updateText()
     end
     if builderState.ready == true then
         text = text .. " <RGB:0.72,0.9,0.72> Builder Ready <LINE> "
+    elseif requireBuilder ~= true and builder == nil then
+        text = text .. " <RGB:0.82,0.82,0.82> No builder assigned yet. Confirming will queue this project until you assign one. <LINE> "
+    elseif requireBuilder ~= true then
+        text = text .. " <RGB:0.92,0.84,0.45> "
+            .. tostring(builderState.reason or "Selected builder is not ready.")
+            .. " The project can still be queued without assigning them yet. <LINE> "
     else
         text = text .. " <RGB:0.9,0.65,0.65> " .. tostring(builderState.reason or "Builder is not ready.") .. " <LINE> "
+    end
+    if willStartImmediately then
+        text = text .. " <RGB:0.72,0.9,0.72> Confirming will start work immediately. <LINE> "
+    elseif willQueue then
+        text = text .. " <RGB:0.82,0.82,0.82> Confirming will queue this project. It will wait for materials and/or a builder before work begins. <LINE> "
     end
 
     self.textPanel:setText(text)
@@ -129,9 +143,9 @@ function DC_BuildingProjectModal:updateText()
     if self.confirmLabelOverride and self.confirmLabelOverride ~= "" then
         self.btnConfirm:setTitle(self.confirmLabelOverride)
     else
-        self.btnConfirm:setTitle(preview.canStart == true and "Start" or "Queue")
+        self.btnConfirm:setTitle(willStartImmediately and "Start" or "Queue")
     end
-    self.btnConfirm:setEnable(preview.available == true and builderState.ready == true)
+    self.btnConfirm:setEnable(preview.available == true and (builderState.ready == true or requireBuilder ~= true))
 end
 
 function DC_BuildingProjectModal:createChildren()
@@ -179,12 +193,19 @@ end
 
 function DC_BuildingProjectModal:onConfirmClicked()
     local builder = self:getSelectedBuilder()
-    if not builder or not self.onConfirmCallback then
+    local builderState = DC_BuildingsClientSelectors.GetBuilderRequirementState(builder, {
+        allowedProjectID = self.preview and self.preview.projectID or nil
+    })
+    local requireBuilder = self.requireBuilder == true
+    if not self.onConfirmCallback then
+        return
+    end
+    if requireBuilder == true and builderState.ready ~= true then
         return
     end
 
     self.onConfirmCallback({
-        workerID = builder.workerID,
+        workerID = builderState.ready == true and builder and builder.workerID or nil,
         projectID = self.preview.projectID,
         buildingType = self.preview.buildingType,
         mode = self.preview.mode,
@@ -247,6 +268,7 @@ function DC_BuildingProjectModal.Open(args)
     modal.onConfirmCallback = args.onConfirm
     modal.onDebugMaterialsCallback = args.onDebugMaterials
     modal.confirmLabelOverride = args.confirmLabel
+    modal.requireBuilder = args.requireBuilder == true
     modal.debugEnabled = canUseDebug()
     modal.builderOptions = {}
     modal:initialise()

@@ -29,8 +29,16 @@ end
 function System.OpenOwnedFactionManagement()
     local status = System.GetOwnedFactionStatus()
     if status and status.faction then
-        DC_FactionInfoWindow.Open()
-        if DC_FactionInfoWindow.instance and DC_FactionInfoWindow.instance.refreshList then
+        if not DC_FactionInfoWindow or not DC_FactionInfoWindow.Open then
+            return false, "Faction management window is not available yet."
+        end
+        local ok, message = DC_FactionInfoWindow.Open()
+        if ok ~= true then
+            return false, message or "Faction Intelligence is unavailable right now."
+        end
+        if DC_FactionInfoWindow.Refresh then
+            DC_FactionInfoWindow.Refresh()
+        elseif DC_FactionInfoWindow.instance and DC_FactionInfoWindow.instance.refreshList then
             DC_FactionInfoWindow.instance:refreshList()
         end
         return true, nil
@@ -42,6 +50,10 @@ function System.PromptCreateFaction()
     local status = System.GetOwnedFactionStatus()
     if not status or status.canCreate ~= true then
         return false, buildBlockedMessage(status)
+    end
+
+    if not DC_PlayerFactionNameModal or not DC_PlayerFactionNameModal.Open then
+        return false, "Faction name prompt is unavailable."
     end
 
     DC_PlayerFactionNameModal.Open({

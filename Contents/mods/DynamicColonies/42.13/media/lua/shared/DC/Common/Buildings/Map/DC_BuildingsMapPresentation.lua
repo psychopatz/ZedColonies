@@ -15,7 +15,7 @@ local function getRegistry()
     return DC_Colony and DC_Colony.Registry or nil
 end
 
-local function summarizeProject(project)
+local function summarizeProject(project, sourcePlayer)
     if not project then
         return nil
     end
@@ -30,7 +30,7 @@ local function summarizeProject(project)
         or nil
     local progress = math.max(0, tonumber(project.progressWorkPoints) or 0)
     local required = math.max(1, tonumber(project.requiredWorkPoints) or 1)
-    local materialStatus = Buildings.GetProjectMaterialStatus and Buildings.GetProjectMaterialStatus(project) or {
+    local materialStatus = Buildings.GetProjectMaterialStatus and Buildings.GetProjectMaterialStatus(project, sourcePlayer) or {
         hasAll = true,
         entries = {},
         progressRatio = 1
@@ -60,7 +60,7 @@ local function summarizeProject(project)
     }
 end
 
-function Buildings.BuildMapSnapshot(ownerUsername)
+function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
     local owner = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
         and DC_Colony.Config.GetOwnerUsername(ownerUsername)
         or tostring(ownerUsername or "local")
@@ -74,7 +74,7 @@ function Buildings.BuildMapSnapshot(ownerUsername)
     local activeProjects = Buildings.GetOwnerProjectList(owner)
     local projectsByPlotKey = {}
     for _, project in ipairs(activeProjects) do
-        projectsByPlotKey[Buildings.GetPlotKey(project.plotX, project.plotY)] = summarizeProject(project)
+        projectsByPlotKey[Buildings.GetPlotKey(project.plotX, project.plotY)] = summarizeProject(project, sourcePlayer)
     end
 
     local plots = {}
@@ -104,12 +104,12 @@ function Buildings.BuildMapSnapshot(ownerUsername)
             }
 
             if state == Buildings.MapConstants.PlotStates.Empty and plot.unlocked == true then
-                plotEntry.buildOptions = Buildings.BuildPlotBuildOptions(owner, x, y)
+                plotEntry.buildOptions = Buildings.BuildPlotBuildOptions(owner, x, y, sourcePlayer)
             end
 
             if building then
-                local upgradePreview = Buildings.BuildProjectPreview(owner, building.buildingType, "upgrade", x, y, building.buildingID)
-                local installOptions = Buildings.BuildBuildingInstallOptions and Buildings.BuildBuildingInstallOptions(owner, x, y, building.buildingID) or {}
+                local upgradePreview = Buildings.BuildProjectPreview(owner, building.buildingType, "upgrade", x, y, building.buildingID, nil, sourcePlayer)
+                local installOptions = Buildings.BuildBuildingInstallOptions and Buildings.BuildBuildingInstallOptions(owner, x, y, building.buildingID, sourcePlayer) or {}
                 local canDestroy, destroyReason = Buildings.CanDestroyBuilding(owner, x, y, building.buildingID)
                 plotEntry.availableActions.canUpgrade = upgradePreview.available == true
                 plotEntry.availableActions.canInstall = #installOptions > 0
