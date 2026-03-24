@@ -1,7 +1,7 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonySkills/DC_ColonySkills"
 require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition"
-require "DC/Common/Colony/ColonyTiredness/DC_ColonyTiredness"
+require "DC/Common/Colony/ColonyEnergy/DC_ColonyEnergy"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Registry = DC_Colony.Registry or {}

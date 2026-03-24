@@ -2,7 +2,7 @@ require "DC/UI/Colony/MainWindow/MainWindowCore/DC_MainWindowCore_Bootstrap"
 require "DC/UI/Colony/MainWindow/MainWindowCore/DC_MainWindowCore_Formatters"
 require "DC/UI/Colony/MainWindow/MainWindowCore/DC_MainWindowCore_WorkerPresentation"
 require "ISUI/ISPanel"
-require "DC/Common/Colony/ColonyTiredness/DC_ColonyTiredness"
+require "DC/Common/Colony/ColonyEnergy/DC_ColonyEnergy"
 
 DC_ColonyNeedsPanel = ISPanel:derive("DC_ColonyNeedsPanel")
 
@@ -62,15 +62,15 @@ local function buildPlaceholderNeed(summaryText, captionText)
     }
 end
 
-local function buildTirednessData(worker)
-    if DC_Colony and DC_Colony.Tiredness and isFunction(DC_Colony.Tiredness.GetBarData) then
-        return DC_Colony.Tiredness.GetBarData(worker)
+local function buildEnergyData(worker)
+    if DC_Colony and DC_Colony.Energy and isFunction(DC_Colony.Energy.GetBarData) then
+        return DC_Colony.Energy.GetBarData(worker)
     end
 
-    local currentValue = math.max(0, tonumber(worker and worker.tirednessCurrent) or 0)
-    local maxValue = math.max(1, tonumber(worker and worker.tirednessMax) or 100)
-    local recoveryMultiplier = tonumber(worker and worker.tirednessRecoveryMultiplier) or 1
-    local isResting = worker and worker.isRestingForTiredness == true
+    local currentValue = math.max(0, tonumber(worker and (worker.energyCurrent or worker.tirednessCurrent)) or 0)
+    local maxValue = math.max(1, tonumber(worker and (worker.energyMax or worker.tirednessMax)) or 100)
+    local recoveryMultiplier = tonumber(worker and (worker.energyRecoveryMultiplier or worker.tirednessRecoveryMultiplier)) or 1
+    local isResting = (worker and worker.isRestingForEnergy == true) or (worker and worker.isRestingForTiredness == true)
     return {
         stored = currentValue,
         usage = maxValue,
@@ -91,15 +91,15 @@ local function buildNeedsData(worker)
         return nil
     end
 
-    local tirednessData = buildTirednessData(worker)
+    local energyData = buildEnergyData(worker)
 
     return {
         {
             label = "Energy",
-            color = DC_Colony and DC_Colony.Tiredness and isFunction(DC_Colony.Tiredness.GetBarColor)
-                and DC_Colony.Tiredness.GetBarColor()
+            color = DC_Colony and DC_Colony.Energy and isFunction(DC_Colony.Energy.GetBarColor)
+                and DC_Colony.Energy.GetBarColor()
                 or { r = 0.69, g = 0.33, b = 0.86 },
-            data = tirednessData
+            data = energyData
         },
         {
             label = "Recreation",

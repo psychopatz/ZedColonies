@@ -5,7 +5,7 @@ DC_Colony.Registry.Internal = DC_Colony.Registry.Internal or {}
 local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Internal = Registry.Internal
-local Tiredness = DC_Colony.Tiredness
+local Energy = DC_Colony.Energy
 local Skills = DC_Colony.Skills
 
 local function clampAmount(value)
@@ -121,8 +121,8 @@ function Registry.RecalculateWorker(worker)
     if Skills and Skills.EnsureWorkerSkills then
         Skills.EnsureWorkerSkills(worker)
     end
-    if Tiredness and Tiredness.EnsureWorkerTiredness then
-        Tiredness.EnsureWorkerTiredness(worker)
+    if Energy and Energy.EnsureWorkerEnergy then
+        Energy.EnsureWorkerEnergy(worker)
     end
     worker.lastNutritionCheckpoint = math.max(
         0,
@@ -244,8 +244,8 @@ function Registry.RecalculateWorker(worker)
     if DC_Buildings and DC_Buildings.ApplyWorkerState then
         DC_Buildings.ApplyWorkerState(worker)
     end
-    if Tiredness and Tiredness.ApplyPresentationFields then
-        Tiredness.ApplyPresentationFields(worker)
+    if Energy and Energy.ApplyPresentationFields then
+        Energy.ApplyPresentationFields(worker)
     end
 end
 

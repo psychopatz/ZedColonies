@@ -57,6 +57,24 @@ local function createProjectRecord(owner, worker, buildingType, target, projectD
     }
 end
 
+local function releaseWorkerFromCurrentProject(worker, options)
+    options = type(options) == "table" and options or {}
+    if not worker or not worker.workerID then
+        return nil
+    end
+
+    local currentProject = Buildings.GetProjectForWorker and Buildings.GetProjectForWorker(worker) or nil
+    if not currentProject then
+        return nil
+    end
+    if not (Buildings.CanReleaseBuilderFromProject and Buildings.CanReleaseBuilderFromProject(worker, currentProject, options)) then
+        return nil
+    end
+
+    currentProject.assignedBuilderID = nil
+    return currentProject
+end
+
 function Buildings.EnsureInitialHeadquartersProject(ownerUsername)
     local labourConfig = getColonyConfig()
     local owner = labourConfig.GetOwnerUsername and labourConfig.GetOwnerUsername(ownerUsername) or tostring(ownerUsername or "local")
@@ -110,7 +128,9 @@ function Buildings.StartProject(ownerUsername, workerID, buildingType, mode, plo
     local owner = labourConfig.GetOwnerUsername and labourConfig.GetOwnerUsername(ownerUsername) or tostring(ownerUsername or "local")
     local registry = getRegistry()
     local worker = registry and registry.GetWorkerForOwner and registry.GetWorkerForOwner(owner, workerID) or nil
-    local canBuild, workerReason = Buildings.CanWorkerBuild(worker)
+    local canBuild, workerReason = Buildings.CanWorkerBuild(worker, {
+        allowProjectRelease = true
+    })
     if not canBuild then
         return false, workerReason, nil
     end
@@ -126,6 +146,7 @@ function Buildings.StartProject(ownerUsername, workerID, buildingType, mode, plo
     end
 
     local ownerProjects = Buildings.GetProjectsForOwner(owner)
+    releaseWorkerFromCurrentProject(worker)
     local project = createProjectRecord(owner, worker, buildingType, target, projectDefinition)
     ownerProjects[project.projectID] = project
     Buildings.RefreshProjectMaterialState(project)
@@ -166,7 +187,8 @@ function Buildings.ReassignProjectBuilder(ownerUsername, projectID, workerID)
     local currentWorker = registry and registry.GetWorkerForOwner and registry.GetWorkerForOwner(owner, project.assignedBuilderID) or nil
     local nextWorker = registry and registry.GetWorkerForOwner and registry.GetWorkerForOwner(owner, workerID) or nil
     local canBuild, workerReason = Buildings.CanWorkerBuild(nextWorker, {
-        allowedProjectID = project.projectID
+        allowedProjectID = project.projectID,
+        allowProjectRelease = true
     })
     if not canBuild then
         return false, workerReason, project, currentWorker, nextWorker
@@ -176,6 +198,9 @@ function Buildings.ReassignProjectBuilder(ownerUsername, projectID, workerID)
         return true, nil, project, currentWorker, nextWorker
     end
 
+    releaseWorkerFromCurrentProject(nextWorker, {
+        allowedProjectID = project.projectID
+    })
     project.assignedBuilderID = nextWorker.workerID
     Buildings.Save()
     return true, nil, project, currentWorker, nextWorker

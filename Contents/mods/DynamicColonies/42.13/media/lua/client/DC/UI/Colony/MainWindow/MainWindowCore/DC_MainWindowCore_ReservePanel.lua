@@ -3,7 +3,7 @@ require "DC/UI/Colony/MainWindow/MainWindowCore/DC_MainWindowCore_Formatters"
 require "DC/UI/Colony/MainWindow/MainWindowCore/DC_MainWindowCore_ReserveData"
 require "DC/UI/Colony/MainWindow/MainWindowCore/DC_MainWindowCore_WorkerPresentation"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
-require "DC/Common/Colony/ColonyTiredness/DC_ColonyTiredness"
+require "DC/Common/Colony/ColonyEnergy/DC_ColonyEnergy"
 
 DC_MainWindow = DC_MainWindow or {}
 DC_MainWindow.Internal = DC_MainWindow.Internal or {}
@@ -187,7 +187,7 @@ function ColonyProfileCard:new(x, y, width, height)
     o.caloriesDisplayRatio = 0
     o.hydrationDisplayRatio = 0
     o.healthDisplayRatio = 0
-    o.tirednessDisplayRatio = 0
+    o.energyDisplayRatio = 0
     o.activityDisplayRatio = 0
     o.workerDisplayCache = {}
     return o
@@ -232,12 +232,12 @@ function ColonyProfileCard:setWorker(worker)
         self.caloriesData = nil
         self.hydrationData = nil
         self.healthData = nil
-        self.tirednessData = nil
+        self.energyData = nil
         self.activityData = nil
         self.caloriesTargetRatio = 0
         self.hydrationTargetRatio = 0
         self.healthTargetRatio = 0
-        self.tirednessTargetRatio = 0
+        self.energyTargetRatio = 0
         self.activityTargetRatio = 0
         if self.btnInventory then
             self.btnInventory:setEnable(false)
@@ -275,13 +275,13 @@ function ColonyProfileCard:setWorker(worker)
     self.caloriesData = buildNutritionBarData("Calories", currentCaloriesBuffer, carryoverCalories, provisionCalories, dailyCaloriesNeed)
     self.hydrationData = buildNutritionBarData("Hydration", currentHydrationBuffer, carryoverHydration, provisionHydration, dailyHydrationNeed)
     self.healthData = buildHealthBarData(worker.hp, worker.maxHp)
-    self.tirednessData = DC_Colony and DC_Colony.Tiredness and isFunction(DC_Colony.Tiredness.GetBarData)
-        and DC_Colony.Tiredness.GetBarData(worker) or nil
+    self.energyData = DC_Colony and DC_Colony.Energy and isFunction(DC_Colony.Energy.GetBarData)
+        and DC_Colony.Energy.GetBarData(worker) or nil
     self.activityData = buildWorkerProgressData(worker, profile)
     self.caloriesTargetRatio = self.caloriesData.fillRatio
     self.hydrationTargetRatio = self.hydrationData.fillRatio
     self.healthTargetRatio = self.healthData.fillRatio
-    self.tirednessTargetRatio = self.tirednessData and self.tirednessData.fillRatio or 0
+    self.energyTargetRatio = self.energyData and self.energyData.fillRatio or 0
     self.activityTargetRatio = self.activityData and self.activityData.fillRatio or 0
     self.portraitTex = getWorkerPortraitTexture(worker)
 
@@ -291,7 +291,7 @@ function ColonyProfileCard:setWorker(worker)
         self.caloriesDisplayRatio = tonumber(cachedRatios.calories) or self.caloriesTargetRatio
         self.hydrationDisplayRatio = tonumber(cachedRatios.hydration) or self.hydrationTargetRatio
         self.healthDisplayRatio = tonumber(cachedRatios.health) or self.healthTargetRatio
-        self.tirednessDisplayRatio = tonumber(cachedRatios.tiredness) or self.tirednessTargetRatio
+        self.energyDisplayRatio = tonumber(cachedRatios.energy) or self.energyTargetRatio
         self.activityDisplayRatio = tonumber(cachedRatios.activity) or self.activityTargetRatio
         return
     end
@@ -299,7 +299,7 @@ function ColonyProfileCard:setWorker(worker)
     self.caloriesDisplayRatio = self.caloriesTargetRatio
     self.hydrationDisplayRatio = self.hydrationTargetRatio
     self.healthDisplayRatio = self.healthTargetRatio
-    self.tirednessDisplayRatio = self.tirednessTargetRatio
+    self.energyDisplayRatio = self.energyTargetRatio
     self.activityDisplayRatio = self.activityTargetRatio
 end
 
@@ -348,7 +348,7 @@ function ColonyProfileCard:storeDisplayState()
         calories = self.caloriesDisplayRatio,
         hydration = self.hydrationDisplayRatio,
         health = self.healthDisplayRatio,
-        tiredness = self.tirednessDisplayRatio,
+        energy = self.energyDisplayRatio,
         activity = self.activityDisplayRatio
     }
 end
@@ -374,7 +374,7 @@ function ColonyProfileCard:prerender()
     self.caloriesDisplayRatio = animateRatio(self.caloriesDisplayRatio, self.caloriesTargetRatio)
     self.hydrationDisplayRatio = animateRatio(self.hydrationDisplayRatio, self.hydrationTargetRatio)
     self.healthDisplayRatio = animateRatio(self.healthDisplayRatio, self.healthTargetRatio)
-    self.tirednessDisplayRatio = animateRatio(self.tirednessDisplayRatio, self.tirednessTargetRatio)
+    self.energyDisplayRatio = animateRatio(self.energyDisplayRatio, self.energyTargetRatio)
     self.activityDisplayRatio = animateRatio(self.activityDisplayRatio, self.activityTargetRatio)
     self:storeDisplayState()
 

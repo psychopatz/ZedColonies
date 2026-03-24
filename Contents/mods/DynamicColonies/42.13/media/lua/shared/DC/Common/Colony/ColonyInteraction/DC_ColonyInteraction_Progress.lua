@@ -3,7 +3,7 @@ DC_Colony.Interaction = DC_Colony.Interaction or {}
 
 local Config = DC_Colony.Config
 local Interaction = DC_Colony.Interaction
-local Tiredness = DC_Colony.Tiredness
+local Energy = DC_Colony.Energy
 local Skills = DC_Colony.Skills
 
 function Interaction.GetProgressDescriptor(worker, profile)
@@ -11,10 +11,10 @@ function Interaction.GetProgressDescriptor(worker, profile)
         return nil
     end
 
-    local tirednessSystem = DC_Colony and DC_Colony.Tiredness or Tiredness
+    local energySystem = DC_Colony and DC_Colony.Energy or Energy
     local restingState = tostring((Config.States or {}).Resting or "Resting")
-    if tostring(worker.state or "") == restingState and tirednessSystem and tirednessSystem.GetRestingProgressDescriptor then
-        local descriptor = tirednessSystem.GetRestingProgressDescriptor(worker)
+    if tostring(worker.state or "") == restingState and energySystem and energySystem.GetRestingProgressDescriptor then
+        local descriptor = energySystem.GetRestingProgressDescriptor(worker)
         if descriptor then
             local template = Interaction.getInteractionEntry("Progress", "Common.Resting")
             if type(template) == "table" then

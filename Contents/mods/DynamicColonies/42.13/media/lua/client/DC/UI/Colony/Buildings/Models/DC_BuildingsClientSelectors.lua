@@ -30,6 +30,25 @@ function DC_BuildingsClientSelectors.GetBuilderConstructionLevel(builder)
     return math.max(0, math.floor(level or 0))
 end
 
+local function getBuilderAvailability(worker, options)
+    options = type(options) == "table" and options or {}
+    local allowedProjectID = tostring(options.allowedProjectID or "")
+    local assignedProjectID = tostring(worker and worker.assignedProjectID or "")
+    local assignedProjectMaterialState = tostring(worker and worker.assignedProjectMaterialState or "")
+
+    if assignedProjectID == "" then
+        return "Available"
+    end
+    if allowedProjectID ~= "" and assignedProjectID == allowedProjectID then
+        return "Assigned"
+    end
+    if assignedProjectMaterialState == "Stalled" then
+        return "Available"
+    end
+
+    return "Busy"
+end
+
 function DC_BuildingsClientSelectors.GetBuilderOptions()
     local options = {}
     local workers = DC_MainWindow and DC_MainWindow.cachedWorkers or {}
@@ -64,17 +83,10 @@ end
 
 function DC_BuildingsClientSelectors.BuildBuilderLabel(worker, options)
     options = type(options) == "table" and options or {}
-    local allowedProjectID = tostring(options.allowedProjectID or "")
     local label = tostring(worker.name or worker.workerID or "Builder")
     label = label .. " | Const Lv " .. tostring(DC_BuildingsClientSelectors.GetBuilderConstructionLevel(worker))
     label = label .. " | Tool: " .. tostring(worker.toolState or "Missing")
-    if worker.assignedProjectID then
-        if tostring(worker.assignedProjectID or "") == allowedProjectID and allowedProjectID ~= "" then
-            label = label .. " | Assigned"
-        else
-            label = label .. " | Busy"
-        end
-    end
+    label = label .. " | " .. getBuilderAvailability(worker, options)
     if worker.housingState then
         label = label .. " | " .. tostring(worker.housingState)
     end
@@ -90,7 +102,8 @@ function DC_BuildingsClientSelectors.GetBuilderRequirementState(builder, options
             reason = "Assign a Builder first."
         }
     end
-    if builder.assignedProjectID and tostring(builder.assignedProjectID or "") ~= allowedProjectID then
+    local availability = getBuilderAvailability(builder, options)
+    if availability == "Busy" then
         return {
             ready = false,
             reason = tostring(builder.name or builder.workerID or "That builder")

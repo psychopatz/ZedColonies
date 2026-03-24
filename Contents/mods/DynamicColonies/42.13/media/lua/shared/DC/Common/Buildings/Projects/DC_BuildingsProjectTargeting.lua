@@ -705,6 +705,26 @@ function Buildings.GetProjectForWorker(worker)
     return Buildings.GetWorkerProject(worker.ownerUsername, worker.workerID)
 end
 
+function Buildings.CanReleaseBuilderFromProject(worker, project, options)
+    options = type(options) == "table" and options or {}
+    if not worker or not project then
+        return false
+    end
+    if tostring(project.status or "") ~= "Active" then
+        return false
+    end
+    if tostring(project.assignedBuilderID or "") ~= tostring(worker.workerID or "") then
+        return false
+    end
+
+    local allowedProjectID = tostring(options.allowedProjectID or "")
+    if allowedProjectID ~= "" and tostring(project.projectID or "") == allowedProjectID then
+        return true
+    end
+
+    return tostring(project.materialState or "") == "Stalled"
+end
+
 function Buildings.GetProjectByID(ownerUsername, projectID)
     local owner = getOwnerUsername(ownerUsername)
     local wanted = tostring(projectID or "")
@@ -969,6 +989,7 @@ end
 function Buildings.CanWorkerBuild(worker, options)
     options = type(options) == "table" and options or {}
     local allowedProjectID = tostring(options.allowedProjectID or "")
+    local allowProjectRelease = options.allowProjectRelease == true
     local labourConfig = getColonyConfig()
     if not worker or not worker.workerID then
         return false, "Builder not found."
@@ -984,7 +1005,9 @@ function Buildings.CanWorkerBuild(worker, options)
     end
     local currentProject = Buildings.GetWorkerProject(worker.ownerUsername, worker.workerID)
     if currentProject and tostring(currentProject.projectID or "") ~= allowedProjectID then
-        return false, "That builder already has an active project."
+        if not (allowProjectRelease and Buildings.CanReleaseBuilderFromProject and Buildings.CanReleaseBuilderFromProject(worker, currentProject, options)) then
+            return false, "That builder already has an active project."
+        end
     end
     local registry = getRegistry()
     if registry and registry.WorkerHasRequiredTools and not registry.WorkerHasRequiredTools(worker) then

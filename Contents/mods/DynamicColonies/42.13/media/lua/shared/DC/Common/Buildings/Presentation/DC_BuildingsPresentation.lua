@@ -205,8 +205,8 @@ function Buildings.ApplyWorkerState(worker)
     worker.infirmaryBedAssigned = infirmary and infirmary.assigned == true or false
     worker.doctorCovered = infirmary and infirmary.doctorCovered == true or false
 
-    if DC_Colony and DC_Colony.Tiredness and DC_Colony.Tiredness.SetRecoverySources then
-        DC_Colony.Tiredness.SetRecoverySources(worker, {
+    if DC_Colony and DC_Colony.Energy and DC_Colony.Energy.SetRecoverySources then
+        DC_Colony.Energy.SetRecoverySources(worker, {
             base = 1.0,
             housing = housing.recoveryMultiplier
         })
@@ -218,6 +218,7 @@ function Buildings.ApplyWorkerState(worker)
         worker.assignedProjectBuildingType = project.buildingType
         worker.assignedProjectBuildingID = project.buildingID
         worker.assignedProjectTargetLevel = project.targetLevel
+        worker.assignedProjectMaterialState = project.materialState
         worker.assignedProjectProgress = project.progressWorkPoints
         worker.assignedProjectRequired = project.requiredWorkPoints
         worker.workProgress = project.progressWorkPoints
@@ -228,6 +229,7 @@ function Buildings.ApplyWorkerState(worker)
         worker.assignedProjectBuildingType = nil
         worker.assignedProjectBuildingID = nil
         worker.assignedProjectTargetLevel = nil
+        worker.assignedProjectMaterialState = nil
         worker.assignedProjectProgress = nil
         worker.assignedProjectRequired = nil
     end

@@ -125,6 +125,15 @@ function Interaction.GetDisplayStateLabel(worker)
         end
     end
 
+    if jobKey == tostring((Config.JobTypes or {}).Builder or "Builder") then
+        local assignedProjectID = tostring(worker and worker.assignedProjectID or "")
+        local assignedProjectMaterialState = tostring(worker and worker.assignedProjectMaterialState or "")
+        local workerState = tostring(worker and worker.state or "Idle")
+        if assignedProjectID == "" or (assignedProjectMaterialState == "Stalled" and workerState ~= "Working") then
+            return "Available"
+        end
+    end
+
     return tostring(worker and worker.state or "Idle")
 end
 

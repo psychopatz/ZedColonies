@@ -6,7 +6,7 @@ local Warehouse = DC_Colony.Warehouse
 local Output = DC_Colony.Output
 local Sim = DC_Colony.Sim
 local Internal = Sim.Internal
-local Tiredness = DC_Colony.Tiredness
+local Energy = DC_Colony.Energy
 local Skills = DC_Colony.Skills
 
 local function buildXPAmount(totalQuantity)
@@ -180,7 +180,7 @@ function Sim.ProcessWorker(worker, currentHour)
     local scavengeBaseWorkPerHour = Config.GetScavengeBaseWorkPerHour and Config.GetScavengeBaseWorkPerHour() or 1.0
     local lastHour = tonumber(worker.lastSimHour) or tonumber(currentHour) or 0
     local deltaHours = math.max(0, currentHour - lastHour)
-    local lowTirednessReason = (Config.ReturnReasons and Config.ReturnReasons.LowTiredness) or "LowTiredness"
+    local lowEnergyReason = (Config.ReturnReasons and (Config.ReturnReasons.LowEnergy or Config.ReturnReasons.LowTiredness)) or "LowEnergy"
 
     if worker.state == Config.States.Dead then
         worker.jobEnabled = false
@@ -192,8 +192,8 @@ function Sim.ProcessWorker(worker, currentHour)
         return
     end
 
-    if Tiredness and Tiredness.IsDepleted and Tiredness.IsDepleted(worker) and not Tiredness.IsForcedRest(worker) then
-        Tiredness.SetForcedRest(worker, true, lowTirednessReason)
+    if Energy and Energy.IsDepleted and Energy.IsDepleted(worker) and not Energy.IsForcedRest(worker) then
+        Energy.SetForcedRest(worker, true, lowEnergyReason, currentHour)
     end
 
     Sites.RefreshWorkerSite(worker)
@@ -277,7 +277,7 @@ function Sim.ProcessWorker(worker, currentHour)
     worker.siteState = worker.siteState or "Deferred"
     worker.toolState = toolsReady and "Ready" or "Missing"
 
-    local forcedRest = Tiredness and Tiredness.IsForcedRest and Tiredness.IsForcedRest(worker) or false
+    local forcedRest = Energy and Energy.IsForcedRest and Energy.IsForcedRest(worker) or false
     local canWork = worker.jobEnabled and toolsReady and not forcedRest
     if normalizedJobType == Config.JobTypes.Scavenge then
         canWork = canWork and worker.presenceState == Config.PresenceStates.Scavenging
@@ -325,8 +325,8 @@ function Sim.ProcessWorker(worker, currentHour)
                 elseif totalCaloriesAvailable < returnCaloriesThreshold then
                     Internal.beginScavengeReturnHome(worker, currentHour, Config.ReturnReasons.LowFood)
                     presenceState = Internal.getScavengePresenceState(worker)
-                elseif forcedRest then
-                    Internal.beginScavengeReturnHome(worker, currentHour, lowTirednessReason)
+                elseif Energy.IsForcedRest(worker) then
+                    Internal.beginScavengeReturnHome(worker, currentHour, lowEnergyReason)
                     presenceState = Internal.getScavengePresenceState(worker)
                 end
             end
@@ -391,27 +391,27 @@ function Sim.ProcessWorker(worker, currentHour)
 
             presenceState = Internal.getScavengePresenceState(worker)
             worker.dumpCooldownHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
-            if Tiredness and deltaHours > 0 then
+            if Energy and deltaHours > 0 then
                 if didScavengeWork and workableHours > 0 then
-                    Tiredness.ApplyWorkDrain(worker, workableHours, profile)
+                    Energy.ApplyWorkDrain(worker, workableHours, profile)
                 elseif presenceState == Config.PresenceStates.Home then
-                    Tiredness.ApplyHomeRecovery(worker, deltaHours, profile)
+                    Energy.ApplyHomeRecovery(worker, deltaHours, profile)
                 elseif presenceState == Config.PresenceStates.AwayToSite or presenceState == Config.PresenceStates.AwayToHome then
-                    Tiredness.ApplyTravelDrain(worker, deltaHours, profile)
+                    Energy.ApplyTravelDrain(worker, deltaHours, profile)
                 end
 
-                forcedRest = Tiredness.IsForcedRest(worker)
+                forcedRest = Energy.IsForcedRest(worker)
                 if forcedRest then
-                    Tiredness.CompleteForcedRest(worker, currentHour, "Fully rested again.")
-                elseif Tiredness.IsDepleted(worker) then
+                    Energy.CompleteForcedRest(worker, currentHour, "Fully rested again.")
+                elseif Energy.IsDepleted(worker) then
                     forcedRest = true
-                    Tiredness.BeginForcedRest(worker, currentHour, lowTirednessReason, presenceState == Config.PresenceStates.Home and "Too tired to keep working. Resting at home." or nil)
+                    Energy.BeginForcedRest(worker, currentHour, lowEnergyReason, presenceState == Config.PresenceStates.Home and "Too tired to keep working. Resting at home." or nil)
                     if presenceState ~= Config.PresenceStates.Home and presenceState ~= Config.PresenceStates.AwayToHome then
-                        Internal.beginScavengeReturnHome(worker, currentHour, lowTirednessReason)
+                        Internal.beginScavengeReturnHome(worker, currentHour, lowEnergyReason)
                     end
                 end
                 presenceState = Internal.getScavengePresenceState(worker)
-                forcedRest = Tiredness.IsForcedRest(worker)
+                forcedRest = Energy.IsForcedRest(worker)
             end
 
             if hp <= 0 then
@@ -500,21 +500,21 @@ function Sim.ProcessWorker(worker, currentHour)
             end
         end
 
-        if Tiredness and deltaHours > 0 and hp > 0 then
+        if Energy and deltaHours > 0 and hp > 0 then
             if didWorkThisTick and workableHours > 0 then
-                Tiredness.ApplyWorkDrain(worker, workableHours, profile)
+                Energy.ApplyWorkDrain(worker, workableHours, profile)
             else
-                Tiredness.ApplyHomeRecovery(worker, deltaHours, profile)
+                Energy.ApplyHomeRecovery(worker, deltaHours, profile)
             end
 
-            forcedRest = Tiredness.IsForcedRest(worker)
+            forcedRest = Energy.IsForcedRest(worker)
             if forcedRest then
-                Tiredness.CompleteForcedRest(worker, currentHour, "Fully rested again.")
-            elseif Tiredness.IsDepleted(worker) then
+                Energy.CompleteForcedRest(worker, currentHour, "Fully rested again.")
+            elseif Energy.IsDepleted(worker) then
                 forcedRest = true
-                Tiredness.BeginForcedRest(worker, currentHour, lowTirednessReason, "Too tired to keep building. Resting at home.")
+                Energy.BeginForcedRest(worker, currentHour, lowEnergyReason, "Too tired to keep building. Resting at home.")
             end
-            forcedRest = Tiredness.IsForcedRest(worker)
+            forcedRest = Energy.IsForcedRest(worker)
         end
 
         if hp <= 0 then
@@ -562,21 +562,21 @@ function Sim.ProcessWorker(worker, currentHour)
             didWorkThisTick = doctorWorkHours > 0
         end
 
-        if Tiredness and deltaHours > 0 and hp > 0 then
+        if Energy and deltaHours > 0 and hp > 0 then
             if didWorkThisTick and doctorWorkHours > 0 then
-                Tiredness.ApplyWorkDrain(worker, doctorWorkHours, profile)
+                Energy.ApplyWorkDrain(worker, doctorWorkHours, profile)
             else
-                Tiredness.ApplyHomeRecovery(worker, deltaHours, profile)
+                Energy.ApplyHomeRecovery(worker, deltaHours, profile)
             end
 
-            forcedRest = Tiredness.IsForcedRest(worker)
+            forcedRest = Energy.IsForcedRest(worker)
             if forcedRest then
-                Tiredness.CompleteForcedRest(worker, currentHour, "Fully rested again.")
-            elseif Tiredness.IsDepleted(worker) then
+                Energy.CompleteForcedRest(worker, currentHour, "Fully rested again.")
+            elseif Energy.IsDepleted(worker) then
                 forcedRest = true
-                Tiredness.BeginForcedRest(worker, currentHour, lowTirednessReason, "Too tired to keep treating patients. Resting at home.")
+                Energy.BeginForcedRest(worker, currentHour, lowEnergyReason, "Too tired to keep treating patients. Resting at home.")
             end
-            forcedRest = Tiredness.IsForcedRest(worker)
+            forcedRest = Energy.IsForcedRest(worker)
         end
 
         if hp <= 0 then
@@ -643,21 +643,21 @@ function Sim.ProcessWorker(worker, currentHour)
             end
         end
 
-        if Tiredness and deltaHours > 0 and hp > 0 then
+        if Energy and deltaHours > 0 and hp > 0 then
             if didWorkThisTick and workableHours > 0 then
-                Tiredness.ApplyWorkDrain(worker, workableHours, profile)
+                Energy.ApplyWorkDrain(worker, workableHours, profile)
             else
-                Tiredness.ApplyHomeRecovery(worker, deltaHours, profile)
+                Energy.ApplyHomeRecovery(worker, deltaHours, profile)
             end
 
-            forcedRest = Tiredness.IsForcedRest(worker)
+            forcedRest = Energy.IsForcedRest(worker)
             if forcedRest then
-                Tiredness.CompleteForcedRest(worker, currentHour, "Fully rested again.")
-            elseif Tiredness.IsDepleted(worker) then
+                Energy.CompleteForcedRest(worker, currentHour, "Fully rested again.")
+            elseif Energy.IsDepleted(worker) then
                 forcedRest = true
-                Tiredness.BeginForcedRest(worker, currentHour, lowTirednessReason, "Too tired to keep working. Resting at home.")
+                Energy.BeginForcedRest(worker, currentHour, lowEnergyReason, "Too tired to keep working. Resting at home.")
             end
-            forcedRest = Tiredness.IsForcedRest(worker)
+            forcedRest = Energy.IsForcedRest(worker)
         end
 
         if hp <= 0 then

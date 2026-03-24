@@ -8,7 +8,7 @@ DynamicTrading.RegisterInteractionStrings("Colony", "Outcome", {
         ReturnedHomeWithItems = "Returned home and stowed {count} {item_word} from {place}.",
         ReturnReasons = {
             FullHaul = "Pack is full, heading home.",
-            LowTiredness = "Too tired to keep going, heading home.",
+            LowEnergy = "Too tired to keep going, heading home.",
             LowFood = "Running low on food, heading home.",
             LowDrink = "Running low on water, heading home.",
             MissingTool = "Missing the right tool, heading home.",

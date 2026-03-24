@@ -76,7 +76,7 @@ end
 local function isSleepEligibleWorker(worker)
     return isLivingWorker(worker)
         and tostring(worker and worker.presenceState or "") == tostring((DC_Colony and DC_Colony.Config and DC_Colony.Config.PresenceStates and DC_Colony.Config.PresenceStates.Home) or "Home")
-        and (DC_Colony and DC_Colony.Tiredness and DC_Colony.Tiredness.IsForcedRest and DC_Colony.Tiredness.IsForcedRest(worker) or false)
+        and (DC_Colony and DC_Colony.Energy and DC_Colony.Energy.IsForcedRest and DC_Colony.Energy.IsForcedRest(worker) or false)
         and math.max(0, tonumber(worker and worker.hp) or 0) > 0
 end
 
@@ -102,7 +102,7 @@ local function isDoctorAvailable(worker)
         and tostring(labourConfig.NormalizeJobType and labourConfig.NormalizeJobType(worker and worker.jobType) or worker and worker.jobType or "") == tostring((labourConfig.JobTypes or {}).Doctor or "Doctor")
         and worker.jobEnabled == true
         and tostring(worker and worker.presenceState or "") == tostring((labourConfig.PresenceStates or {}).Home or "Home")
-        and not (DC_Colony and DC_Colony.Tiredness and DC_Colony.Tiredness.IsForcedRest and DC_Colony.Tiredness.IsForcedRest(worker) or false)
+        and not (DC_Colony and DC_Colony.Energy and DC_Colony.Energy.IsForcedRest and DC_Colony.Energy.IsForcedRest(worker) or false)
         and math.max(0, tonumber(worker and worker.hp) or 0) > 0
 end
 
