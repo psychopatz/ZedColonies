@@ -67,16 +67,29 @@ end
 function Renderer.Draw(panel, snapshot, viewportState, selectedPlotKey)
     local plots = snapshot and snapshot.map and snapshot.map.plots or {}
     local territory = snapshot and snapshot.map or {}
+    local statusText = ""
 
-    panel:drawText(tostring(DC_BuildingsUIUtils.GetColonyDisplayName()), 10, 8, 1, 1, 1, 1, UIFont.Medium)
-    panel:drawText(
-        "Unlocked " .. tostring(territory.unlockedPlotCount or 0)
+    if territory.frontierExpansionAvailable == true then
+        statusText = "Unlocked "
+            .. tostring(territory.unlockedPlotCount or 0)
             .. " | Ring "
             .. tostring(territory.currentFrontierRing or 1)
             .. " Barricades "
             .. tostring(territory.activeBarricadeCount or 0)
             .. "/"
-            .. tostring(territory.maxActiveBarricades or 0),
+            .. tostring(territory.maxActiveBarricades or 0)
+    else
+        statusText = "Unlocked "
+            .. tostring(territory.unlockedPlotCount or 0)
+            .. " | Next Ring "
+            .. tostring(territory.nextFrontierRing or territory.currentFrontierRing or 1)
+            .. " requires HQ Lv "
+            .. tostring(territory.frontierRequiredHQLevel or territory.nextFrontierRing or territory.currentFrontierRing or 1)
+    end
+
+    panel:drawText(tostring(DC_BuildingsUIUtils.GetColonyDisplayName()), 10, 8, 1, 1, 1, 1, UIFont.Medium)
+    panel:drawText(
+        statusText,
         150,
         10,
         0.76,

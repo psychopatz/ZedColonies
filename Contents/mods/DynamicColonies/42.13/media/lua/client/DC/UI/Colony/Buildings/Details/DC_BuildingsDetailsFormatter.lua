@@ -12,12 +12,20 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
     text = text .. " <RGB:0.72,0.72,0.72> Type: <RGB:1,1,1> " .. tostring(plot.kind or "Standard") .. " <LINE> "
     text = text .. " <RGB:0.72,0.72,0.72> State: <RGB:1,1,1> " .. tostring(plot.state or "Unknown") .. " <LINE> "
     if plot.territory then
-        text = text .. " <RGB:0.72,0.72,0.72> Frontier Ring: <RGB:1,1,1> " .. tostring(plot.territory.currentFrontierRing or 1) .. " <LINE> "
-        text = text .. " <RGB:0.72,0.72,0.72> Barricades: <RGB:1,1,1> "
-            .. tostring(plot.territory.activeBarricadeCount or 0)
-            .. " / "
-            .. tostring(plot.territory.maxActiveBarricades or 0)
-            .. " <LINE> "
+        text = text .. " <RGB:0.72,0.72,0.72> Headquarters Level: <RGB:1,1,1> " .. tostring(plot.territory.headquartersLevel or 0) .. " <LINE> "
+        if plot.territory.frontierExpansionAvailable == true then
+            text = text .. " <RGB:0.72,0.72,0.72> Frontier Ring: <RGB:1,1,1> " .. tostring(plot.territory.currentFrontierRing or 1) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Barricades: <RGB:1,1,1> "
+                .. tostring(plot.territory.activeBarricadeCount or 0)
+                .. " / "
+                .. tostring(plot.territory.maxActiveBarricades or 0)
+                .. " <LINE> "
+        else
+            text = text .. " <RGB:0.72,0.72,0.72> Next Frontier Ring: <RGB:1,1,1> " .. tostring(plot.territory.nextFrontierRing or plot.territory.currentFrontierRing or 1) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Requirement: <RGB:1,1,1> Headquarters level "
+                .. tostring(plot.territory.frontierRequiredHQLevel or plot.territory.nextFrontierRing or plot.territory.currentFrontierRing or 1)
+                .. " <LINE> "
+        end
     end
 
     if plot.project then
@@ -48,12 +56,19 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
 
         if building.buildingType == "Headquarters" and plot.territory then
             text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Perimeter Control <LINE> "
-            text = text .. " <RGB:0.72,0.72,0.72> Active Barricades: <RGB:1,1,1> "
-                .. tostring(plot.territory.activeBarricadeCount or 0)
-                .. " / "
-                .. tostring(plot.territory.maxActiveBarricades or 0)
-                .. " <LINE> "
-            text = text .. " <RGB:0.72,0.72,0.72> Frontier Ring: <RGB:1,1,1> " .. tostring(plot.territory.currentFrontierRing or 1) .. " <LINE> "
+            if plot.territory.frontierExpansionAvailable == true then
+                text = text .. " <RGB:0.72,0.72,0.72> Active Barricades: <RGB:1,1,1> "
+                    .. tostring(plot.territory.activeBarricadeCount or 0)
+                    .. " / "
+                    .. tostring(plot.territory.maxActiveBarricades or 0)
+                    .. " <LINE> "
+                text = text .. " <RGB:0.72,0.72,0.72> Frontier Ring: <RGB:1,1,1> " .. tostring(plot.territory.currentFrontierRing or 1) .. " <LINE> "
+            else
+                text = text .. " <RGB:0.72,0.72,0.72> Next Frontier Ring: <RGB:1,1,1> " .. tostring(plot.territory.nextFrontierRing or plot.territory.currentFrontierRing or 1) .. " <LINE> "
+                text = text .. " <RGB:0.82,0.74,0.58> Upgrade Headquarters to level "
+                    .. tostring(plot.territory.frontierRequiredHQLevel or plot.territory.nextFrontierRing or plot.territory.currentFrontierRing or 1)
+                    .. " to expand further. <LINE> "
+            end
             text = text .. " <RGB:0.72,0.72,0.72> Unlocked Plots: <RGB:1,1,1> " .. tostring(plot.territory.unlockedPlotCount or 0) .. " <LINE> "
         elseif building.buildingType == "Barricade" then
             text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Perimeter Control <LINE> "
@@ -140,6 +155,12 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
             for _, line in ipairs(DC_BuildingsUIUtils.BuildRecipeLines(plot.buildOptions[1].preview and plot.buildOptions[1].preview.recipeAvailability and plot.buildOptions[1].preview.recipeAvailability.entries or {})) do
                 text = text .. " " .. line .. " <LINE> "
             end
+        elseif plot.territory and plot.territory.frontierExpansionAvailable ~= true then
+            text = text .. " <LINE> <RGB:0.82,0.74,0.58> Upgrade Headquarters to level "
+                .. tostring(plot.territory.frontierRequiredHQLevel or plot.territory.nextFrontierRing or plot.territory.currentFrontierRing or 1)
+                .. " to unlock frontier ring "
+                .. tostring(plot.territory.nextFrontierRing or plot.territory.currentFrontierRing or 1)
+                .. ". <LINE> "
         else
             text = text .. " <LINE> <RGB:0.72,0.62,0.62> Secure the current frontier ring first to reveal the next outer ring. <LINE> "
         end

@@ -105,6 +105,20 @@ local function getSecuredPerimeterRing(ownerUsername)
     return computedRing
 end
 
+local function getNextFrontierRing(ownerUsername)
+    return getSecuredPerimeterRing(ownerUsername) + 1
+end
+
+local function canExpandToRing(ownerUsername, ring)
+    local safeOwner = getOwnerUsername(ownerUsername)
+    local safeRing = math.max(0, math.floor(tonumber(ring) or 0))
+    if safeRing <= 0 then
+        return false
+    end
+
+    return Buildings.GetHeadquartersLevel(safeOwner) >= safeRing
+end
+
 local function hasUnlockedSupportingNeighbor(ownerUsername, plotX, plotY)
     local x = math.floor(tonumber(plotX) or 0)
     local y = math.floor(tonumber(plotY) or 0)
@@ -122,11 +136,20 @@ local function hasUnlockedSupportingNeighbor(ownerUsername, plotX, plotY)
 end
 
 local function getActiveFrontierRing(ownerUsername)
-    return getSecuredPerimeterRing(ownerUsername) + 1
+    local safeOwner = getOwnerUsername(ownerUsername)
+    local nextRing = getNextFrontierRing(safeOwner)
+    if canExpandToRing(safeOwner, nextRing) then
+        return nextRing
+    end
+    return 0
 end
 
 function Buildings.GetActiveFrontierRing(ownerUsername)
     return getActiveFrontierRing(ownerUsername)
+end
+
+function Buildings.GetNextFrontierRing(ownerUsername)
+    return getNextFrontierRing(ownerUsername)
 end
 
 function Buildings.GetSecuredPerimeterRing(ownerUsername)
@@ -139,6 +162,9 @@ function Buildings.TryFinalizeBarricadeRing(ownerUsername, ring)
     local currentSecuredRing = getSecuredPerimeterRing(safeOwner)
 
     if safeRing ~= (currentSecuredRing + 1) then
+        return false, 0
+    end
+    if not canExpandToRing(safeOwner, safeRing) then
         return false, 0
     end
     if not isRingSecured(safeOwner, safeRing) then
@@ -178,6 +204,9 @@ function Buildings.GetMaxActiveBarricades(ownerUsername)
     local owner = getOwnerUsername(ownerUsername)
     local frontierConfig = Config and Config.Frontier or nil
     local currentRing = getActiveFrontierRing(owner)
+    if currentRing <= 0 then
+        return 0
+    end
     local ringCap = frontierConfig and frontierConfig.GetRingBarricadeCapacity and frontierConfig.GetRingBarricadeCapacity(currentRing) or 0
     return ringCap
 end
@@ -185,6 +214,9 @@ end
 function Buildings.GetActiveBarricadeCount(ownerUsername)
     local owner = getOwnerUsername(ownerUsername)
     local currentRing = getActiveFrontierRing(owner)
+    if currentRing <= 0 then
+        return 0
+    end
     local count = 0
 
     for _, instance in ipairs(Buildings.GetBuildingsForOwner(owner) or {}) do
@@ -213,6 +245,9 @@ function Buildings.IsFrontierPlot(ownerUsername, plotX, plotY)
     local x = math.floor(tonumber(plotX) or 0)
     local y = math.floor(tonumber(plotY) or 0)
     local targetRing = getActiveFrontierRing(owner)
+    if targetRing <= 0 then
+        return false
+    end
     local plot, state, building, project = Buildings.GetPlotWithState(owner, x, y)
 
     if not plot or tostring(plot.kind or "") ~= tostring(Buildings.MapConstants.PlotKinds.Standard) then
@@ -235,6 +270,9 @@ end
 function Buildings.GetFrontierCandidatePlots(ownerUsername)
     local owner = getOwnerUsername(ownerUsername)
     local targetRing = getActiveFrontierRing(owner)
+    if targetRing <= 0 then
+        return {}
+    end
     local candidates = {}
     local seen = {}
 
@@ -264,6 +302,7 @@ function Buildings.GetTerritorySummary(ownerUsername)
     local unlockedPlots = Buildings.GetUnlockedPlotEntries(owner)
     local headquartersLevel = Buildings.GetHeadquartersLevel(owner)
     local securedPerimeterRing = getSecuredPerimeterRing(owner)
+    local nextFrontierRing = getNextFrontierRing(owner)
     local currentFrontierRing = getActiveFrontierRing(owner)
     local activeBarricades = Buildings.GetActiveBarricadeCount(owner)
     local maxBarricades = Buildings.GetMaxActiveBarricades(owner)
@@ -272,7 +311,10 @@ function Buildings.GetTerritorySummary(ownerUsername)
         ownerUsername = owner,
         headquartersLevel = headquartersLevel,
         securedPerimeterRing = securedPerimeterRing,
-        currentFrontierRing = currentFrontierRing,
+        currentFrontierRing = currentFrontierRing > 0 and currentFrontierRing or nextFrontierRing,
+        nextFrontierRing = nextFrontierRing,
+        frontierExpansionAvailable = currentFrontierRing > 0,
+        frontierRequiredHQLevel = nextFrontierRing,
         unlockedPlotCount = #unlockedPlots,
         activeBarricadeCount = activeBarricades,
         maxActiveBarricades = maxBarricades

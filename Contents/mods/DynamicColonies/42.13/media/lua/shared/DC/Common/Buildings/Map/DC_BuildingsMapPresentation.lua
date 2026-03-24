@@ -68,6 +68,10 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
     local territory = Buildings.GetTerritorySummary and Buildings.GetTerritorySummary(owner) or {
         headquartersLevel = 0,
         securedPerimeterRing = 0,
+        currentFrontierRing = 1,
+        nextFrontierRing = 1,
+        frontierExpansionAvailable = false,
+        frontierRequiredHQLevel = 1,
         unlockedPlotCount = 0,
         activeBarricadeCount = 0,
         maxActiveBarricades = 0
@@ -200,6 +204,10 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
         unlockedBounds = bounds,
         headquartersLevel = territory.headquartersLevel,
         securedPerimeterRing = territory.securedPerimeterRing,
+        currentFrontierRing = territory.currentFrontierRing,
+        nextFrontierRing = territory.nextFrontierRing,
+        frontierExpansionAvailable = territory.frontierExpansionAvailable,
+        frontierRequiredHQLevel = territory.frontierRequiredHQLevel,
         unlockedPlotCount = territory.unlockedPlotCount,
         activeBarricadeCount = territory.activeBarricadeCount,
         maxActiveBarricades = territory.maxActiveBarricades,

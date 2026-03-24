@@ -612,15 +612,18 @@ function Buildings.ResolveProjectTarget(ownerUsername, buildingType, mode, plotX
         if not Buildings.OwnerHasHeadquarters(owner) then
             return nil, "Build Headquarters first."
         end
-        if not Buildings.IsFrontierPlot or not Buildings.IsFrontierPlot(owner, x, y) then
-            return nil, "Barricades can only be built on the active frontier perimeter."
-        end
 
         local activeBarricades = Buildings.GetActiveBarricadeCount and Buildings.GetActiveBarricadeCount(owner) or 0
         local maxBarricades = Buildings.GetMaxActiveBarricades and Buildings.GetMaxActiveBarricades(owner) or 0
-        local frontierRing = Buildings.GetActiveFrontierRing and Buildings.GetActiveFrontierRing(owner) or (Buildings.GetPlotRing and Buildings.GetPlotRing(x, y) or 1)
+        local frontierRing = Buildings.GetActiveFrontierRing and Buildings.GetActiveFrontierRing(owner) or 0
+        if frontierRing <= 0 and Buildings.GetNextFrontierRing then
+            frontierRing = Buildings.GetNextFrontierRing(owner)
+        end
         if maxBarricades <= 0 then
-            return nil, "Unsafe-zone control is unavailable for ring " .. tostring(frontierRing) .. "."
+            return nil, "Upgrade Headquarters to level " .. tostring(frontierRing) .. " to unlock frontier ring " .. tostring(frontierRing) .. "."
+        end
+        if not Buildings.IsFrontierPlot or not Buildings.IsFrontierPlot(owner, x, y) then
+            return nil, "Barricades can only be built on the active frontier perimeter."
         end
         if activeBarricades >= maxBarricades then
             return nil, "Frontier ring " .. tostring(frontierRing) .. " is at capacity."

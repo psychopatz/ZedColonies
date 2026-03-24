@@ -273,6 +273,44 @@ function DC_BuildingsWindow:onRefresh()
     self:requestSnapshot()
 end
 
+function DC_BuildingsWindow:layoutChildren()
+    local th = self:titleBarHeight()
+    local pad = 10
+    local contentY = th + pad
+    local contentH = self.height - th - (pad * 2) - 40
+    local mapW = math.floor(self.width * 0.62)
+    local detailsW = self.width - mapW - (pad * 3)
+
+    if self.mapPanel then
+        self.mapPanel:setX(pad)
+        self.mapPanel:setY(contentY)
+        self.mapPanel:setWidth(mapW)
+        self.mapPanel:setHeight(contentH)
+    end
+
+    if self.detailsPanel then
+        self.detailsPanel:setX((pad * 2) + mapW)
+        self.detailsPanel:setY(contentY)
+        self.detailsPanel:setWidth(detailsW)
+        self.detailsPanel:setHeight(contentH)
+        if self.detailsPanel.relayout then
+            self.detailsPanel:relayout()
+        end
+    end
+
+    if self.btnRefresh then
+        self.btnRefresh:setX(self.width - 100)
+        self.btnRefresh:setY(self.height - 30)
+        self.btnRefresh:setWidth(90)
+        self.btnRefresh:setHeight(24)
+    end
+end
+
+function DC_BuildingsWindow:onResize()
+    ISCollapsableWindow.onResize(self)
+    self:layoutChildren()
+end
+
 function DC_BuildingsWindow:createChildren()
     ISCollapsableWindow.createChildren(self)
 
@@ -287,6 +325,9 @@ function DC_BuildingsWindow:createChildren()
         self:onPlotSelected(plot)
     end)
     self.mapPanel:initialise()
+    self.mapPanel:setAnchorLeft(true)
+    self.mapPanel:setAnchorRight(false)
+    self.mapPanel:setAnchorTop(true)
     self.mapPanel:setAnchorBottom(true)
     self:addChild(self.mapPanel)
 
@@ -313,16 +354,21 @@ function DC_BuildingsWindow:createChildren()
     )
     self.detailsPanel:initialise()
     self.detailsPanel:createChildren()
+    self.detailsPanel:setAnchorLeft(false)
     self.detailsPanel:setAnchorRight(true)
+    self.detailsPanel:setAnchorTop(true)
     self.detailsPanel:setAnchorBottom(true)
     self:addChild(self.detailsPanel)
 
     self.btnRefresh = ISButton:new(self.width - 100, self.height - 30, 90, 24, "Refresh", self, self.onRefresh)
     self.btnRefresh:initialise()
-    self.btnRefresh:setAnchorBottom(true)
+    self.btnRefresh:setAnchorLeft(false)
     self.btnRefresh:setAnchorRight(true)
+    self.btnRefresh:setAnchorTop(false)
+    self.btnRefresh:setAnchorBottom(true)
     self:addChild(self.btnRefresh)
 
+    self:layoutChildren()
     self:requestSnapshot()
 end
 

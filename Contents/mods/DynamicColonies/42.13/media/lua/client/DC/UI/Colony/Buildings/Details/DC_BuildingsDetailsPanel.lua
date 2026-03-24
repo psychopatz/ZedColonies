@@ -35,12 +35,64 @@ function DC_BuildingsDetailsPanel:initialise()
     ISPanel.initialise(self)
 end
 
+function DC_BuildingsDetailsPanel:relayout()
+    local textPanelHeight = self.height - (self.debugEnabled == true and 78 or 50)
+    if self.textPanel then
+        self.textPanel:setX(8)
+        self.textPanel:setY(8)
+        self.textPanel:setWidth(math.max(0, self.width - 16))
+        self.textPanel:setHeight(math.max(0, textPanelHeight))
+        if self.textPanel.vscroll then
+            self.textPanel.vscroll:setHeight(self.textPanel:getHeight())
+        end
+    end
+    if self.btnDebugComplete then
+        self.btnDebugComplete:setX(8)
+        self.btnDebugComplete:setY(self.height - 62)
+        self.btnDebugComplete:setWidth(96)
+        self.btnDebugComplete:setHeight(24)
+    end
+    if self.btnUpgrade then
+        self.btnUpgrade:setX(8)
+        self.btnUpgrade:setY(self.height - 34)
+        self.btnUpgrade:setWidth(78)
+        self.btnUpgrade:setHeight(24)
+    end
+    if self.btnInstall then
+        self.btnInstall:setX(94)
+        self.btnInstall:setY(self.height - 34)
+        self.btnInstall:setWidth(78)
+        self.btnInstall:setHeight(24)
+    end
+    if self.btnSwap then
+        self.btnSwap:setX(180)
+        self.btnSwap:setY(self.height - 34)
+        self.btnSwap:setWidth(78)
+        self.btnSwap:setHeight(24)
+    end
+    if self.btnDestroy then
+        self.btnDestroy:setX(266)
+        self.btnDestroy:setY(self.height - 34)
+        self.btnDestroy:setWidth(62)
+        self.btnDestroy:setHeight(24)
+    end
+end
+
+function DC_BuildingsDetailsPanel:onResize()
+    ISPanel.onResize(self)
+    self:relayout()
+end
+
 function DC_BuildingsDetailsPanel:createChildren()
     ISPanel.createChildren(self)
 
     local textPanelHeight = self.height - (self.debugEnabled == true and 78 or 50)
     self.textPanel = ISRichTextPanel:new(8, 8, self.width - 16, textPanelHeight)
     self.textPanel:initialise()
+    self.textPanel:setAnchorLeft(true)
+    self.textPanel:setAnchorRight(false)
+    self.textPanel:setAnchorTop(true)
+    self.textPanel:setAnchorBottom(false)
     self.textPanel.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
     self.textPanel.borderColor = { r = 0, g = 0, b = 0, a = 0 }
     self.textPanel.clip = true
@@ -51,29 +103,46 @@ function DC_BuildingsDetailsPanel:createChildren()
     if self.debugEnabled == true then
         self.btnDebugComplete = ISButton:new(8, self.height - 62, 96, 24, "Debug Finish", self, self.onDebugCompleteClicked)
         self.btnDebugComplete:initialise()
+        self.btnDebugComplete:setAnchorLeft(true)
+        self.btnDebugComplete:setAnchorRight(false)
+        self.btnDebugComplete:setAnchorTop(false)
         self.btnDebugComplete:setAnchorBottom(true)
         self:addChild(self.btnDebugComplete)
     end
 
     self.btnUpgrade = ISButton:new(8, self.height - 34, 78, 24, "Upgrade", self, self.onUpgradeClicked)
     self.btnUpgrade:initialise()
+    self.btnUpgrade:setAnchorLeft(true)
+    self.btnUpgrade:setAnchorRight(false)
+    self.btnUpgrade:setAnchorTop(false)
     self.btnUpgrade:setAnchorBottom(true)
     self:addChild(self.btnUpgrade)
 
     self.btnInstall = ISButton:new(94, self.height - 34, 78, 24, "Install", self, self.onInstallClicked)
     self.btnInstall:initialise()
+    self.btnInstall:setAnchorLeft(true)
+    self.btnInstall:setAnchorRight(false)
+    self.btnInstall:setAnchorTop(false)
     self.btnInstall:setAnchorBottom(true)
     self:addChild(self.btnInstall)
 
     self.btnSwap = ISButton:new(180, self.height - 34, 78, 24, "Manage", self, self.onSwapClicked)
     self.btnSwap:initialise()
+    self.btnSwap:setAnchorLeft(true)
+    self.btnSwap:setAnchorRight(false)
+    self.btnSwap:setAnchorTop(false)
     self.btnSwap:setAnchorBottom(true)
     self:addChild(self.btnSwap)
 
     self.btnDestroy = ISButton:new(266, self.height - 34, 62, 24, "Destroy", self, self.onDestroyClicked)
     self.btnDestroy:initialise()
+    self.btnDestroy:setAnchorLeft(true)
+    self.btnDestroy:setAnchorRight(false)
+    self.btnDestroy:setAnchorTop(false)
     self.btnDestroy:setAnchorBottom(true)
     self:addChild(self.btnDestroy)
+
+    self:relayout()
 end
 
 function DC_BuildingsDetailsPanel:setPlot(plot)
