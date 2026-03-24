@@ -8,6 +8,9 @@ local Sim = DC_Colony.Sim
 local Internal = Sim.Internal
 local Energy = DC_Colony.Energy
 local Skills = DC_Colony.Skills
+local Health = DC_Colony.Health
+local Medical = DC_Colony.Medical
+local Nutrition = DC_Colony.Nutrition
 
 local function buildXPAmount(totalQuantity)
     return math.max(10, 20 + math.min(20, math.floor(tonumber(totalQuantity) or 0) * 3))
@@ -48,117 +51,7 @@ local function getOwnerKey(ownerUsername)
     return Config.GetOwnerUsername and Config.GetOwnerUsername(ownerUsername) or tostring(ownerUsername or "local")
 end
 
-local function isSleepEligible(worker, forcedRest)
-    return worker
-        and tostring(worker.presenceState or "") == tostring((Config.PresenceStates or {}).Home or "Home")
-        and forcedRest == true
-        and math.max(0, tonumber(worker.hp) or 0) > 0
-end
-
-local function getOwnerMedicalPlan(ownerUsername)
-    local plans = Internal.ownerMedicalPlans or {}
-    return plans[getOwnerKey(ownerUsername)]
-end
-
-local function buildOwnerMedicalPlan(ownerUsername)
-    local buildings = getBuildings()
-    local infirmary = buildings and buildings.BuildInfirmaryAssignment and buildings.BuildInfirmaryAssignment(ownerUsername) or nil
-    if not infirmary then
-        infirmary = {
-            assignments = {},
-            doctorCoveredWorkerIDs = {},
-            doctorCoveredCount = 0,
-            doctorCount = 0,
-            treatmentHourBudget = 0
-        }
-    end
-
-    local plan = {
-        ownerUsername = getOwnerKey(ownerUsername),
-        infirmary = infirmary,
-        priorityIndex = {},
-        remainingTreatmentHours = math.max(0, tonumber(infirmary.treatmentHourBudget) or 0),
-        initialTreatmentHours = math.max(0, tonumber(infirmary.treatmentHourBudget) or 0),
-        usedTreatmentHours = 0,
-        coveredPatientCount = math.max(0, tonumber(infirmary.doctorCoveredCount) or 0),
-        doctorCount = math.max(0, tonumber(infirmary.doctorCount) or 0),
-    }
-
-    for index, workerID in ipairs(infirmary.doctorCoveredWorkerIDs or {}) do
-        plan.priorityIndex[tostring(workerID or "")] = index
-    end
-
-    return plan
-end
-
-local function buildAllOwnerMedicalPlans(data)
-    local plans = {}
-    local seenOwners = {}
-
-    for _, worker in pairs(data.Workers or {}) do
-        local ownerKey = getOwnerKey(worker and worker.ownerUsername)
-        if ownerKey ~= "" and not seenOwners[ownerKey] then
-            seenOwners[ownerKey] = true
-            plans[ownerKey] = buildOwnerMedicalPlan(ownerKey)
-        end
-    end
-
-    return plans
-end
-
-local function getWorkerMedicalAssignment(worker)
-    local plan = getOwnerMedicalPlan(worker and worker.ownerUsername)
-    local infirmary = plan and plan.infirmary or nil
-    local assignments = infirmary and infirmary.assignments or {}
-    return assignments[tostring(worker and worker.workerID or "")]
-end
-
-local function applySleepHealing(worker, forcedRest, nutritionResult)
-    local baseRate = 0.25
-    local treatedRate = 1.00
-    local supportedHours = math.max(0, tonumber(nutritionResult and nutritionResult.supportedHours) or 0)
-    local maxHp = math.max(1, tonumber(worker and worker.maxHp) or Config.DEFAULT_WORKER_MAX_HP or 100)
-    local hp = Internal.clampHp(worker and worker.hp, maxHp)
-    local sleepEligible = isSleepEligible(worker, forcedRest)
-    local assignment = getWorkerMedicalAssignment(worker) or {}
-    local plan = getOwnerMedicalPlan(worker and worker.ownerUsername)
-    local boostedHours = 0
-    local healingAmount = 0
-
-    worker.sleepHealingRate = 0
-    worker.sleepHealingSource = "None"
-    worker.medicalSupplyBlocked = false
-
-    if not sleepEligible or supportedHours <= 0 or hp <= 0 then
-        return hp, 0, 0
-    end
-
-    healingAmount = supportedHours * baseRate
-    if assignment.assigned == true and assignment.doctorCovered == true and plan and (plan.remainingTreatmentHours or 0) > 0 then
-        boostedHours = math.min(supportedHours, math.max(0, tonumber(plan.remainingTreatmentHours) or 0))
-        plan.remainingTreatmentHours = math.max(0, (tonumber(plan.remainingTreatmentHours) or 0) - boostedHours)
-        plan.usedTreatmentHours = math.max(0, tonumber(plan.usedTreatmentHours) or 0) + boostedHours
-        healingAmount = healingAmount + (boostedHours * (treatedRate - baseRate))
-    end
-
-    hp = Internal.clampHp(hp + healingAmount, maxHp)
-    worker.hp = hp
-    worker.sleepHealingRate = supportedHours > 0 and (healingAmount / supportedHours) or 0
-
-    if boostedHours > 0 then
-        worker.sleepHealingSource = "InfirmaryDoctor"
-    elseif assignment.assigned == true then
-        worker.sleepHealingSource = "Infirmary"
-    else
-        worker.sleepHealingSource = "HomeSleep"
-    end
-
-    if assignment.assigned == true and assignment.doctorCovered == true and boostedHours < supportedHours then
-        worker.medicalSupplyBlocked = true
-    end
-
-    return hp, supportedHours, boostedHours
-end
+-- Removed inline medical/HP logic in favor of ColonyHealth and ColonyMedical submodules
 
 function Sim.ProcessWorker(worker, currentHour)
     if not worker then return end
@@ -282,7 +175,7 @@ function Sim.ProcessWorker(worker, currentHour)
     if normalizedJobType == Config.JobTypes.Scavenge then
         canWork = canWork and worker.presenceState == Config.PresenceStates.Scavenging
     end
-    local nutritionResult = Internal.processNutrition(
+    local nutritionResult = Nutrition and Nutrition.ProcessWorkerNutrition and Nutrition.ProcessWorkerNutrition(
         worker,
         currentHour,
         dailyCaloriesNeed,
@@ -293,9 +186,11 @@ function Sim.ProcessWorker(worker, currentHour)
     local supportedHours = math.max(0, tonumber(nutritionResult and nutritionResult.supportedHours) or 0)
     local hasCalories = nutritionResult and nutritionResult.hasCalories == true or false
     local hasHydration = nutritionResult and nutritionResult.hasHydration == true or false
-    local hp = Internal.clampHp(nutritionResult and nutritionResult.hp, math.max(1, tonumber(worker.maxHp) or Config.DEFAULT_WORKER_MAX_HP or 100))
+    local hp = Health and Health.GetCurrent(worker) or 100
 
-    hp = select(1, applySleepHealing(worker, forcedRest, nutritionResult))
+    if Health and Health.ApplySleepHealing then
+        hp = select(1, Health.ApplySleepHealing(worker, forcedRest, supportedHours))
+    end
 
     worker.starvationHours = 0
     worker.dehydrationHours = 0
@@ -340,7 +235,10 @@ end
 function Sim.ProcessAllWorkers(currentHour)
     currentHour = currentHour or (Config.GetCurrentWorldHours and Config.GetCurrentWorldHours()) or Config.GetCurrentHour()
     local data = Registry.GetData()
-    Internal.ownerMedicalPlans = buildAllOwnerMedicalPlans(data)
+
+    if Medical and Medical.SetPlansCache and Medical.BuildAllOwnerPlans then
+        Medical.SetPlansCache(Medical.BuildAllOwnerPlans(data))
+    end
 
     local orderedWorkers = {}
     for _, worker in pairs(data.Workers or {}) do
@@ -354,8 +252,8 @@ function Sim.ProcessAllWorkers(currentHour)
             return ownerA < ownerB
         end
 
-        local planA = Internal.ownerMedicalPlans and Internal.ownerMedicalPlans[ownerA] or nil
-        local planB = Internal.ownerMedicalPlans and Internal.ownerMedicalPlans[ownerB] or nil
+        local planA = Medical and Medical.GetOwnerPlan and Medical.GetOwnerPlan(ownerA) or nil
+        local planB = Medical and Medical.GetOwnerPlan and Medical.GetOwnerPlan(ownerB) or nil
         local priorityA = planA and planA.priorityIndex and planA.priorityIndex[tostring(a and a.workerID or "")] or 1000000
         local priorityB = planB and planB.priorityIndex and planB.priorityIndex[tostring(b and b.workerID or "")] or 1000000
         if priorityA ~= priorityB then
@@ -373,14 +271,24 @@ function Sim.ProcessAllWorkers(currentHour)
         end
     end
 
-    for ownerUsername, plan in pairs(Internal.ownerMedicalPlans or {}) do
-        local usedHours = math.max(0, tonumber(plan and plan.usedTreatmentHours) or 0)
-        if usedHours > 0 and Warehouse and Warehouse.ConsumeMedicalProvisionHours then
-            Warehouse.ConsumeMedicalProvisionHours(ownerUsername, usedHours)
+    if Medical and Medical.GetOwnerPlan then
+        local seenPlans = {}
+        for _, worker in pairs(data.Workers or {}) do
+            local ownerKey = getOwnerKey(worker and worker.ownerUsername)
+            if not seenPlans[ownerKey] then
+                seenPlans[ownerKey] = true
+                local plan = Medical.GetOwnerPlan(ownerKey)
+                local usedHours = math.max(0, tonumber(plan and plan.usedTreatmentHours) or 0)
+                if usedHours > 0 and Warehouse and Warehouse.ConsumeMedicalProvisionHours then
+                    Warehouse.ConsumeMedicalProvisionHours(ownerKey, usedHours)
+                end
+            end
         end
     end
 
-    Internal.ownerMedicalPlans = nil
+    if Medical and Medical.ClearPlansCache then
+        Medical.ClearPlansCache()
+    end
     Registry.Save()
 end
 

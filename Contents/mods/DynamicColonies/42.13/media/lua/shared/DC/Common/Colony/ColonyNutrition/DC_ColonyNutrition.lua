@@ -13,5 +13,7 @@ require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition_ItemAnalysis"
 require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition_Reserve"
 require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition_Ledger"
 require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition_Provisioning"
+require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition_Process"
+require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition_Presentation"
 
 return Nutrition

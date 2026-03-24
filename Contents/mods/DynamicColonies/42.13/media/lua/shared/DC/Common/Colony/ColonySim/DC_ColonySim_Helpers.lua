@@ -21,15 +21,7 @@ Internal.isAutoRepeatEnabled = function(worker)
     return worker and (worker.autoRepeatJob == true or worker.autoRepeatScavenge == true)
 end
 
-Internal.clampCheckpoint = function(value, fallback)
-    local safeValue = math.floor(tonumber(value) or tonumber(fallback) or 0)
-    return math.max(0, safeValue)
-end
 
-Internal.clampHp = function(value, maxHp)
-    local safeMax = math.max(1, tonumber(maxHp) or Config.DEFAULT_WORKER_MAX_HP or 100)
-    return math.max(0, math.min(safeMax, tonumber(value) or safeMax))
-end
 
 Internal.freezeWorkerForOfflineOwner = function(worker, currentHour)
     if not worker then

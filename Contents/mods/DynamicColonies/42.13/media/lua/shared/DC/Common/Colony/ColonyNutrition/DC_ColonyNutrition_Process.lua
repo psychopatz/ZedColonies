@@ -1,8 +1,10 @@
+DC_Colony = DC_Colony or {}
+DC_Colony.Nutrition = DC_Colony.Nutrition or {}
+
 local Config = DC_Colony.Config
 local Nutrition = DC_Colony.Nutrition
-local Internal = DC_Colony.Sim.Internal
 
-Internal.getHourlyNeed = function(dailyNeed)
+function Nutrition.GetHourlyNeed(dailyNeed)
     local hoursPerDay = tonumber(Config.HOURS_PER_DAY) or 24
     if hoursPerDay <= 0 then
         return 0
@@ -10,17 +12,7 @@ Internal.getHourlyNeed = function(dailyNeed)
     return math.max(0, tonumber(dailyNeed) or 0) / hoursPerDay
 end
 
-Internal.refillReserveToDailyTargets = function(worker, dailyCaloriesNeed, dailyHydrationNeed)
-    Nutrition.RefillReserveToTargets(
-        worker,
-        math.max(0, tonumber(dailyCaloriesNeed) or 0),
-        math.max(0, tonumber(dailyHydrationNeed) or 0),
-        math.max(0, tonumber(dailyCaloriesNeed) or 0),
-        math.max(0, tonumber(dailyHydrationNeed) or 0)
-    )
-end
-
-Internal.getSupportedHours = function(reserveAmount, hourlyNeed, intervalHours)
+function Nutrition.GetSupportedHours(reserveAmount, hourlyNeed, intervalHours)
     if intervalHours <= 0 then
         return 0
     end
@@ -30,13 +22,19 @@ Internal.getSupportedHours = function(reserveAmount, hourlyNeed, intervalHours)
     return math.min(intervalHours, math.max(0, (tonumber(reserveAmount) or 0) / hourlyNeed))
 end
 
-Internal.maybeRefillReserve = function(worker, currentHour, checkpointCount, dailyCaloriesNeed, dailyHydrationNeed, forceMealRefill)
+function Nutrition.MaybeRefillReserve(worker, currentHour, checkpointCount, dailyCaloriesNeed, dailyHydrationNeed, forceMealRefill)
     if not worker then
         return
     end
 
     if forceMealRefill then
-        Internal.refillReserveToDailyTargets(worker, dailyCaloriesNeed, dailyHydrationNeed)
+        Nutrition.RefillReserveToTargets(
+            worker,
+            math.max(0, tonumber(dailyCaloriesNeed) or 0),
+            math.max(0, tonumber(dailyHydrationNeed) or 0),
+            math.max(0, tonumber(dailyCaloriesNeed) or 0),
+            math.max(0, tonumber(dailyHydrationNeed) or 0)
+        )
         return
     end
 
@@ -44,25 +42,31 @@ Internal.maybeRefillReserve = function(worker, currentHour, checkpointCount, dai
     local safeNextHour = tonumber(nextCheckpointHour) or 0
     local safeCurrentHour = tonumber(currentHour) or 0
     local hoursUntilNextMeal = math.max(0, safeNextHour - safeCurrentHour)
-    local caloriesThreshold = Internal.getHourlyNeed(dailyCaloriesNeed) * hoursUntilNextMeal
-    local hydrationThreshold = Internal.getHourlyNeed(dailyHydrationNeed) * hoursUntilNextMeal
+    local caloriesThreshold = Nutrition.GetHourlyNeed(dailyCaloriesNeed) * hoursUntilNextMeal
+    local hydrationThreshold = Nutrition.GetHourlyNeed(dailyHydrationNeed) * hoursUntilNextMeal
     local activeCalories, activeHydration = Nutrition.GetOnBodyTotals(worker)
 
     if activeCalories <= (caloriesThreshold + 0.0001) or activeHydration <= (hydrationThreshold + 0.0001) then
-        Internal.refillReserveToDailyTargets(worker, dailyCaloriesNeed, dailyHydrationNeed)
+        Nutrition.RefillReserveToTargets(
+            worker,
+            math.max(0, tonumber(dailyCaloriesNeed) or 0),
+            math.max(0, tonumber(dailyHydrationNeed) or 0),
+            math.max(0, tonumber(dailyCaloriesNeed) or 0),
+            math.max(0, tonumber(dailyHydrationNeed) or 0)
+        )
     end
 end
 
-Internal.applyInterval = function(worker, workableHours, supportedHours, hp, maxHp, intervalHours, caloriesPerHour, hydrationPerHour, canWork)
+function Nutrition.ApplyInterval(worker, workableHours, supportedHours, intervalHours, caloriesPerHour, hydrationPerHour, canWork)
     if intervalHours <= 0 then
-        return workableHours, supportedHours, hp
+        return workableHours, supportedHours
     end
 
     local activeCalories, activeHydration = Nutrition.GetOnBodyTotals(worker)
     local fullyFedHours = math.min(
         intervalHours,
-        Internal.getSupportedHours(activeCalories, caloriesPerHour, intervalHours),
-        Internal.getSupportedHours(activeHydration, hydrationPerHour, intervalHours)
+        Nutrition.GetSupportedHours(activeCalories, caloriesPerHour, intervalHours),
+        Nutrition.GetSupportedHours(activeHydration, hydrationPerHour, intervalHours)
     )
     local deprivedHours = math.max(0, intervalHours - fullyFedHours)
 
@@ -81,17 +85,22 @@ Internal.applyInterval = function(worker, workableHours, supportedHours, hp, max
         supportedHours = supportedHours + fullyFedHours
     end
 
-    if deprivedHours > 0 then
-        hp = Internal.clampHp(hp - (deprivedHours * (Config.WORKER_HP_LOSS_PER_HOUR or 1)), maxHp)
+    if deprivedHours > 0 and DC_Colony.Health and DC_Colony.Health.ApplyDeprivationDamage then
+        DC_Colony.Health.ApplyDeprivationDamage(worker, deprivedHours)
     end
 
-    return workableHours, supportedHours, hp
+    return workableHours, supportedHours
 end
 
-Internal.processNutrition = function(worker, currentHour, dailyCaloriesNeed, dailyHydrationNeed, canWork)
+function Nutrition.ClampCheckpoint(value, fallback)
+    local safeValue = math.floor(tonumber(value) or tonumber(fallback) or 0)
+    return math.max(0, safeValue)
+end
+
+function Nutrition.ProcessWorkerNutrition(worker, currentHour, dailyCaloriesNeed, dailyHydrationNeed, canWork)
     local lastHour = tonumber(worker.lastSimHour) or tonumber(currentHour) or 0
     local currentCheckpoint = Config.GetMealCheckpointCountAtHour(currentHour)
-    local previousCheckpoint = Internal.clampCheckpoint(
+    local previousCheckpoint = Nutrition.ClampCheckpoint(
         worker.lastNutritionCheckpoint,
         Config.GetMealCheckpointCountAtHour(lastHour)
     )
@@ -100,14 +109,9 @@ Internal.processNutrition = function(worker, currentHour, dailyCaloriesNeed, dai
         previousCheckpoint = currentCheckpoint
     end
 
-    local caloriesPerHour = Internal.getHourlyNeed(dailyCaloriesNeed)
-    local hydrationPerHour = Internal.getHourlyNeed(dailyHydrationNeed)
-    Internal.maybeRefillReserve(worker, lastHour, previousCheckpoint, dailyCaloriesNeed, dailyHydrationNeed, false)
-    local reserveCalories, reserveHydration = Nutrition.GetOnBodyTotals(worker)
-    local hasCalories = reserveCalories > 0
-    local hasHydration = reserveHydration > 0
-    local maxHp = math.max(1, tonumber(worker.maxHp) or Config.DEFAULT_WORKER_MAX_HP or 100)
-    local hp = Internal.clampHp(worker.hp, maxHp)
+    local caloriesPerHour = Nutrition.GetHourlyNeed(dailyCaloriesNeed)
+    local hydrationPerHour = Nutrition.GetHourlyNeed(dailyHydrationNeed)
+    Nutrition.MaybeRefillReserve(worker, lastHour, previousCheckpoint, dailyCaloriesNeed, dailyHydrationNeed, false)
     local workableHours = 0
     local supportedHours = 0
     local segmentStart = lastHour
@@ -115,12 +119,10 @@ Internal.processNutrition = function(worker, currentHour, dailyCaloriesNeed, dai
     for checkpoint = previousCheckpoint + 1, currentCheckpoint do
         local checkpointHour = Config.GetMealCheckpointHourByCount(checkpoint)
         local intervalHours = math.max(0, math.min(currentHour, checkpointHour) - segmentStart)
-        workableHours, supportedHours, hp = Internal.applyInterval(
+        workableHours, supportedHours = Nutrition.ApplyInterval(
             worker,
             workableHours,
             supportedHours,
-            hp,
-            maxHp,
             intervalHours,
             caloriesPerHour,
             hydrationPerHour,
@@ -128,38 +130,34 @@ Internal.processNutrition = function(worker, currentHour, dailyCaloriesNeed, dai
         )
         segmentStart = math.max(segmentStart, checkpointHour)
 
-        Internal.maybeRefillReserve(worker, checkpointHour, checkpoint, dailyCaloriesNeed, dailyHydrationNeed, true)
-        reserveCalories, reserveHydration = Nutrition.GetOnBodyTotals(worker)
-        hasCalories = reserveCalories > 0
-        hasHydration = reserveHydration > 0
+        Nutrition.MaybeRefillReserve(worker, checkpointHour, checkpoint, dailyCaloriesNeed, dailyHydrationNeed, true)
     end
 
     local tailHours = math.max(0, currentHour - segmentStart)
-    workableHours, supportedHours, hp = Internal.applyInterval(
+    workableHours, supportedHours = Nutrition.ApplyInterval(
         worker,
         workableHours,
         supportedHours,
-        hp,
-        maxHp,
         tailHours,
         caloriesPerHour,
         hydrationPerHour,
         canWork
     )
-    Internal.maybeRefillReserve(worker, currentHour, currentCheckpoint, dailyCaloriesNeed, dailyHydrationNeed, false)
+    Nutrition.MaybeRefillReserve(worker, currentHour, currentCheckpoint, dailyCaloriesNeed, dailyHydrationNeed, false)
 
-    reserveCalories, reserveHydration = Nutrition.GetOnBodyTotals(worker)
-    hasCalories = reserveCalories > 0
-    hasHydration = reserveHydration > 0
+    local reserveCalories, reserveHydration = Nutrition.GetOnBodyTotals(worker)
+    local hasCalories = reserveCalories > 0
+    local hasHydration = reserveHydration > 0
 
     worker.lastNutritionCheckpoint = currentCheckpoint
-    worker.hp = hp
 
     return {
         workableHours = workableHours,
         supportedHours = supportedHours,
         hasCalories = hasCalories,
         hasHydration = hasHydration,
-        hp = hp
+        hp = worker.hp -- maintained for backwards compatibility
     }
 end
+
+return Nutrition

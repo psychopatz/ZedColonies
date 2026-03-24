@@ -49,69 +49,29 @@ local function getPortraitTexture(subject)
     return getTexture(pathFolder .. tostring(portraitID) .. ".png") or getTexture("media/ui/Portraits/General/" .. gender .. "/1.png")
 end
 
-local function buildPlaceholderNeed(summaryText, captionText)
-    return {
-        stored = 0,
-        usage = 100,
-        fillRatio = 0,
-        overflow = 0,
-        daysLeft = nil,
-        summaryText = tostring(summaryText or "Pending"),
-        captionText = tostring(captionText or "Not tracked yet"),
-        placeholder = true
-    }
-end
-
-local function buildEnergyData(worker)
-    if DC_Colony and DC_Colony.Energy and isFunction(DC_Colony.Energy.GetBarData) then
-        return DC_Colony.Energy.GetBarData(worker)
-    end
-
-    local currentValue = math.max(0, tonumber(worker and (worker.energyCurrent or worker.tirednessCurrent)) or 0)
-    local maxValue = math.max(1, tonumber(worker and (worker.energyMax or worker.tirednessMax)) or 100)
-    local recoveryMultiplier = tonumber(worker and (worker.energyRecoveryMultiplier or worker.tirednessRecoveryMultiplier)) or 1
-    local isResting = (worker and worker.isRestingForEnergy == true) or (worker and worker.isRestingForTiredness == true)
-    return {
-        stored = currentValue,
-        usage = maxValue,
-        fillRatio = math.max(0, math.min(1, currentValue / maxValue)),
-        overflow = 0,
-        daysLeft = nil,
-        captionText = isResting and "resting at home" or "work readiness",
-        summaryText = tostring(math.floor(currentValue + 0.5))
-            .. " / "
-            .. tostring(math.floor(maxValue + 0.5))
-            .. " | Regen x"
-            .. string.format("%.2f", recoveryMultiplier)
-    }
-end
-
 local function buildNeedsData(worker)
     if not worker then
         return nil
     end
 
-    local energyData = buildEnergyData(worker)
+    local needs = {}
+    
+    if DC_Colony and type(DC_Colony.NeedProviders) == "table" then
+        for _, provider in ipairs(DC_Colony.NeedProviders) do
+            if provider and provider.label and isFunction(provider.GetBarData) then
+                local data = provider.GetBarData(worker)
+                if data then
+                    needs[#needs + 1] = {
+                        label = provider.label,
+                        color = provider.color or { r = 0.55, g = 0.55, b = 0.55 },
+                        data = data
+                    }
+                end
+            end
+        end
+    end
 
-    return {
-        {
-            label = "Energy",
-            color = DC_Colony and DC_Colony.Energy and isFunction(DC_Colony.Energy.GetBarColor)
-                and DC_Colony.Energy.GetBarColor()
-                or { r = 0.69, g = 0.33, b = 0.86 },
-            data = energyData
-        },
-        {
-            label = "Recreation",
-            color = { r = 0.28, g = 0.66, b = 0.58 },
-            data = buildPlaceholderNeed("Planned system", "Tracked here once recreation exists")
-        },
-        {
-            label = "Morale",
-            color = { r = 0.84, g = 0.68, b = 0.24 },
-            data = buildPlaceholderNeed("Planned system", "Tracked here once morale exists")
-        }
-    }
+    return needs
 end
 
 function DC_ColonyNeedsPanel:new(x, y, width, height)
