@@ -103,8 +103,8 @@ function DC_BuildingsWindow:openReassignProjectModal(plot)
     end
 
     DC_BuildingProjectModal.Open({
-        title = "Swap Project Builder",
-        confirmLabel = "Swap",
+        title = "Manage Project",
+        confirmLabel = "Save",
         requireBuilder = true,
         preview = {
             projectID = project.projectID,
@@ -125,6 +125,14 @@ function DC_BuildingsWindow:openReassignProjectModal(plot)
             assignedBuilderID = project.assignedBuilderID,
             assignedBuilderName = project.assignedBuilderName
         },
+        onSupply = function(payload)
+            local ownerWindow = self:getOwnerWindow()
+            if ownerWindow and ownerWindow.sendColonyCommand then
+                ownerWindow:sendColonyCommand("SupplyBuildingProjectFromInventory", {
+                    projectID = payload.projectID
+                })
+            end
+        end,
         onConfirm = function(payload)
             local ownerWindow = self:getOwnerWindow()
             if ownerWindow and ownerWindow.sendColonyCommand then

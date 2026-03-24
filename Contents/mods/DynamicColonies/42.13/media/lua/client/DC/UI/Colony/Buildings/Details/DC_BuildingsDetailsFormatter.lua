@@ -30,7 +30,7 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
             .. " / "
             .. tostring(plot.project.requiredWorkPoints or 0)
             .. " WP <LINE> "
-        text = text .. " <RGB:0.82,0.82,0.82> Use Swap to move this project onto another Builder without losing progress. <LINE> "
+        text = text .. " <RGB:0.82,0.82,0.82> Use Manage to supply materials or assign another Builder without losing progress. <LINE> "
         text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Project Materials <LINE> "
         for _, line in ipairs(DC_BuildingsUIUtils.BuildRecipeLines(plot.project.materialEntries or {})) do
             text = text .. " " .. line .. " <LINE> "
@@ -46,7 +46,7 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
         text = text .. " <RGB:0.72,0.72,0.72> Level: <RGB:1,1,1> " .. tostring(building.level or 0) .. " <LINE> "
 
         if building.buildingType == "Headquarters" and plot.territory then
-            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Frontier Control <LINE> "
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Unsafe Zone Control <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Active Barricades: <RGB:1,1,1> "
                 .. tostring(plot.territory.activeBarricadeCount or 0)
                 .. " / "
@@ -54,8 +54,8 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
                 .. " <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Unlocked Plots: <RGB:1,1,1> " .. tostring(plot.territory.unlockedPlotCount or 0) .. " <LINE> "
         elseif building.buildingType == "Barricade" then
-            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Frontier Control <LINE> "
-            text = text .. " <RGB:0.72,0.72,0.72> Role: <RGB:1,1,1> Claims and secures one frontier tile. <LINE> "
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Unsafe Zone Control <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Role: <RGB:1,1,1> Claims and secures one unsafe zone tile. <LINE> "
             if building.barricadeHP then
                 text = text .. " <RGB:0.72,0.72,0.72> HP Placeholder: <RGB:1,1,1> " .. tostring(building.barricadeHP) .. " <LINE> "
             end
@@ -124,12 +124,12 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
         text = text .. " <LINE> <RGB:0.82,0.82,0.82> This plot is available for construction. <LINE> "
     elseif plot.state == "Locked" then
         if plot.frontierCandidate == true and plot.buildOptions and plot.buildOptions[1] then
-            text = text .. " <LINE> <RGB:0.88,0.82,0.72> This frontier tile can be claimed by building a Barricade. <LINE> "
+            text = text .. " <LINE> <RGB:0.88,0.82,0.72> This unsafe zone tile can be claimed by building a Barricade. <LINE> "
             for _, line in ipairs(DC_BuildingsUIUtils.BuildRecipeLines(plot.buildOptions[1].preview and plot.buildOptions[1].preview.recipeAvailability and plot.buildOptions[1].preview.recipeAvailability.entries or {})) do
                 text = text .. " " .. line .. " <LINE> "
             end
         else
-            text = text .. " <LINE> <RGB:0.72,0.62,0.62> Expand outward from adjacent unlocked plots to reveal new frontier tiles. <LINE> "
+            text = text .. " <LINE> <RGB:0.72,0.62,0.62> Expand outward from adjacent unlocked plots to reveal new unsafe zone tiles. <LINE> "
         end
     end
 

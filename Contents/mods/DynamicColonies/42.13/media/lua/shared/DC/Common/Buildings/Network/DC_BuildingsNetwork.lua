@@ -253,7 +253,7 @@ Network.Handlers.ReassignBuildingProject = function(player, args)
 
     if not ok then
         if Internal.syncNotice then
-            Internal.syncNotice(player, reason or "Unable to swap builders for that project.", "error", true)
+            Internal.syncNotice(player, reason or "Unable to reassign the builder for that project.", "error", true)
         end
         syncBuildingsSnapshot(player, owner)
         return
@@ -281,7 +281,7 @@ Network.Handlers.ReassignBuildingProject = function(player, args)
         else
             Internal.syncNotice(
                 player,
-                "Swapped project builder to " .. tostring(nextWorker and (nextWorker.name or nextWorker.workerID) or "the selected worker") .. ".",
+                "Reassigned project builder to " .. tostring(nextWorker and (nextWorker.name or nextWorker.workerID) or "the selected worker") .. ".",
                 "info",
                 false
             )

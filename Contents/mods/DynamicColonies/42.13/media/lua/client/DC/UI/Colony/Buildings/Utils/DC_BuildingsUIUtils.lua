@@ -4,11 +4,23 @@ DC_BuildingsUIUtils.Colors = {
     locked = { r = 0.12, g = 0.12, b = 0.12, a = 0.9 },
     frontierLocked = { r = 0.18, g = 0.1, b = 0.1, a = 0.92 },
     empty = { r = 0.18, g = 0.18, b = 0.18, a = 0.9 },
+    queuedProject = { r = 0.22, g = 0.22, b = 0.22, a = 0.94 },
     reserved = { r = 0.85, g = 0.72, b = 0.15, a = 0.95 },
     built = { r = 0.26, g = 0.36, b = 0.24, a = 0.95 },
     selectedBorder = { r = 1, g = 0.95, b = 0.45, a = 0.95 },
     defaultBorder = { r = 0.85, g = 0.85, b = 0.85, a = 0.2 }
 }
+
+function DC_BuildingsUIUtils.IsProjectStarted(plot)
+    local project = plot and plot.project or nil
+    if not project then
+        return false
+    end
+
+    local progressWorkPoints = math.max(0, tonumber(project.progressWorkPoints) or 0)
+    local progressRatio = math.max(0, tonumber(project.progressRatio) or 0)
+    return progressWorkPoints > 0 or progressRatio > 0
+end
 
 function DC_BuildingsUIUtils.GetPlotColor(plot)
     local colors = DC_BuildingsUIUtils.Colors
@@ -20,6 +32,12 @@ function DC_BuildingsUIUtils.GetPlotColor(plot)
     end
     if plot.state == "Locked" then
         return colors.locked
+    end
+    if plot.project then
+        if DC_BuildingsUIUtils.IsProjectStarted(plot) then
+            return colors.reserved
+        end
+        return colors.queuedProject
     end
     if plot.state == "Reserved" then
         return colors.reserved
@@ -41,7 +59,7 @@ function DC_BuildingsUIUtils.GetPlotTitle(plot)
         return tostring(plot.project.displayName or plot.project.buildingType or "Building")
     end
     if plot.frontierCandidate == true then
-        return "Frontier"
+        return "Unsafe Zone"
     end
     if plot.kind == "HQOnly" then
         return "HQ"
@@ -69,7 +87,10 @@ function DC_BuildingsUIUtils.BuildRecipeLines(recipeEntries)
     local lines = {}
     for _, entry in ipairs(recipeEntries or {}) do
         local ready = entry.satisfied == true
-        local color = ready and "<RGB:0.76,0.92,0.76>" or "<RGB:0.95,0.62,0.62>"
+        local availableToSupply = math.max(0, tonumber(entry.available) or 0)
+        local remainingToSupply = math.max(0, tonumber(entry.remaining) or 0)
+        local canSupplyNow = ready ~= true and remainingToSupply > 0 and availableToSupply > 0
+        local color = ready and "<RGB:0.76,0.92,0.76>" or (canSupplyNow and "<RGB:0.92,0.84,0.45>" or "<RGB:0.95,0.62,0.62>")
         local line = color
             .. tostring(entry.count or 0)
             .. " x "
@@ -79,10 +100,15 @@ function DC_BuildingsUIUtils.BuildRecipeLines(recipeEntries)
                 .. " <RGB:0.72,0.72,0.72>("
                 .. tostring(entry.supplied or 0)
                 .. " supplied, "
-                .. tostring(entry.available or 0)
-                .. " in warehouse, "
-                .. tostring(entry.remaining or 0)
-                .. " missing)"
+                .. tostring(availableToSupply)
+                .. " available to supply"
+            if remainingToSupply <= 0 then
+                line = line .. ", fully supplied)"
+            elseif availableToSupply > 0 then
+                line = line .. ", " .. tostring(remainingToSupply) .. " still needs supplying)"
+            else
+                line = line .. ", " .. tostring(remainingToSupply) .. " missing)"
+            end
         else
             line = line
                 .. " <RGB:0.72,0.72,0.72>("
