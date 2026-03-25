@@ -186,10 +186,9 @@ function Presentation.SyncAllWorkers()
     end
 
     local players = getActivePlayers()
-    local data = Registry.GetData()
-    for _, worker in pairs(data.Workers or {}) do
+    Registry.ForEachWorkerRaw(function(worker)
         Presentation.SyncWorker(worker, players)
-    end
+    end)
 end
 
 function Presentation.OnTick()

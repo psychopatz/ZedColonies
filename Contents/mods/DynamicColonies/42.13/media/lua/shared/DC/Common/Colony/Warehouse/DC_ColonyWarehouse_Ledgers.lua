@@ -8,6 +8,17 @@ local Registry = DC_Colony.Registry
 local Warehouse = DC_Colony.Warehouse
 local Internal = Warehouse.Internal
 
+local function getProvisionStackKey(entry)
+    return table.concat({
+        tostring(entry and entry.fullType or ""),
+        tostring(entry and entry.provisionType or ""),
+        tostring(math.max(0, tonumber(entry and entry.caloriesRemaining) or 0)),
+        tostring(math.max(0, tonumber(entry and entry.hydrationRemaining) or 0)),
+        tostring(math.max(0, tonumber(entry and entry.treatmentUnitsRemaining) or 0)),
+        tostring(entry and entry.medicalUse or "")
+    }, "|")
+end
+
 local function appendProvisionEntry(warehouse, entry)
     if not warehouse or not entry or not entry.fullType then
         return false
@@ -18,15 +29,31 @@ local function appendProvisionEntry(warehouse, entry)
         return false
     end
 
-    warehouse.ledgers.provisions[#warehouse.ledgers.provisions + 1] = {
+    local normalized = {
         fullType = entry.fullType,
         displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
         provisionType = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and "medical" or "nutrition",
         caloriesRemaining = math.max(0, tonumber(entry.caloriesRemaining) or 0),
         hydrationRemaining = math.max(0, tonumber(entry.hydrationRemaining) or 0),
         treatmentUnitsRemaining = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0),
-        medicalUse = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and tostring(entry.medicalUse or "bandage") or nil
+        medicalUse = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and tostring(entry.medicalUse or "bandage") or nil,
+        qty = math.max(1, math.floor(tonumber(entry.qty) or 1))
     }
+
+    local stackKey = getProvisionStackKey(normalized)
+    for _, existing in ipairs(warehouse.ledgers.provisions) do
+        if getProvisionStackKey(existing) == stackKey then
+            existing.qty = math.max(1, math.floor(tonumber(existing.qty) or 1)) + normalized.qty
+            Warehouse.TouchItemsVersion(warehouse.ownerUsername)
+            Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
+            Warehouse.Recalculate(warehouse)
+            return true
+        end
+    end
+
+    warehouse.ledgers.provisions[#warehouse.ledgers.provisions + 1] = normalized
+    Warehouse.TouchItemsVersion(warehouse.ownerUsername)
+    Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
     Warehouse.Recalculate(warehouse)
     return true
 end
@@ -41,11 +68,26 @@ local function appendEquipmentEntry(warehouse, entry)
         return false
     end
 
-    warehouse.ledgers.equipment[#warehouse.ledgers.equipment + 1] = {
+    local normalized = {
         fullType = entry.fullType,
         displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
-        tags = entry.tags or (Config.GetItemCombinedTags and Config.GetItemCombinedTags(entry.fullType)) or {}
+        tags = entry.tags or (Config.GetItemCombinedTags and Config.GetItemCombinedTags(entry.fullType)) or {},
+        qty = math.max(1, math.floor(tonumber(entry.qty) or 1))
     }
+
+    for _, existing in ipairs(warehouse.ledgers.equipment) do
+        if existing.fullType == normalized.fullType then
+            existing.qty = math.max(1, math.floor(tonumber(existing.qty) or 1)) + normalized.qty
+            Warehouse.TouchItemsVersion(warehouse.ownerUsername)
+            Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
+            Warehouse.Recalculate(warehouse)
+            return true
+        end
+    end
+
+    warehouse.ledgers.equipment[#warehouse.ledgers.equipment + 1] = normalized
+    Warehouse.TouchItemsVersion(warehouse.ownerUsername)
+    Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
     Warehouse.Recalculate(warehouse)
     return true
 end
@@ -73,6 +115,8 @@ local function mergeOutputEntry(warehouse, fullType, qty)
     for _, existing in ipairs(warehouse.ledgers.output) do
         if existing.fullType == fullType then
             existing.qty = math.max(1, tonumber(existing.qty) or 1) + fitQty
+            Warehouse.TouchItemsVersion(warehouse.ownerUsername)
+            Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
             Warehouse.Recalculate(warehouse)
             return fitQty
         end
@@ -82,6 +126,8 @@ local function mergeOutputEntry(warehouse, fullType, qty)
         fullType = fullType,
         qty = fitQty
     }
+    Warehouse.TouchItemsVersion(warehouse.ownerUsername)
+    Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
     Warehouse.Recalculate(warehouse)
     return fitQty
 end
@@ -263,6 +309,10 @@ end
 function Warehouse.TakeProvisionEntries(ownerUsername, indexes)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     local entries = takeEntries(warehouse.ledgers.provisions, indexes)
+    if #entries > 0 then
+        Warehouse.TouchItemsVersion(ownerUsername)
+        Warehouse.TouchSummaryVersion(ownerUsername)
+    end
     Warehouse.Recalculate(warehouse)
     return entries
 end
@@ -270,6 +320,10 @@ end
 function Warehouse.TakeEquipmentEntries(ownerUsername, indexes)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     local entries = takeEntries(warehouse.ledgers.equipment, indexes)
+    if #entries > 0 then
+        Warehouse.TouchItemsVersion(ownerUsername)
+        Warehouse.TouchSummaryVersion(ownerUsername)
+    end
     Warehouse.Recalculate(warehouse)
     return entries
 end
@@ -277,6 +331,10 @@ end
 function Warehouse.TakeOutputEntries(ownerUsername, indexes)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     local entries = takeEntries(warehouse.ledgers.output, indexes)
+    if #entries > 0 then
+        Warehouse.TouchItemsVersion(ownerUsername)
+        Warehouse.TouchSummaryVersion(ownerUsername)
+    end
     Warehouse.Recalculate(warehouse)
     return entries
 end
@@ -285,6 +343,10 @@ function Warehouse.CollectAllOutput(ownerUsername)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     local entries = Internal.CopyArray(warehouse.ledgers.output)
     warehouse.ledgers.output = {}
+    if #entries > 0 then
+        Warehouse.TouchItemsVersion(ownerUsername)
+        Warehouse.TouchSummaryVersion(ownerUsername)
+    end
     Warehouse.Recalculate(warehouse)
     return entries
 end
@@ -294,7 +356,7 @@ function Warehouse.GetMedicalProvisionUnitTotal(ownerUsername)
     local totalUnits = 0
     for _, entry in ipairs(warehouse and warehouse.ledgers and warehouse.ledgers.provisions or {}) do
         if Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) then
-            totalUnits = totalUnits + math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0)
+            totalUnits = totalUnits + (math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0) * math.max(1, tonumber(entry.qty) or 1))
         end
     end
     return totalUnits
@@ -324,13 +386,21 @@ function Warehouse.ConsumeMedicalProvisionHours(ownerUsername, usedHours)
     end
 
     local consumedUnits = 0
-    for _, entry in ipairs(warehouse.ledgers.provisions or {}) do
+    for index = #warehouse.ledgers.provisions, 1, -1 do
+        local entry = warehouse.ledgers.provisions[index]
         if Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) then
-            local availableUnits = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0)
+            local unitsPerItem = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0)
+            local availableQty = math.max(1, tonumber(entry.qty) or 1)
+            local availableUnits = unitsPerItem * availableQty
             if availableUnits > 0 then
                 local takeUnits = math.min(availableUnits, unitsToConsume - consumedUnits)
                 if takeUnits > 0 then
-                    entry.treatmentUnitsRemaining = availableUnits - takeUnits
+                    local remainingUnits = availableUnits - takeUnits
+                    if remainingUnits <= 0 then
+                        table.remove(warehouse.ledgers.provisions, index)
+                    else
+                        entry.qty = math.max(1, math.ceil(remainingUnits / math.max(1, unitsPerItem)))
+                    end
                     consumedUnits = consumedUnits + takeUnits
                     if consumedUnits >= unitsToConsume then
                         break
@@ -340,6 +410,10 @@ function Warehouse.ConsumeMedicalProvisionHours(ownerUsername, usedHours)
         end
     end
 
+    if consumedUnits > 0 then
+        Warehouse.TouchItemsVersion(ownerUsername)
+        Warehouse.TouchSummaryVersion(ownerUsername)
+    end
     Warehouse.Recalculate(warehouse)
     return consumedUnits
 end

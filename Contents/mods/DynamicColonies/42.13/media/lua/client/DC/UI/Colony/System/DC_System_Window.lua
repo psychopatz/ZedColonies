@@ -47,7 +47,7 @@ function System.SendCommand(command, args)
         return true
     end
 
-    if triggerEvent and DynamicTrading and DynamicTrading.NetworkServer and DynamicTrading.NetworkServer.HandlesSharedCommands then
+    if triggerEvent and isServer and isServer() and not (isClient and isClient()) then
         triggerEvent("OnClientCommand", Internal.GetCommandModule(), command, player, args or {})
         return true
     end

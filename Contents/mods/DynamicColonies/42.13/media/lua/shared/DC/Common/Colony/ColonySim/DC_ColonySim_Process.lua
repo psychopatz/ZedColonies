@@ -234,54 +234,39 @@ end
 
 function Sim.ProcessAllWorkers(currentHour)
     currentHour = currentHour or (Config.GetCurrentWorldHours and Config.GetCurrentWorldHours()) or Config.GetCurrentHour()
-    local data = Registry.GetData()
 
     if Medical and Medical.SetPlansCache and Medical.BuildAllOwnerPlans then
-        Medical.SetPlansCache(Medical.BuildAllOwnerPlans(data))
+        Medical.SetPlansCache(Medical.BuildAllOwnerPlans())
     end
 
-    local orderedWorkers = {}
-    for _, worker in pairs(data.Workers or {}) do
-        orderedWorkers[#orderedWorkers + 1] = worker
-    end
+    for _, ownerUsername in ipairs(Registry.GetOwnerUsernames and Registry.GetOwnerUsernames() or {}) do
+        local orderedWorkers = Registry.GetWorkersForOwnerRaw(ownerUsername)
+        local ownerKey = getOwnerKey(ownerUsername)
 
-    table.sort(orderedWorkers, function(a, b)
-        local ownerA = getOwnerKey(a and a.ownerUsername)
-        local ownerB = getOwnerKey(b and b.ownerUsername)
-        if ownerA ~= ownerB then
-            return ownerA < ownerB
+        table.sort(orderedWorkers, function(a, b)
+            local plan = Medical and Medical.GetOwnerPlan and Medical.GetOwnerPlan(ownerKey) or nil
+            local priorityA = plan and plan.priorityIndex and plan.priorityIndex[tostring(a and a.workerID or "")] or 1000000
+            local priorityB = plan and plan.priorityIndex and plan.priorityIndex[tostring(b and b.workerID or "")] or 1000000
+            if priorityA ~= priorityB then
+                return priorityA < priorityB
+            end
+
+            return tostring(a and a.workerID or "") < tostring(b and b.workerID or "")
+        end)
+
+        for _, worker in ipairs(orderedWorkers) do
+            if Internal.freezeWorkerForOfflineOwner(worker, currentHour) then
+                Registry.RecalculateWorker(worker)
+            else
+                Sim.ProcessWorker(worker, currentHour)
+            end
         end
 
-        local planA = Medical and Medical.GetOwnerPlan and Medical.GetOwnerPlan(ownerA) or nil
-        local planB = Medical and Medical.GetOwnerPlan and Medical.GetOwnerPlan(ownerB) or nil
-        local priorityA = planA and planA.priorityIndex and planA.priorityIndex[tostring(a and a.workerID or "")] or 1000000
-        local priorityB = planB and planB.priorityIndex and planB.priorityIndex[tostring(b and b.workerID or "")] or 1000000
-        if priorityA ~= priorityB then
-            return priorityA < priorityB
-        end
-
-        return tostring(a and a.workerID or "") < tostring(b and b.workerID or "")
-    end)
-
-    for _, worker in ipairs(orderedWorkers) do
-        if Internal.freezeWorkerForOfflineOwner(worker, currentHour) then
-            Registry.RecalculateWorker(worker)
-        else
-            Sim.ProcessWorker(worker, currentHour)
-        end
-    end
-
-    if Medical and Medical.GetOwnerPlan then
-        local seenPlans = {}
-        for _, worker in pairs(data.Workers or {}) do
-            local ownerKey = getOwnerKey(worker and worker.ownerUsername)
-            if not seenPlans[ownerKey] then
-                seenPlans[ownerKey] = true
-                local plan = Medical.GetOwnerPlan(ownerKey)
-                local usedHours = math.max(0, tonumber(plan and plan.usedTreatmentHours) or 0)
-                if usedHours > 0 and Warehouse and Warehouse.ConsumeMedicalProvisionHours then
-                    Warehouse.ConsumeMedicalProvisionHours(ownerKey, usedHours)
-                end
+        if Medical and Medical.GetOwnerPlan then
+            local plan = Medical.GetOwnerPlan(ownerKey)
+            local usedHours = math.max(0, tonumber(plan and plan.usedTreatmentHours) or 0)
+            if usedHours > 0 and Warehouse and Warehouse.ConsumeMedicalProvisionHours then
+                Warehouse.ConsumeMedicalProvisionHours(ownerKey, usedHours)
             end
         end
     end

@@ -28,6 +28,17 @@ end
 function Registry.FindWorkerBySourceID(ownerUsername, sourceNPCID)
     if not sourceNPCID then return nil end
 
+    local workerID = Registry.Internal.Runtime
+        and Registry.Internal.Runtime.sourceNPCToWorkerID
+        and Registry.Internal.Runtime.sourceNPCToWorkerID[tostring(sourceNPCID)]
+        or nil
+    if workerID then
+        local worker = Registry.GetWorker(workerID)
+        if worker and worker.ownerUsername == Config.GetOwnerUsername(ownerUsername) then
+            return worker
+        end
+    end
+
     local owner = Config.GetOwnerUsername(ownerUsername)
     for _, worker in ipairs(Registry.GetWorkersForOwner(owner)) do
         if worker.sourceNPCID and tostring(worker.sourceNPCID) == tostring(sourceNPCID) then

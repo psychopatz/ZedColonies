@@ -3,7 +3,9 @@ DC_Buildings.Config = DC_Buildings.Config or {}
 
 local Config = DC_Buildings.Config
 
-Config.MOD_DATA_KEY = "DynamicTrading_Buildings"
+Config.MOD_DATA_KEY = "DColony_Buildings_Index"
+Config.MOD_DATA_SCHEMA_VERSION = 3
+Config.MOD_DATA_PREFIX = "DColony_Buildings_"
 Config.DEFAULT_UNHOUSED_RECOVERY_MULTIPLIER = 1.00
 
 Config.Definitions = Config.Definitions or {}

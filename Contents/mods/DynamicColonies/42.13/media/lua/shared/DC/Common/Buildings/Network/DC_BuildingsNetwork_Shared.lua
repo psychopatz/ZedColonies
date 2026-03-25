@@ -15,6 +15,38 @@ local Internal = Network.Internal
 
 Network.Handlers = Network.Handlers or {}
 
+local function buildVersionToken(value, seen)
+    local valueType = type(value)
+    if valueType ~= "table" then
+        return tostring(valueType) .. ":" .. tostring(value)
+    end
+
+    seen = seen or {}
+    if seen[value] then
+        return "<cycle>"
+    end
+    seen[value] = true
+
+    local keys = {}
+    for key, _ in pairs(value) do
+        keys[#keys + 1] = key
+    end
+    table.sort(keys, function(a, b)
+        return tostring(a) < tostring(b)
+    end)
+
+    local parts = { "{" }
+    for _, key in ipairs(keys) do
+        parts[#parts + 1] = tostring(key)
+        parts[#parts + 1] = "="
+        parts[#parts + 1] = buildVersionToken(value[key], seen)
+        parts[#parts + 1] = ";"
+    end
+    parts[#parts + 1] = "}"
+    seen[value] = nil
+    return table.concat(parts)
+end
+
 function Internal.canUseDebug(player)
     if DynamicTrading and DynamicTrading.Debug then
         return true
@@ -47,13 +79,23 @@ function Internal.sendResponse(player, module, command, args)
     end
 end
 
-function Internal.syncBuildingsSnapshot(player, ownerUsername)
+function Internal.syncBuildingsSnapshot(player, ownerUsername, knownVersion)
     local owner = ColonyConfig.GetOwnerUsername(ownerUsername or player)
     if Buildings.EnsureInitialHeadquartersProject then
         Buildings.EnsureInitialHeadquartersProject(owner)
     end
+    local snapshot = Buildings.BuildOwnerSnapshot(owner, player)
+    local version = buildVersionToken(snapshot or {})
+    if knownVersion and tostring(knownVersion) == version then
+        Internal.sendResponse(player, ColonyConfig.COMMAND_MODULE, "SyncBuildingsSnapshot", {
+            version = version,
+            unchanged = true
+        })
+        return
+    end
     Internal.sendResponse(player, ColonyConfig.COMMAND_MODULE, "SyncBuildingsSnapshot", {
-        snapshot = Buildings.BuildOwnerSnapshot(owner, player)
+        version = version,
+        snapshot = snapshot
     })
 end
 

@@ -46,14 +46,16 @@ function Medical.BuildOwnerPlan(ownerUsername)
     return plan
 end
 
-function Medical.BuildAllOwnerPlans(data)
+function Medical.BuildAllOwnerPlans()
     local plans = {}
-    local seenOwners = {}
 
-    for _, worker in pairs(data.Workers or {}) do
-        local ownerKey = getOwnerKey(worker and worker.ownerUsername)
-        if ownerKey ~= "" and not seenOwners[ownerKey] then
-            seenOwners[ownerKey] = true
+    if not DC_Colony or not DC_Colony.Registry or not DC_Colony.Registry.GetOwnerUsernames then
+        return plans
+    end
+
+    for _, ownerUsername in ipairs(DC_Colony.Registry.GetOwnerUsernames()) do
+        local ownerKey = getOwnerKey(ownerUsername)
+        if ownerKey ~= "" then
             plans[ownerKey] = Medical.BuildOwnerPlan(ownerKey)
         end
     end

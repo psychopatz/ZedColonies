@@ -20,12 +20,12 @@ function DC_MainWindow:sendColonyCommand(command, args)
     end
 
     if isClient() and not isServer() then
-        sendClientCommand(player, "DynamicTrading_V2", command, args or {})
+        sendClientCommand(player, config.COMMAND_MODULE or "DColony", command, args or {})
         return true
     end
 
-    if triggerEvent and DynamicTrading and DynamicTrading.NetworkServer and DynamicTrading.NetworkServer.HandlesSharedCommands then
-        triggerEvent("OnClientCommand", "DynamicTrading_V2", command, player, args or {})
+    if triggerEvent and isServer() and not isClient() then
+        triggerEvent("OnClientCommand", config.COMMAND_MODULE or "DColony", command, player, args or {})
         return true
     end
 

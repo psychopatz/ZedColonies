@@ -31,7 +31,14 @@ local function takeFirstEquipmentEntry(ownerUsername, predicate)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     for index, entry in ipairs(warehouse.ledgers.equipment or {}) do
         if predicate(entry) then
-            local removed = table.remove(warehouse.ledgers.equipment, index)
+            local removed = Registry.Internal.CopyShallow(entry)
+            removed.qty = 1
+            entry.qty = math.max(1, math.floor(tonumber(entry.qty) or 1)) - 1
+            if entry.qty <= 0 then
+                table.remove(warehouse.ledgers.equipment, index)
+            end
+            Warehouse.TouchItemsVersion(ownerUsername)
+            Warehouse.TouchSummaryVersion(ownerUsername)
             Warehouse.Recalculate(warehouse)
             return removed
         end
@@ -165,21 +172,32 @@ local function restockProvisions(worker, dailyCaloriesNeed, dailyHydrationNeed)
             break
         end
 
-        local entry = table.remove(warehouse.ledgers.provisions, index)
+        local entry = warehouse.ledgers.provisions[index]
         if not entry then
             break
         end
 
-        Registry.AddNutritionEntry(worker, entry)
-        movedCalories = movedCalories + math.max(0, tonumber(entry.caloriesRemaining) or 0)
-        movedHydration = movedHydration + math.max(0, tonumber(entry.hydrationRemaining) or 0)
+        local removed = Registry.Internal.CopyShallow(entry)
+        removed.qty = 1
+        entry.qty = math.max(1, math.floor(tonumber(entry.qty) or 1)) - 1
+        if entry.qty <= 0 then
+            table.remove(warehouse.ledgers.provisions, index)
+        end
+
+        Registry.AddNutritionEntry(worker, removed)
+        movedCalories = movedCalories + math.max(0, tonumber(removed.caloriesRemaining) or 0)
+        movedHydration = movedHydration + math.max(0, tonumber(removed.hydrationRemaining) or 0)
         movedCount = movedCount + 1
-        hiddenCount = recordProvisionName(sampleNames, entry, hiddenCount)
-        totalCalories = totalCalories + math.max(0, tonumber(entry.caloriesRemaining) or 0)
-        totalHydration = totalHydration + math.max(0, tonumber(entry.hydrationRemaining) or 0)
+        hiddenCount = recordProvisionName(sampleNames, removed, hiddenCount)
+        totalCalories = totalCalories + math.max(0, tonumber(removed.caloriesRemaining) or 0)
+        totalHydration = totalHydration + math.max(0, tonumber(removed.hydrationRemaining) or 0)
         safetyCounter = safetyCounter + 1
     end
 
+    if movedCount > 0 then
+        Warehouse.TouchItemsVersion(worker.ownerUsername)
+        Warehouse.TouchSummaryVersion(worker.ownerUsername)
+    end
     Warehouse.Recalculate(warehouse)
     return movedCalories, movedHydration, movedCount, sampleNames, hiddenCount
 end

@@ -4,12 +4,17 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 function DC_SupplyWindow:onRefresh()
     self:startInventoryScan()
     if self.workerID then
-        local includeWarehouseLedgers = self.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse)
         self:sendColonyCommand("RequestWorkerDetails", {
             workerID = self.workerID,
-            includeWarehouseLedgers = includeWarehouseLedgers,
+            knownVersion = DC_MainWindow and DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[self.workerID] or nil,
             includeWorkerLedgers = true
         })
+        if self.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) then
+            self:sendColonyCommand("RequestWarehouse", {
+                knownVersion = self.warehouseVersion,
+                includeLedgers = true
+            })
+        end
     end
 end
 
@@ -18,10 +23,15 @@ function DC_SupplyWindow:requestWorkerDetails()
         return
     end
 
-    local includeWarehouseLedgers = self.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse)
     self:sendColonyCommand("RequestWorkerDetails", {
         workerID = self.workerID,
-        includeWarehouseLedgers = includeWarehouseLedgers,
+        knownVersion = DC_MainWindow and DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[self.workerID] or nil,
         includeWorkerLedgers = true
     })
+    if self.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) then
+        self:sendColonyCommand("RequestWarehouse", {
+            knownVersion = self.warehouseVersion,
+            includeLedgers = true
+        })
+    end
 end

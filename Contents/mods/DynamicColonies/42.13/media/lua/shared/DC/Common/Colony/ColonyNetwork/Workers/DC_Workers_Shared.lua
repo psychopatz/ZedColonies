@@ -77,8 +77,11 @@ function Shared.saveAndRefreshProcessed(player, worker, syncProjection)
     if Presentation and Presentation.SyncWorker then
         Presentation.SyncWorker(worker, { player })
     end
-    Internal.syncWorkerDetail(player, worker.workerID, syncProjection)
+    Internal.syncWorkerDetail(player, worker.workerID, nil, true)
     Internal.syncWorkerList(player)
+    if syncProjection then
+        Internal.syncWarehouse(player, nil, true)
+    end
 end
 
 function Shared.saveAndRefreshBasic(player, worker, syncProjection)
@@ -87,8 +90,11 @@ function Shared.saveAndRefreshBasic(player, worker, syncProjection)
     if Registry and Registry.Save then
         Registry.Save()
     end
-    Internal.syncWorkerDetail(player, worker.workerID, syncProjection)
+    Internal.syncWorkerDetail(player, worker.workerID, nil, true)
     Internal.syncWorkerList(player)
+    if syncProjection then
+        Internal.syncWarehouse(player, nil, true)
+    end
 end
 
 return Network

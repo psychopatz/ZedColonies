@@ -172,6 +172,7 @@ local function createWorkerFromRecruitArgs(owner, args, sourceSoul)
     local Config = getConfig()
     local Registry = getRegistry()
     local archetypeID = Config.NormalizeArchetypeID(args.archetypeID or args.profession or (sourceSoul and sourceSoul.archetypeID))
+    local resolvedSourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or recruitUUID
     local isFemale = args.isFemale
     if isFemale == nil and sourceSoul and sourceSoul.isFemale ~= nil then
         isFemale = sourceSoul.isFemale
@@ -189,7 +190,7 @@ local function createWorkerFromRecruitArgs(owner, args, sourceSoul)
         presenceState = Config.PresenceStates.Home,
         state = Config.States.Idle,
         jobEnabled = false,
-        sourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or nil,
+        sourceNPCID = resolvedSourceNPCID and tostring(resolvedSourceNPCID) or nil,
         sourceNPCType = args.sourceNPCType or "ConversationUI"
     })
 
@@ -211,7 +212,7 @@ Network.Handlers.AttemptRecruitWorker = function(player, args)
     local Sim = getSim()
     local Presentation = getPresentation()
     local owner = Config.GetOwnerUsername(player)
-    local sourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or nil
+    local sourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or resolveRecruitSourceUUID(args)
     if not sourceNPCID then
         Internal.syncRecruitAttemptResult(player, {
             success = false,

@@ -9,11 +9,13 @@ local Internal = Network.Internal
 
 Network.Handlers = Network.Handlers or {}
 
-Network.Handlers.RequestOwnerBuildings = function(player, args)
+Network.Handlers.RequestBuildingsSnapshot = function(player, args)
     if Internal.syncBuildingsSnapshot then
-        Internal.syncBuildingsSnapshot(player, player)
+        Internal.syncBuildingsSnapshot(player, player, args and args.knownVersion)
     end
 end
+
+Network.Handlers.RequestOwnerBuildings = Network.Handlers.RequestBuildingsSnapshot
 
 Network.Handlers.RequestBuildingProjectPreview = function(player, args)
     if not args or not args.buildingType then

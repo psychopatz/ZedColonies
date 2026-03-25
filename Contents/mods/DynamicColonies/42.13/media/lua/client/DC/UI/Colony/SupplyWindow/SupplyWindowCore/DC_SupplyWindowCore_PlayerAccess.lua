@@ -8,7 +8,7 @@ function Internal.getCommandModule()
     if type(config) == "table" and config.COMMAND_MODULE and config.COMMAND_MODULE ~= "" then
         return config.COMMAND_MODULE
     end
-    return "DynamicTrading_V2"
+    return "DColony"
 end
 
 function Internal.getLocalPlayer()

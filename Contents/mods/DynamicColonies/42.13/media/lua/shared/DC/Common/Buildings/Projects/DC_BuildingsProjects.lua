@@ -32,7 +32,7 @@ end
 local function createProjectRecord(owner, worker, buildingType, target, projectDefinition)
     local labourConfig = getColonyConfig()
     return {
-        projectID = "project_" .. tostring(Buildings.NextID("project")),
+        projectID = Buildings.NextID("project", owner),
         ownerUsername = owner,
         buildingType = tostring(buildingType or ""),
         buildingID = target.instance and target.instance.buildingID or nil,

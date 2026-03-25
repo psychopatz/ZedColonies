@@ -12,6 +12,14 @@ local function getColonyConfig()
     return (DC_Colony and DC_Colony.Config) or {}
 end
 
+local function getCommandModule()
+    local config = getColonyConfig()
+    if type(config) == "table" and config.COMMAND_MODULE and config.COMMAND_MODULE ~= "" then
+        return config.COMMAND_MODULE
+    end
+    return "DColony"
+end
+
 local function resolveLiveWorker(workerID)
     if not workerID then
         return nil
@@ -38,7 +46,7 @@ local function sendColonyCommand(command, args)
     end
 
     if isClient() and not isServer() then
-        sendClientCommand(player, "DynamicTrading_V2", command, args or {})
+        sendClientCommand(player, getCommandModule(), command, args or {})
         return true
     end
 
@@ -192,7 +200,7 @@ function DC_ColonyCharacterWindow:requestWorkerDetails()
 
     sendColonyCommand("RequestWorkerDetails", {
         workerID = self.workerID,
-        includeWarehouseLedgers = false,
+        knownVersion = DC_MainWindow and DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[self.workerID] or nil,
         includeWorkerLedgers = false
     })
 end

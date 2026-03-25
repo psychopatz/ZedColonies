@@ -41,9 +41,19 @@ local function onServerCommand(module, command, args)
         return
     end
     if command == "SyncWorkerDetails" then
+        if args and args.unchanged == true then
+            if DC_SupplyWindow.instance.autoRefreshPending then
+                DC_SupplyWindow.instance.autoRefreshPending = nil
+            end
+            return
+        end
         local worker = args and args.worker or nil
         if worker and worker.workerID == DC_SupplyWindow.instance.workerID then
             local cache = DC_MainWindow and DC_MainWindow.cachedDetails or nil
+            if DC_MainWindow then
+                DC_MainWindow.cachedDetailVersions = DC_MainWindow.cachedDetailVersions or {}
+                DC_MainWindow.cachedDetailVersions[worker.workerID] = args and args.version or nil
+            end
             local cachedWorker = cache and cache[worker.workerID] or nil
             local currentWorker = DC_SupplyWindow.instance.workerData
             local mergeWorkerDetail = DC_MainWindow and DC_MainWindow.MergeWorkerDetail or nil
@@ -66,6 +76,20 @@ local function onServerCommand(module, command, args)
         elseif args and args.workerID and args.workerID == DC_SupplyWindow.instance.workerID then
             DC_SupplyWindow.instance:updateStatus("This worker record was removed.")
             DC_SupplyWindow.instance:close()
+        end
+    elseif command == "SyncWarehouse" then
+        if args and args.unchanged == true then
+            if DC_SupplyWindow.instance.autoRefreshPending then
+                DC_SupplyWindow.instance.autoRefreshPending = nil
+            end
+            return
+        end
+        local currentWorker = DC_SupplyWindow.instance.workerData or {}
+        currentWorker.warehouse = args and args.warehouse or nil
+        DC_SupplyWindow.instance.warehouseVersion = args and args.version or nil
+        DC_SupplyWindow.instance:setWorkerData(currentWorker)
+        if not DC_SupplyWindow.instance.autoRefreshPending then
+            DC_SupplyWindow.instance:updateStatus("Warehouse reserves refreshed.")
         end
     elseif command == "ColonyNotice" then
         if args and args.message then

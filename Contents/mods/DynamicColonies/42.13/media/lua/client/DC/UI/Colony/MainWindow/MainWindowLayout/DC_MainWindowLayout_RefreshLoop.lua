@@ -11,7 +11,9 @@ local function autoRefreshWindow(window)
 
     if isClient() and not isServer() then
         window.syncStatusMutedFrames = 120
-        window:sendColonyCommand("RequestPlayerWorkers", {})
+        window:sendColonyCommand("RequestPlayerWorkers", {
+            knownVersion = DC_MainWindow.cachedWorkersVersion
+        })
         if window.selectedWorkerSummary and window.selectedWorkerSummary.workerID then
             local supplyWindow = DC_SupplyWindow and DC_SupplyWindow.instance or nil
             local supplyOwnsDetailSync = supplyWindow
@@ -22,7 +24,7 @@ local function autoRefreshWindow(window)
             if not supplyOwnsDetailSync then
                 window:sendColonyCommand("RequestWorkerDetails", {
                     workerID = window.selectedWorkerSummary.workerID,
-                    includeWarehouseLedgers = false,
+                    knownVersion = DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[window.selectedWorkerSummary.workerID] or nil,
                     includeWorkerLedgers = false
                 })
             end

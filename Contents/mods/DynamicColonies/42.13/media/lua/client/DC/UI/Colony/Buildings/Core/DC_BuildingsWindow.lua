@@ -27,7 +27,9 @@ function DC_BuildingsWindow:requestSnapshot()
     if isClient() and not isServer() then
         local ownerWindow = self:getOwnerWindow()
         if ownerWindow and ownerWindow.sendColonyCommand then
-            ownerWindow:sendColonyCommand("RequestOwnerBuildings", {})
+            ownerWindow:sendColonyCommand("RequestBuildingsSnapshot", {
+                knownVersion = DC_BuildingsWindow.cachedVersion
+            })
         end
         if DC_System and DC_System.RequestOwnedFactionStatus then
             DC_System.RequestOwnedFactionStatus()
@@ -424,12 +426,17 @@ end
 
 if not DC_BuildingsWindow.EventsAdded then
     Events.OnServerCommand.Add(function(module, command, args)
-        if module ~= "DynamicTrading_V2" then
+        local expectedModule = ((DC_Colony and DC_Colony.Config and DC_Colony.Config.COMMAND_MODULE) or "DColony")
+        if module ~= expectedModule then
             return
         end
         if command ~= "SyncBuildingsSnapshot" then
             return
         end
+        if args and args.unchanged == true then
+            return
+        end
+        DC_BuildingsWindow.cachedVersion = args and args.version or nil
         DC_BuildingsWindow.cachedSnapshot = args and args.snapshot or nil
         if DC_BuildingsWindow.instance and DC_BuildingsWindow.instance:getIsVisible() then
             DC_BuildingsWindow.instance:refreshFromSnapshot()

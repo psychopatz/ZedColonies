@@ -57,7 +57,7 @@ Network.Handlers.DebugRecruitWorker = function(player, args)
     local Sim = getSim()
     local Presentation = getPresentation()
     local owner = Config.GetOwnerUsername(player)
-    local sourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or nil
+    local sourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or (args.traderUUID and tostring(args.traderUUID) or nil)
     local worker = sourceNPCID and Registry.FindWorkerBySourceID(owner, sourceNPCID) or nil
     local recruitedTraderUUID = args.traderUUID or sourceNPCID or nil
 

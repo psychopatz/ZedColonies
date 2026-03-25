@@ -5,6 +5,10 @@ local Config = DC_Buildings.Config
 local Buildings = DC_Buildings
 local Internal = Buildings.Internal
 
+Internal.Runtime = Internal.Runtime or {}
+
+local Runtime = Internal.Runtime
+
 local function copyDeep(value)
     if type(value) ~= "table" then
         return value
@@ -19,6 +23,30 @@ end
 
 local function ensureArray(value)
     return type(value) == "table" and value or {}
+end
+
+local function clearTable(target)
+    for key, _ in pairs(target or {}) do
+        target[key] = nil
+    end
+end
+
+local function ensureModDataTable(key, defaults)
+    if not ModData.exists(key) then
+        ModData.add(key, defaults or {})
+    end
+
+    local data = ModData.get(key)
+    if type(data) == "table" then
+        return data
+    end
+
+    if ModData.remove then
+        ModData.remove(key)
+    end
+
+    ModData.add(key, defaults or {})
+    return ModData.get(key)
 end
 
 local function normalizeInstallCounts(instance)
@@ -49,75 +77,103 @@ local function normalizeBuildingInstance(instance)
     return instance
 end
 
-local function findUsedPlotKeys(ownerData)
-    local used = {}
-    for _, instance in ipairs(ownerData.buildings or {}) do
-        if instance.plotX ~= nil and instance.plotY ~= nil then
-            used[Buildings.GetPlotKey(instance.plotX, instance.plotY)] = true
-        end
-    end
-    return used
+local function getRegistry()
+    return DC_Colony and DC_Colony.Registry or nil
 end
 
-local function migrateLegacyPlots(ownerData)
-    local mapData = Buildings.EnsureMapData(ownerData)
-    local used = findUsedPlotKeys(ownerData)
-    local standardCandidates = {}
-    local maxLegacyRing = 0
-
-    for ring = 1, 6 do
-        for _, cell in ipairs(Buildings.GetRingCoordinates(ring)) do
-            standardCandidates[#standardCandidates + 1] = cell
+local function getOwnerKey(ownerUsername)
+    local registry = getRegistry()
+    if registry and registry.GetColonyIDForOwner then
+        local colonyID = registry.GetColonyIDForOwner(ownerUsername, true)
+        if colonyID ~= nil then
+            return tostring(colonyID)
         end
     end
 
-    local candidateIndex = 1
-    local function nextStandardCell()
-        while standardCandidates[candidateIndex] do
-            local cell = standardCandidates[candidateIndex]
-            candidateIndex = candidateIndex + 1
-            local key = Buildings.GetPlotKey(cell.x, cell.y)
-            if not used[key] then
-                used[key] = true
-                return cell
-            end
-        end
-        return nil
-    end
+    return DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
+        and DC_Colony.Config.GetOwnerUsername(ownerUsername)
+        or tostring(ownerUsername or "local")
+end
 
-    for _, instance in ipairs(ownerData.buildings or {}) do
-        local hasCoords = instance.plotX ~= nil and instance.plotY ~= nil
-        if hasCoords then
-            local px = math.floor(tonumber(instance.plotX) or 0)
-            local py = math.floor(tonumber(instance.plotY) or 0)
-            instance.plotX = px
-            instance.plotY = py
-            local kind = (px == 0 and py == 0) and Buildings.MapConstants.PlotKinds.HQOnly or Buildings.MapConstants.PlotKinds.Standard
-            Internal.UnlockPlotInMap(mapData, px, py, kind)
-            maxLegacyRing = math.max(maxLegacyRing, math.max(math.abs(px), math.abs(py)))
-        elseif tostring(instance.buildingType or "") == "Headquarters" then
-            instance.plotX = 0
-            instance.plotY = 0
-            Internal.UnlockPlotInMap(mapData, 0, 0, Buildings.MapConstants.PlotKinds.HQOnly)
-        else
-            local cell = nextStandardCell()
-            if cell then
-                instance.plotX = cell.x
-                instance.plotY = cell.y
-                maxLegacyRing = math.max(maxLegacyRing, math.max(math.abs(cell.x), math.abs(cell.y)))
-                Internal.UnlockPlotInMap(mapData, cell.x, cell.y, Buildings.MapConstants.PlotKinds.Standard)
-            end
-        end
-    end
+local function getAuthorityOwner(ownerUsername)
+    return DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
+        and DC_Colony.Config.GetOwnerUsername(ownerUsername)
+        or tostring(ownerUsername or "local")
+end
 
-    if maxLegacyRing > 0 then
-        for ring = 1, maxLegacyRing do
-            for _, cell in ipairs(Buildings.GetRingCoordinates(ring)) do
-                Internal.UnlockPlotInMap(mapData, cell.x, cell.y, Buildings.MapConstants.PlotKinds.Standard)
-            end
+local function getIndexKey()
+    return tostring(Config.MOD_DATA_KEY or "DColony_Buildings_Index")
+end
+
+local function getShardKey(ownerUsername)
+    return tostring(Config.MOD_DATA_PREFIX or "DColony_Buildings_") .. tostring(getOwnerKey(ownerUsername))
+end
+
+local function getShardKeyForColonyID(colonyID)
+    return tostring(Config.MOD_DATA_PREFIX or "DColony_Buildings_") .. tostring(colonyID)
+end
+
+local function buildEmptyIndex()
+    return {
+        schemaVersion = Config.MOD_DATA_SCHEMA_VERSION or 3
+    }
+end
+
+local function buildEmptyOwnerShard(ownerUsername)
+    local colonyID = getOwnerKey(ownerUsername)
+    return {
+        schemaVersion = Config.MOD_DATA_SCHEMA_VERSION or 3,
+        colonyID = colonyID,
+        ownerUsername = getAuthorityOwner(ownerUsername),
+        version = 1,
+        counters = {
+            nextBuildingID = 1,
+            nextProjectID = 1
+        },
+        buildings = {},
+        projects = {},
+        map = nil
+    }
+end
+
+local function normalizeOwnerData(ownerUsername, ownerData)
+    ownerData.schemaVersion = Config.MOD_DATA_SCHEMA_VERSION or 3
+    ownerData.colonyID = tostring(ownerData.colonyID or getOwnerKey(ownerUsername))
+    ownerData.ownerUsername = getAuthorityOwner(ownerUsername or ownerData.ownerUsername)
+    ownerData.version = math.max(1, math.floor(tonumber(ownerData.version) or 1))
+    ownerData.counters = type(ownerData.counters) == "table" and ownerData.counters or {}
+    ownerData.counters.nextBuildingID = math.max(1, math.floor(tonumber(ownerData.counters.nextBuildingID) or 1))
+    ownerData.counters.nextProjectID = math.max(1, math.floor(tonumber(ownerData.counters.nextProjectID) or 1))
+    ownerData.buildings = ensureArray(ownerData.buildings)
+    for _, instance in ipairs(ownerData.buildings) do
+        normalizeBuildingInstance(instance)
+    end
+    ownerData.projects = type(ownerData.projects) == "table" and ownerData.projects or {}
+    Buildings.EnsureMapData(ownerData)
+    return ownerData
+end
+
+local function rebuildRuntimeIndexes()
+    Runtime.buildingToColonyID = {}
+    Runtime.projectToColonyID = {}
+    Runtime.plotToBuildingID = {}
+
+    local registry = getRegistry()
+    local index = registry and registry.GetData and registry.GetData() or nil
+    for colonyID, colonySummary in pairs(index and index.colonies or {}) do
+        local ownerData = normalizeOwnerData(
+            colonySummary and colonySummary.ownerUsername or "local",
+            ensureModDataTable(getShardKeyForColonyID(colonyID), buildEmptyOwnerShard(colonySummary and colonySummary.ownerUsername or "local"))
+        )
+        local plotMap = {}
+        for _, instance in ipairs(ownerData.buildings or {}) do
+            Runtime.buildingToColonyID[tostring(instance.buildingID or "")] = ownerData.colonyID
+            plotMap[Buildings.GetPlotKey(instance.plotX, instance.plotY)] = tostring(instance.buildingID or "")
         end
-        mapData.currentRing = math.max(mapData.currentRing, maxLegacyRing + 1)
-        mapData.nextUnlockDirection = "Left"
+        for projectID, _ in pairs(ownerData.projects or {}) do
+            Runtime.projectToColonyID[tostring(projectID)] = ownerData.colonyID
+        end
+        Runtime.plotToBuildingID[ownerData.colonyID] = plotMap
     end
 end
 
@@ -126,64 +182,43 @@ Internal.EnsureArray = ensureArray
 Internal.NormalizeBuildingInstance = normalizeBuildingInstance
 
 function Buildings.Init()
-    if not ModData.exists(Config.MOD_DATA_KEY) then
-        ModData.add(Config.MOD_DATA_KEY, {
-            Owners = {},
-            Counters = { building = 0, project = 0 }
-        })
-    end
-
-    local data = ModData.get(Config.MOD_DATA_KEY)
-    data.Owners = data.Owners or {}
-    data.Counters = data.Counters or { building = 0, project = 0 }
+    ensureModDataTable(getIndexKey(), buildEmptyIndex())
+    rebuildRuntimeIndexes()
 end
 
 Events.OnInitGlobalModData.Add(Buildings.Init)
 
 function Buildings.GetData()
-    if not ModData.exists(Config.MOD_DATA_KEY) then
-        Buildings.Init()
-    end
-    return ModData.get(Config.MOD_DATA_KEY)
+    local data = ensureModDataTable(getIndexKey(), buildEmptyIndex())
+    data.schemaVersion = Config.MOD_DATA_SCHEMA_VERSION or 3
+    return data
 end
 
-function Buildings.Save()
+function Buildings.Save(ownerUsername)
+    if ownerUsername then
+        local ownerData = Buildings.EnsureOwner(ownerUsername)
+        ownerData.version = ownerData.version + 1
+    end
+
     if GlobalModData and GlobalModData.save then
         GlobalModData.save()
     end
 end
 
-function Buildings.NextID(kind)
-    local data = Buildings.GetData()
-    local key = kind == "building" and "building" or "project"
-    data.Counters[key] = (data.Counters[key] or 0) + 1
-    return data.Counters[key]
+function Buildings.NextID(kind, ownerOrColonyID)
+    local ownerData = Buildings.EnsureOwner(ownerOrColonyID)
+    local key = kind == "building" and "nextBuildingID" or "nextProjectID"
+    local prefix = kind == "building" and "building_" or "project_"
+    local nextValue = math.max(1, math.floor(tonumber(ownerData.counters[key]) or 1))
+    ownerData.counters[key] = nextValue + 1
+    ownerData.version = ownerData.version + 1
+    return prefix .. tostring(nextValue)
 end
 
 function Buildings.EnsureOwner(ownerUsername)
-    local owner = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
-        and DC_Colony.Config.GetOwnerUsername(ownerUsername)
-        or tostring(ownerUsername or "local")
-    local data = Buildings.GetData()
-    if not data.Owners[owner] then
-        data.Owners[owner] = {
-            ownerUsername = owner,
-            buildings = {},
-            projects = {},
-            map = nil
-        }
-    end
-
-    local ownerData = data.Owners[owner]
-    ownerData.ownerUsername = owner
-    ownerData.buildings = ensureArray(ownerData.buildings)
-    for _, instance in ipairs(ownerData.buildings) do
-        normalizeBuildingInstance(instance)
-    end
-    ownerData.projects = type(ownerData.projects) == "table" and ownerData.projects or {}
-    Buildings.EnsureMapData(ownerData)
-    migrateLegacyPlots(ownerData)
-    return ownerData
+    local shardKey = getShardKey(ownerUsername)
+    local ownerData = ensureModDataTable(shardKey, buildEmptyOwnerShard(ownerUsername))
+    return normalizeOwnerData(ownerUsername, ownerData)
 end
 
 function Buildings.GetBuildingsForOwner(ownerUsername)
@@ -197,15 +232,20 @@ end
 function Buildings.CreateBuildingInstance(ownerUsername, buildingType, level, plotX, plotY)
     local ownerData = Buildings.EnsureOwner(ownerUsername)
     local instance = {
-        buildingID = "building_" .. tostring(Buildings.NextID("building")),
+        buildingID = Buildings.NextID("building", ownerUsername),
         buildingType = tostring(buildingType or ""),
         level = math.max(0, math.floor(tonumber(level) or 0)),
         plotX = math.floor(tonumber(plotX) or 0),
         plotY = math.floor(tonumber(plotY) or 0),
         installs = {}
     }
+
     normalizeBuildingInstance(instance)
     ownerData.buildings[#ownerData.buildings + 1] = instance
+    ownerData.version = ownerData.version + 1
+    Runtime.buildingToColonyID[instance.buildingID] = ownerData.colonyID
+    Runtime.plotToBuildingID[ownerData.colonyID] = Runtime.plotToBuildingID[ownerData.colonyID] or {}
+    Runtime.plotToBuildingID[ownerData.colonyID][Buildings.GetPlotKey(instance.plotX, instance.plotY)] = instance.buildingID
     return instance
 end
 
@@ -219,10 +259,19 @@ function Buildings.FindBuildingForOwner(ownerUsername, buildingID)
 end
 
 function Buildings.FindBuildingAtPlot(ownerUsername, plotX, plotY)
-    local wantedX = math.floor(tonumber(plotX) or 0)
-    local wantedY = math.floor(tonumber(plotY) or 0)
-    for _, instance in ipairs(Buildings.GetBuildingsForOwner(ownerUsername)) do
-        if math.floor(tonumber(instance.plotX) or 0) == wantedX and math.floor(tonumber(instance.plotY) or 0) == wantedY then
+    local ownerData = Buildings.EnsureOwner(ownerUsername)
+    local wantedKey = Buildings.GetPlotKey(plotX, plotY)
+    local plotMap = Runtime.plotToBuildingID[ownerData.colonyID]
+    local buildingID = plotMap and plotMap[wantedKey] or nil
+    if buildingID then
+        local found = Buildings.FindBuildingForOwner(ownerUsername, buildingID)
+        if found then
+            return found
+        end
+    end
+
+    for _, instance in ipairs(ownerData.buildings) do
+        if Buildings.GetPlotKey(instance.plotX, instance.plotY) == wantedKey then
             return instance
         end
     end
@@ -231,6 +280,12 @@ end
 
 function Buildings.CopyOwnerData(ownerUsername)
     return copyDeep(Buildings.EnsureOwner(ownerUsername))
+end
+
+function Buildings.TouchOwnerVersion(ownerUsername)
+    local ownerData = Buildings.EnsureOwner(ownerUsername)
+    ownerData.version = ownerData.version + 1
+    return ownerData.version
 end
 
 function Buildings.GetPlotRing(plotX, plotY)

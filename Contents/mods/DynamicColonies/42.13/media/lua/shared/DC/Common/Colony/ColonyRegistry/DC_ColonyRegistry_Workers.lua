@@ -10,18 +10,21 @@ function Registry.CreateWorker(ownerUsername, template)
     template = template or {}
     local owner = Config.GetOwnerUsername(ownerUsername)
     local ownerData = Registry.EnsureOwner(owner)
+    local colonyID = ownerData.colonyID
+    local colonyData = Registry.GetColonyData(colonyID, true)
+    local workersData = Registry.GetWorkersData(colonyID, true)
     local archetypeID = Config.NormalizeArchetypeID(template.archetypeID or template.profession)
     local jobType = Config.NormalizeJobType(template.jobType or template.profession or Config.GetDefaultJobForArchetype(archetypeID))
     local profile = Config.GetJobProfile(jobType)
-    local data = Registry.GetData()
-    local workerID = template.workerID or ("worker_" .. tostring(Registry.NextID("worker")))
+    local workerID = template.workerID or Registry.NextID("worker", colonyID)
     local currentHour = (Config.GetCurrentWorldHours and Config.GetCurrentWorldHours()) or Config.GetCurrentHour()
     local starterCalories, starterHydration = Internal.GetStarterReserveTotals(template)
 
     local worker = {
+        colonyID = colonyID,
         ownerUsername = owner,
         workerID = workerID,
-        name = template.name or (jobType .. " Worker " .. tostring(data.Counters.worker)),
+        name = template.name or (jobType .. " Worker " .. tostring(workerID)),
         profession = template.profession or jobType,
         jobType = jobType,
         archetypeID = archetypeID,
@@ -76,7 +79,8 @@ function Registry.CreateWorker(ownerUsername, template)
         identitySeed = template.identitySeed,
         visualID = template.visualID,
         sourceNPCID = template.sourceNPCID,
-        sourceNPCType = template.sourceNPCType
+        sourceNPCType = template.sourceNPCType,
+        detailVersion = tonumber(template.detailVersion) or 1
     }
 
     if worker.isFemale == nil then
@@ -94,26 +98,45 @@ function Registry.CreateWorker(ownerUsername, template)
     Internal.EnsureActivityLog(worker)
 
     Registry.RecalculateWorker(worker)
-    data.Workers[workerID] = worker
+    local persistedWorker = Registry.GetWorkerData(colonyID, workerID)
+    for key, value in pairs(worker) do
+        persistedWorker[key] = value
+    end
+    ownerData.workers[workerID] = persistedWorker
 
     local exists = false
-    for _, existingID in ipairs(ownerData.workerIDs) do
+    for _, existingID in ipairs(workersData.workerIDs) do
         if existingID == workerID then
             exists = true
             break
         end
     end
     if not exists then
-        table.insert(ownerData.workerIDs, workerID)
+        table.insert(workersData.workerIDs, workerID)
     end
 
+    if Registry.GetWorkerSummary then
+        workersData.summaries[workerID] = Registry.GetWorkerSummary(persistedWorker)
+    end
+
+    Registry.Internal.Runtime.workerToColonyID[workerID] = colonyID
+    if persistedWorker.sourceNPCID ~= nil and tostring(persistedWorker.sourceNPCID or "") ~= "" then
+        Registry.Internal.Runtime.sourceNPCToWorkerID[tostring(persistedWorker.sourceNPCID)] = workerID
+    end
+    colonyData.versions.colony = colonyData.versions.colony + 1
+    Registry.TouchWorkersVersion(colonyID)
+
     Registry.Save()
-    return worker
+    return persistedWorker
 end
 
 function Registry.GetWorkerRaw(workerID)
-    local data = Registry.GetData()
-    return data.Workers[workerID]
+    local colonyID = Registry.GetWorkerColonyID(workerID)
+    if not colonyID then
+        return nil
+    end
+
+    return Registry.GetWorkerData(colonyID, workerID)
 end
 
 function Registry.GetWorker(workerID)
@@ -144,10 +167,14 @@ end
 
 function Registry.GetWorkersForOwnerRaw(ownerUsername)
     local owner = Config.GetOwnerUsername(ownerUsername)
-    local ownerData = Registry.EnsureOwner(owner)
+    local colonyID = Registry.GetColonyIDForOwner(owner, false)
+    if not colonyID then
+        return {}
+    end
+    local workersData = Registry.GetWorkersData(colonyID, false)
     local workers = {}
 
-    for _, workerID in ipairs(ownerData.workerIDs or {}) do
+    for _, workerID in ipairs(workersData and workersData.workerIDs or {}) do
         local worker = Registry.GetWorkerRaw(workerID)
         if worker then
             workers[#workers + 1] = worker
@@ -180,20 +207,32 @@ function Registry.RemoveWorkerForOwner(ownerUsername, workerID)
     end
 
     local owner = Config.GetOwnerUsername(ownerUsername)
+    local colonyID = Registry.GetColonyIDForOwner(owner, false)
+    if not colonyID then
+        return false
+    end
+
     local ownerData = Registry.EnsureOwner(owner)
-    local data = Registry.GetData()
-    local worker = data.Workers[workerID]
+    local colonyData = Registry.GetColonyData(colonyID, false)
+    local workersData = Registry.GetWorkersData(colonyID, false)
+    local worker = ownerData.workers[workerID]
     if not worker or worker.ownerUsername ~= owner then
         return false
     end
 
-    data.Workers[workerID] = nil
-
-    for index = #ownerData.workerIDs, 1, -1 do
-        if ownerData.workerIDs[index] == workerID then
-            table.remove(ownerData.workerIDs, index)
+    workersData.summaries[workerID] = nil
+    for index = #workersData.workerIDs, 1, -1 do
+        if workersData.workerIDs[index] == workerID then
+            table.remove(workersData.workerIDs, index)
         end
     end
+
+    if worker.sourceNPCID ~= nil and tostring(worker.sourceNPCID or "") ~= "" then
+        Registry.Internal.Runtime.sourceNPCToWorkerID[tostring(worker.sourceNPCID)] = nil
+    end
+    Registry.RemoveWorkerShard(colonyID, workerID)
+    colonyData.versions.colony = colonyData.versions.colony + 1
+    Registry.TouchWorkersVersion(colonyID)
 
     Registry.Save()
     return true

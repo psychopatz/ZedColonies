@@ -6,17 +6,36 @@ local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 
 function Registry.UpsertSite(site)
-    local data = Registry.GetData()
-    if not site.siteID then
-        site.siteID = "site_" .. tostring(Registry.NextID("site"))
+    local owner = Config.GetOwnerUsername(site and site.ownerUsername)
+    if owner == "" and site and site.workerID then
+        owner = Registry.GetWorkerOwner(site.workerID)
     end
-    data.Sites[site.siteID] = site
+    owner = Config.GetOwnerUsername(owner)
+    local colonyID = Registry.GetColonyIDForOwner(owner, true)
+    local colonyData = Registry.GetColonyData(colonyID, true)
+    local sitesData = Registry.GetSitesData(colonyID, true)
+
+    if not site.siteID then
+        site.siteID = Registry.NextID("site", colonyID)
+    end
+
+    site.ownerUsername = owner
+    site.colonyID = colonyID
+    sitesData.sites[site.siteID] = site
+    Registry.Internal.Runtime.siteToColonyID[site.siteID] = colonyID
+    colonyData.versions.colony = colonyData.versions.colony + 1
+    Registry.TouchSitesVersion(colonyID)
     return site
 end
 
 function Registry.GetSite(siteID)
-    local data = Registry.GetData()
-    return siteID and data.Sites[siteID] or nil
+    local colonyID = Registry.GetSiteColonyID(siteID)
+    if not colonyID then
+        return nil
+    end
+
+    local sitesData = Registry.GetSitesData(colonyID, false)
+    return siteID and sitesData and sitesData.sites[siteID] or nil
 end
 
 function Registry.AssignSiteToWorker(worker, site)

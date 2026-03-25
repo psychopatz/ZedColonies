@@ -16,7 +16,7 @@ function DC_MainWindow:applyWorkerSelection(summary, requestDetail)
         self:updateStatus("Requesting worker details for " .. tostring(summary.name or summary.workerID) .. "...")
         self:sendColonyCommand("RequestWorkerDetails", {
             workerID = summary.workerID,
-            includeWarehouseLedgers = false,
+            knownVersion = DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[summary.workerID] or nil,
             includeWorkerLedgers = false
         })
     end

@@ -102,12 +102,17 @@ end
 DC_MainWindow.MergeWorkerDetail = mergeWorkerDetail
 
 local function onServerCommand(module, command, args)
-    if module ~= "DynamicTrading_V2" then
+    local expectedModule = ((DC_Colony and DC_Colony.Config and DC_Colony.Config.COMMAND_MODULE) or "DColony")
+    if module ~= expectedModule then
         return
     end
 
     if command == "SyncPlayerWorkers" then
+        if args and args.unchanged == true then
+            return
+        end
         DC_MainWindow.cachedWorkers = args and args.workers or {}
+        DC_MainWindow.cachedWorkersVersion = args and args.version or nil
         if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() then
             DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers)
             if (tonumber(DC_MainWindow.instance.syncStatusMutedFrames) or 0) <= 0 then
@@ -115,11 +120,16 @@ local function onServerCommand(module, command, args)
             end
         end
     elseif command == "SyncWorkerDetails" then
+        if args and args.unchanged == true then
+            return
+        end
         if args and args.worker and args.worker.workerID then
             DC_MainWindow.cachedDetails = DC_MainWindow.cachedDetails or {}
+            DC_MainWindow.cachedDetailVersions = DC_MainWindow.cachedDetailVersions or {}
             local workerID = args.worker.workerID
             local mergedWorker = mergeWorkerDetail(DC_MainWindow.cachedDetails[workerID], args.worker)
             DC_MainWindow.cachedDetails[workerID] = mergedWorker
+            DC_MainWindow.cachedDetailVersions[workerID] = args.version or nil
             if DC_MainWindow.instance
                 and DC_MainWindow.instance:getIsVisible()
                 and DC_MainWindow.instance.selectedWorkerSummary
@@ -137,7 +147,9 @@ local function onServerCommand(module, command, args)
             end
         elseif args and args.workerID then
             DC_MainWindow.cachedDetails = DC_MainWindow.cachedDetails or {}
+            DC_MainWindow.cachedDetailVersions = DC_MainWindow.cachedDetailVersions or {}
             DC_MainWindow.cachedDetails[args.workerID] = nil
+            DC_MainWindow.cachedDetailVersions[args.workerID] = nil
             if DC_MainWindow.instance
                 and DC_MainWindow.instance:getIsVisible()
                 and DC_MainWindow.instance.selectedWorkerSummary
@@ -151,6 +163,22 @@ local function onServerCommand(module, command, args)
                 and DC_ColonyCharacterWindow.instance.workerID == args.workerID then
                 DC_ColonyCharacterWindow.instance:setWorkerData(nil)
                 DC_ColonyCharacterWindow.instance:close()
+            end
+        end
+    elseif command == "SyncWarehouse" then
+        if args and args.unchanged == true then
+            return
+        end
+
+        local selectedWorkerID = DC_MainWindow.instance and DC_MainWindow.instance.selectedWorkerSummary and DC_MainWindow.instance.selectedWorkerSummary.workerID or nil
+        if selectedWorkerID and DC_MainWindow.cachedDetails and DC_MainWindow.cachedDetails[selectedWorkerID] then
+            local mergedWorker = mergeWorkerDetail(DC_MainWindow.cachedDetails[selectedWorkerID], {
+                workerID = selectedWorkerID,
+                warehouse = args and args.warehouse or nil
+            })
+            DC_MainWindow.cachedDetails[selectedWorkerID] = mergedWorker
+            if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() and DC_MainWindow.instance.selectedWorkerSummary and DC_MainWindow.instance.selectedWorkerSummary.workerID == selectedWorkerID then
+                DC_MainWindow.instance:updateWorkerDetail(mergedWorker)
             end
         end
     elseif command == "ColonyNotice" then
@@ -193,7 +221,7 @@ if not DC_MainWindow.EventsAdded then
             return
         end
 
-        if key == (Internal.Config.MOD_DATA_KEY or "DynamicTrading_Colony") then
+        if key == (Internal.Config.MOD_DATA_INDEX_KEY or Internal.Config.MOD_DATA_KEY or "DColony_Index") then
             DC_MainWindow.instance:populateWorkerList(Internal.resolveWorkerSummaries())
             if (tonumber(DC_MainWindow.instance.syncStatusMutedFrames) or 0) <= 0 then
                 DC_MainWindow.instance:updateStatus("Colony data refreshed from ModData.")

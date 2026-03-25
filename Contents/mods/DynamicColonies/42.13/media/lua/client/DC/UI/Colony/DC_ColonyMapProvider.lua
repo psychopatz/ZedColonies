@@ -86,11 +86,13 @@ function Provider.requestSync(playerObj, state)
     if state then
         state.awaitingWorkerSync = true
     end
-    sendClientCommand(playerObj, Config.COMMAND_MODULE or "DynamicTrading_V2", "RequestPlayerWorkers", {})
+    sendClientCommand(playerObj, Config.COMMAND_MODULE or "DColony", "RequestPlayerWorkers", {
+        knownVersion = state and state.cachedVersion or nil
+    })
 end
 
 function Provider.onServerCommand(module, command, args, state)
-    if module ~= (Config.COMMAND_MODULE or "DynamicTrading_V2") then
+    if module ~= (Config.COMMAND_MODULE or "DColony") then
         return
     end
 
@@ -99,6 +101,10 @@ function Provider.onServerCommand(module, command, args, state)
             return
         end
         state.awaitingWorkerSync = false
+        if args and args.unchanged == true then
+            return
+        end
+        state.cachedVersion = args and args.version or nil
         state.cachedWorkers = args and args.workers or {}
     end
 end

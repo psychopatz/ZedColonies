@@ -511,6 +511,13 @@ function Config.GetOwnerUsername(playerOrUsername)
     if player and player.getUsername then
         local username = player:getUsername()
         if username and username ~= "" then
+            if DynamicTrading_Factions and DynamicTrading_Factions.GetPlayerFaction then
+                local faction = DynamicTrading_Factions.GetPlayerFaction(player)
+                local authorityUsername = faction and tostring(faction.leaderUsername or "") or ""
+                if authorityUsername ~= "" then
+                    return authorityUsername
+                end
+            end
             return username
         end
     end

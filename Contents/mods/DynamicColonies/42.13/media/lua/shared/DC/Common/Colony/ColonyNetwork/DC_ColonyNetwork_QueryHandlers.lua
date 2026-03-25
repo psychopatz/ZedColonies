@@ -6,7 +6,7 @@ local Network = DC_Colony.Network
 Network.Handlers = Network.Handlers or {}
 
 Network.Handlers.RequestPlayerWorkers = function(player, args)
-    Network.Internal.syncWorkerList(player)
+    Network.Internal.syncWorkerList(player, args and args.knownVersion)
 end
 
 Network.Handlers.RequestWorkerDetails = function(player, args)
@@ -14,8 +14,16 @@ Network.Handlers.RequestWorkerDetails = function(player, args)
     Network.Internal.syncWorkerDetail(
         player,
         args.workerID,
-        args.includeWarehouseLedgers == true,
+        args.knownVersion,
         args.includeWorkerLedgers == true
+    )
+end
+
+Network.Handlers.RequestWarehouse = function(player, args)
+    Network.Internal.syncWarehouse(
+        player,
+        args and args.knownVersion,
+        args and args.includeLedgers == true
     )
 end
 

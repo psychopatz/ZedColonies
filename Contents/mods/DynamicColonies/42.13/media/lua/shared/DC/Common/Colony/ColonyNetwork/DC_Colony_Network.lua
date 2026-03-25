@@ -19,4 +19,17 @@ require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork"
 require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_Debug"
 
+if isServer() and not DC_Colony.Network.ServerHookAdded then
+    Events.OnClientCommand.Add(function(module, command, player, args)
+        if module ~= ((DC_Colony.Config and DC_Colony.Config.COMMAND_MODULE) or "DColony") then
+            return
+        end
+
+        if DC_Colony.Network and DC_Colony.Network.HandleCommand then
+            DC_Colony.Network.HandleCommand(player, command, args or {})
+        end
+    end)
+    DC_Colony.Network.ServerHookAdded = true
+end
+
 return DC_Colony.Network

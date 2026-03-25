@@ -33,8 +33,9 @@ local function withdrawWarehouseNutritionEntries(ownerUsername, inventory, index
     local moved = 0
     for _, entry in ipairs(Warehouse.TakeProvisionEntries(ownerUsername, indexes) or {}) do
         if entry and entry.fullType then
-            Internal.addInventoryItem(inventory, entry.fullType, 1)
-            moved = moved + 1
+            local qty = math.max(1, tonumber(entry.qty) or 1)
+            Internal.addInventoryItem(inventory, entry.fullType, qty)
+            moved = moved + qty
         end
     end
     return moved
@@ -63,8 +64,9 @@ local function withdrawWarehouseToolEntries(ownerUsername, inventory, indexes)
     local moved = 0
     for _, entry in ipairs(Warehouse.TakeEquipmentEntries(ownerUsername, indexes) or {}) do
         if entry and entry.fullType then
-            Internal.addInventoryItem(inventory, entry.fullType, 1)
-            moved = moved + 1
+            local qty = math.max(1, tonumber(entry.qty) or 1)
+            Internal.addInventoryItem(inventory, entry.fullType, qty)
+            moved = moved + qty
         end
     end
     return moved

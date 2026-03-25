@@ -3,8 +3,16 @@ DC_Colony.Config = DC_Colony.Config or {}
 
 local Config = DC_Colony.Config
 
-Config.MOD_DATA_KEY = "DynamicTrading_Colony"
-Config.COMMAND_MODULE = "DynamicTrading_V2"
+Config.MOD_DATA_KEY = "DColony_Index"
+Config.MOD_DATA_INDEX_KEY = "DColony_Index"
+Config.MOD_DATA_SCHEMA_VERSION = 3
+Config.MOD_DATA_COLONY_PREFIX = "DColony_Colony_"
+Config.MOD_DATA_WORKERS_PREFIX = "DColony_Workers_"
+Config.MOD_DATA_WORKER_PREFIX = "DColony_Worker_"
+Config.MOD_DATA_SITES_PREFIX = "DColony_Sites_"
+Config.MOD_DATA_WAREHOUSE_PREFIX = "DColony_Warehouse_"
+Config.MOD_DATA_WAREHOUSE_ITEMS_PREFIX = "DColony_WarehouseItems_"
+Config.COMMAND_MODULE = "DColony"
 Config.PROJECTION_PREFIX = "DTLAB_"
 Config.HOURS_PER_DAY = 24
 Config.SIM_TICK_RATE = 60

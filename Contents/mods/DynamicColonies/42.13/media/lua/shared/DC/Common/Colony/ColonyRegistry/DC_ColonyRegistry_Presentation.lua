@@ -166,11 +166,6 @@ function Registry.GetWorkerDetailsForOwner(ownerUsername, workerID, includeWareh
         detail.haulLedger = nil
         detail.outputLedger = nil
     end
-    local Warehouse = DC_Colony and DC_Colony.Warehouse or nil
-    detail.warehouse = Warehouse and Warehouse.GetClientSnapshot and Warehouse.GetClientSnapshot(ownerUsername, includeWarehouseLedgers == true) or nil
-    if DC_Buildings and DC_Buildings.BuildOwnerSnapshot then
-        detail.buildings = DC_Buildings.BuildOwnerSnapshot(ownerUsername)
-    end
     return detail
 end
 

@@ -48,14 +48,35 @@ local function addOptimisticProvision(window, entry)
         if not warehouse then
             return false
         end
+        local normalizedProvisionType = entry.provisionType or "nutrition"
+        local normalizedCalories = math.max(0, tonumber(entry.calories) or 0)
+        local normalizedHydration = math.max(0, tonumber(entry.hydration) or 0)
+        local normalizedTreatmentUnits = math.max(0, tonumber(entry.treatmentUnits) or 0)
+        local normalizedMedicalUse = normalizedProvisionType == "medical" and "bandage" or nil
+
+        for _, existing in ipairs(warehouse.ledgers.provisions) do
+            if existing.fullType == entry.fullType
+                and tostring(existing.provisionType or "nutrition") == tostring(normalizedProvisionType)
+                and math.max(0, tonumber(existing.caloriesRemaining) or 0) == normalizedCalories
+                and math.max(0, tonumber(existing.hydrationRemaining) or 0) == normalizedHydration
+                and math.max(0, tonumber(existing.treatmentUnitsRemaining) or 0) == normalizedTreatmentUnits
+                and tostring(existing.medicalUse or "") == tostring(normalizedMedicalUse or "") then
+                existing.qty = math.max(1, tonumber(existing.qty) or 1) + 1
+                existing.pending = true
+                applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))
+                return true
+            end
+        end
+
         warehouse.ledgers.provisions[#warehouse.ledgers.provisions + 1] = {
             fullType = entry.fullType,
             displayName = entry.displayName,
-            provisionType = entry.provisionType or "nutrition",
-            caloriesRemaining = math.max(0, tonumber(entry.calories) or 0),
-            hydrationRemaining = math.max(0, tonumber(entry.hydration) or 0),
-            treatmentUnitsRemaining = math.max(0, tonumber(entry.treatmentUnits) or 0),
-            medicalUse = entry.provisionType == "medical" and "bandage" or nil,
+            provisionType = normalizedProvisionType,
+            caloriesRemaining = normalizedCalories,
+            hydrationRemaining = normalizedHydration,
+            treatmentUnitsRemaining = normalizedTreatmentUnits,
+            medicalUse = normalizedMedicalUse,
+            qty = 1,
             pending = true,
         }
         applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))
@@ -87,10 +108,20 @@ local function addOptimisticTool(window, entry)
         if not warehouse then
             return false
         end
+        for _, existing in ipairs(warehouse.ledgers.equipment) do
+            if existing.fullType == entry.fullType then
+                existing.qty = math.max(1, tonumber(existing.qty) or 1) + 1
+                existing.pending = true
+                applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))
+                return true
+            end
+        end
+
         warehouse.ledgers.equipment[#warehouse.ledgers.equipment + 1] = {
             fullType = entry.fullType,
             displayName = entry.displayName,
             tags = entry.tags or {},
+            qty = 1,
             pending = true,
         }
         applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))
