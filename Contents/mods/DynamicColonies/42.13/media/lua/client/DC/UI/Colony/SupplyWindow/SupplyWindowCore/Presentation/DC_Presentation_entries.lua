@@ -98,6 +98,25 @@ local function isMedicalProvisionEntry(entry)
     return tostring(entry and entry.provisionType or "") == "medical" or (tonumber(entry and entry.treatmentUnits) or 0) > 0
 end
 
+local function getEquipmentMatchSummary(entry, worker)
+    local config = Internal.Config or {}
+    if not entry or not worker or not worker.jobType or not config.GetMatchingEquipmentRequirementDefinitions then
+        return nil
+    end
+
+    local matches = config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, worker.jobType) or {}
+    if #matches <= 0 then
+        return nil
+    end
+
+    local labels = {}
+    for _, definition in ipairs(matches) do
+        labels[#labels + 1] = tostring(definition.label or definition.requirementKey or "Equipment")
+    end
+
+    return table.concat(labels, ", ")
+end
+
 function Internal.getWorkerTabSummary(window, entries)
     local activeTab = window and window.activeTab or Internal.Tabs.Provisions
 
@@ -182,8 +201,9 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
 
     if activeTab == Internal.Tabs.Equipment then
         if entry.canAssignTool then
+            local matchSummary = getEquipmentMatchSummary(entry, worker)
             return {
-                statText = appendWeightText(Internal.getMissingEquipmentSummary(worker, 3), entry),
+                statText = appendWeightText(matchSummary and ("Matches: " .. matchSummary) or "Relevant labour equipment", entry),
                 badgeText = "Tool",
                 dimmed = false,
             }

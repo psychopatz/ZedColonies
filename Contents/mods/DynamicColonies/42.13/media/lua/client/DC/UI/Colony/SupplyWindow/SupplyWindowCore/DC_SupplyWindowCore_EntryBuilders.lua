@@ -44,9 +44,17 @@ function Internal.buildInventoryEntry(invItem)
     local fullType = invItem:getFullType()
     local isMedicalProvision = Internal.Config.IsMedicalProvisionFullType and Internal.Config.IsMedicalProvisionFullType(fullType) or false
     local treatmentUnits = isMedicalProvision and (Internal.Config.GetMedicalProvisionUnits and Internal.Config.GetMedicalProvisionUnits(fullType) or 0) or 0
+    local matchingEquipmentRequirements = Internal.Config.GetMatchingEquipmentRequirementDefinitions
+        and Internal.Config.GetMatchingEquipmentRequirementDefinitions(fullType)
+        or {}
     local tags = Internal.Config.GetItemCombinedTags and Internal.Config.GetItemCombinedTags(fullType)
         or (Internal.Config.FindItemTags and Internal.Config.FindItemTags(fullType))
         or {}
+    local searchTerms = {}
+    for _, definition in ipairs(matchingEquipmentRequirements) do
+        searchTerms[#searchTerms + 1] = tostring(definition.label or definition.requirementKey or "")
+        searchTerms[#searchTerms + 1] = tostring(definition.searchText or "")
+    end
     return {
         kind = "player",
         invItem = invItem,
@@ -60,8 +68,10 @@ function Internal.buildInventoryEntry(invItem)
         unitWeight = getUnitWeight(fullType),
         totalWeight = getTotalWeight(fullType, 1),
         canDeposit = isMedicalProvision or calories > 0 or hydration > 0,
-        canAssignTool = Internal.Config.IsColonyToolFullType and Internal.Config.IsColonyToolFullType(fullType) or false,
+        canAssignTool = #matchingEquipmentRequirements > 0,
+        equipmentRequirementKeys = matchingEquipmentRequirements,
         tags = tags,
+        searchText = table.concat(searchTerms, " "),
         texture = invItem.getTex and invItem:getTex() or nil,
     }
 end

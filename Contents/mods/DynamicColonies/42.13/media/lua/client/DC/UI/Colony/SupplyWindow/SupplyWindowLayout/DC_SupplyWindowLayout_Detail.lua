@@ -100,16 +100,7 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         text = text .. " <RGB:0.82,0.82,0.82> Item: <RGB:1,1,1> " .. tostring(Internal.formatEntryLabel(entry)) .. " <LINE> "
         if entry.kind == "placeholder" then
             local supportDisplay = Internal.getPlaceholderSupportDisplay(self, entry)
-            text = text .. " <RGB:0.82,0.82,0.82> Slot Type: <RGB:1,1,1> Missing Requirement <LINE> "
-            text = text .. " <RGB:0.82,0.82,0.82> Why It Matters: <RGB:1,1,1> " .. tostring(entry.reasonText or "This tool unlocks scavenging capability for the worker.") .. " <LINE> "
-            text = text .. " <RGB:0.82,0.82,0.82> Suggested Match: <RGB:1,1,1> " .. tostring(entry.hintText or "Assign a matching tool from the player inventory") .. " <LINE> "
-            if supportDisplay.hasMatches then
-                text = text .. " <RGB:0.82,0.82,0.82> Available Match Count: <RGB:1,1,1> " .. tostring(#(supportDisplay.entries or {})) .. " <LINE> "
-                text = text .. " <RGB:0.82,0.82,0.82> Icons Below: <RGB:1,1,1> Matching items currently in your inventory. <LINE> "
-            else
-                text = text .. " <RGB:0.82,0.82,0.82> Icons Below: <RGB:1,1,1> Supported examples for this requirement. <LINE> "
-            end
-            text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Select a matching item on the left side and use > to assign it. <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Needed For: <RGB:1,1,1> " .. tostring(entry.reasonText or "This tool unlocks additional work options for the worker.") .. " <LINE> "
             setDetailSupportPanel(self, supportDisplay.title, supportDisplay.entries)
         else
             setDetailSupportPanel(self, "", {})
@@ -118,11 +109,6 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         if entry.kind == "money" then
             text = text .. " <RGB:0.82,0.82,0.82> Stored Dollars: <RGB:1,1,1> $" .. tostring(math.max(0, math.floor(tonumber(entry.amount) or 0))) .. " <LINE> "
             text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use < to withdraw a chosen amount. <LINE> "
-        elseif entry.kind == "placeholder" then
-            local tags = entry.tags or {}
-            text = text .. " <RGB:0.82,0.82,0.82> Requirement Tags: <RGB:1,1,1> "
-                .. ((#tags > 0 and table.concat(tags, ", ")) or "None")
-                .. " <LINE> "
         elseif self.activeTab == Internal.Tabs.Equipment then
             text = appendWeightLine(text, entry)
             local tags = entry.tags or {}

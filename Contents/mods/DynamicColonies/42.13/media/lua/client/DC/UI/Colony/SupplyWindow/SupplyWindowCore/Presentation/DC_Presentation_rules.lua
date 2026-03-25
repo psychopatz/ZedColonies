@@ -3,6 +3,20 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function isRelevantEquipmentEntry(entry, window)
+    if not entry or entry.kind == "money" or entry.canAssignTool ~= true then
+        return false
+    end
+
+    local config = Internal.Config or {}
+    local worker = window and window.workerData or nil
+    if config.GetMatchingEquipmentRequirementDefinitions and worker and worker.jobType then
+        return #(config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, worker.jobType) or {}) > 0
+    end
+
+    return true
+end
+
 function Internal.canTransferWithWorker(worker)
     if not worker then
         return false
@@ -49,7 +63,7 @@ function Internal.shouldShowPlayerEntry(entry, activeTab, window)
     end
 
     if activeTab == Internal.Tabs.Equipment then
-        return true
+        return isRelevantEquipmentEntry(entry, window)
     end
 
     if activeTab == Internal.Tabs.Output then

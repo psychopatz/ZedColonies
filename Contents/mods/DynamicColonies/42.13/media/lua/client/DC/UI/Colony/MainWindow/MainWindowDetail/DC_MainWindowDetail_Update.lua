@@ -153,7 +153,7 @@ function DC_MainWindow:updateWorkerDetail(worker)
 
     local config = getConfig()
     local profile = (isFunction(config.GetJobProfile) and config.GetJobProfile(worker.jobType)) or {}
-    local toolTags = profile.requiredToolTags or {}
+    local equipmentDefinitions = (isFunction(config.GetEquipmentRequirementDefinitions) and config.GetEquipmentRequirementDefinitions(worker.jobType)) or {}
     local jobSkillEffects = worker.jobSkillEffects or {
         skillID = worker.jobSkillID,
         skillLabel = worker.jobSkillLabel,
@@ -165,11 +165,12 @@ function DC_MainWindow:updateWorkerDetail(worker)
     local stateLabel = tostring(worker.state or "")
     local deadState = tostring((config.States or {}).Dead or "Dead")
     local workProgressData = isFunction(Internal.getWorkerProgressData) and Internal.getWorkerProgressData(worker, profile) or nil
-    local toolSummary = (#toolTags > 0) and table.concat(toolTags, ", ")
-        or ((normalizedJobType == (config.JobTypes and config.JobTypes.Scavenge)) and "Optional scavenger kit" or "Optional")
-    if normalizedJobType == (config.JobTypes and config.JobTypes.Builder) then
-        toolSummary = "Builder.Tool.Hammer, Builder.Tool.Saw"
+    local toolLabels = {}
+    for _, definition in ipairs(equipmentDefinitions) do
+        toolLabels[#toolLabels + 1] = tostring(definition.label or definition.requirementKey or "Tool")
     end
+    local toolSummary = (#toolLabels > 0) and table.concat(toolLabels, ", ")
+        or ((normalizedJobType == (config.JobTypes and config.JobTypes.Scavenge)) and "Optional scavenger kit" or "Optional")
     local text = ""
     text = text .. " <RGB:1,1,1> <SIZE:Medium> Overview <LINE> "
     text = text .. " <RGB:0.72,0.72,0.72> Job Enabled: <RGB:1,1,1> " .. formatBool(worker.jobEnabled == true) .. " <LINE> "

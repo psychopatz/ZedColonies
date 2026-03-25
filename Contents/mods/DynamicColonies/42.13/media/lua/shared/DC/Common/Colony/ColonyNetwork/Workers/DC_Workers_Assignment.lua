@@ -37,7 +37,8 @@ Network.Handlers.AssignWorkerToolset = function(player, args)
 
     local fullType = invItem:getFullType()
     local tags = Config.GetItemCombinedTags and Config.GetItemCombinedTags(fullType) or Config.FindItemTags(fullType)
-    if not Config.IsColonyToolFullType or not Config.IsColonyToolFullType(fullType) then return end
+    local isRequiredEquipment = Config.IsRequiredEquipmentFullType and Config.IsRequiredEquipmentFullType(fullType, worker.jobType)
+    if not isRequiredEquipment then return end
 
     Registry.AddToolEntry(worker, {
         fullType = fullType,
@@ -59,7 +60,8 @@ Network.Handlers.AssignWarehouseToolset = function(player, args)
 
     local fullType = invItem:getFullType()
     local tags = Config.GetItemCombinedTags and Config.GetItemCombinedTags(fullType) or Config.FindItemTags(fullType)
-    if not Config.IsColonyToolFullType or not Config.IsColonyToolFullType(fullType) then return end
+    local isRequiredEquipment = Config.IsRequiredEquipmentFullType and Config.IsRequiredEquipmentFullType(fullType, worker.jobType)
+    if not isRequiredEquipment then return end
 
     local stored = Warehouse.DepositEquipmentEntry(owner, {
         fullType = fullType,

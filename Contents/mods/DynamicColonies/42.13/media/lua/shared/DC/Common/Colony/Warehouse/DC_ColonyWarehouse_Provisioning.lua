@@ -6,15 +6,21 @@ local Config = DC_Colony.Config
 local Nutrition = DC_Colony.Nutrition
 local Registry = DC_Colony.Registry
 local Warehouse = DC_Colony.Warehouse
-local AUTO_SCAVENGE_TOOL_TAGS = {
-    "Scavenge.Haul.Bag"
-}
 
 local function workerHasToolTag(worker, requiredTag)
     Registry.RecalculateWorker(worker)
     local tagMap = worker and worker.assignedToolTags or {}
     for itemTag, enabled in pairs(tagMap or {}) do
         if enabled and Config.TagMatches and Config.TagMatches(itemTag, requiredTag) then
+            return true
+        end
+    end
+    return false
+end
+
+local function workerHasAnyRequirementTag(worker, requirementTags)
+    for _, requirementTag in ipairs(requirementTags or {}) do
+        if workerHasToolTag(worker, requirementTag) then
             return true
         end
     end
@@ -64,41 +70,33 @@ local function takeFirstEquipmentEntryByTag(ownerUsername, requiredTag)
     end)
 end
 
+local function takeFirstEquipmentEntryByRequirementTags(ownerUsername, requirementTags)
+    for _, requirementTag in ipairs(requirementTags or {}) do
+        local entry = takeFirstEquipmentEntryByTag(ownerUsername, requirementTag)
+        if entry then
+            return entry
+        end
+    end
+    return nil
+end
+
 local function restockRequiredTools(worker)
     if not worker then
         return 0
     end
 
     local added = 0
-    local profile = Config.GetJobProfile and Config.GetJobProfile(worker.jobType) or {}
+    local requirementDefinitions = Config.GetAutoEquipRequirementDefinitions
+        and Config.GetAutoEquipRequirementDefinitions(worker.jobType)
+        or {}
 
-    for _, requiredTag in ipairs(profile.requiredToolTags or {}) do
-        if not workerHasToolTag(worker, requiredTag) then
-            local entry = takeFirstEquipmentEntryByTag(worker.ownerUsername, requiredTag)
+    for _, definition in ipairs(requirementDefinitions) do
+        local requirementTags = definition.requirementTags or { definition.requirementKey }
+        if not workerHasAnyRequirementTag(worker, requirementTags) then
+            local entry = takeFirstEquipmentEntryByRequirementTags(worker.ownerUsername, requirementTags)
             if entry then
                 Registry.AddToolEntry(worker, entry)
                 added = added + 1
-            end
-        end
-    end
-
-    if Config.NormalizeJobType and Config.NormalizeJobType(worker.jobType) == ((Config.JobTypes or {}).Scavenge) then
-        local hasScavengeTool = workerHasToolTag(worker, "Colony.Tool.Scavenge")
-        if not hasScavengeTool then
-            local entry = takeFirstEquipmentEntryByTag(worker.ownerUsername, "Colony.Tool.Scavenge")
-            if entry then
-                Registry.AddToolEntry(worker, entry)
-                added = added + 1
-            end
-        end
-
-        for _, requiredTag in ipairs(AUTO_SCAVENGE_TOOL_TAGS) do
-            if not workerHasToolTag(worker, requiredTag) then
-                local entry = takeFirstEquipmentEntryByTag(worker.ownerUsername, requiredTag)
-                if entry then
-                    Registry.AddToolEntry(worker, entry)
-                    added = added + 1
-                end
             end
         end
     end
