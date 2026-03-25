@@ -16,10 +16,11 @@ function Internal.getWorkerSupplyTotals(entries)
         if entry.kind == "money" then
             totals.money = totals.money + math.max(0, math.floor(tonumber(entry.amount) or 0))
         else
-            totals.count = totals.count + 1
-            totals.calories = totals.calories + math.max(0, tonumber(entry.calories) or 0)
-            totals.hydration = totals.hydration + math.max(0, tonumber(entry.hydration) or 0)
-            totals.medicalUnits = totals.medicalUnits + math.max(0, tonumber(entry.treatmentUnits) or 0)
+            local qty = math.max(1, tonumber(entry.qty) or 1)
+            totals.count = totals.count + qty
+            totals.calories = totals.calories + ((tonumber(entry.totalCalories) or math.max(0, tonumber(entry.calories) or 0) * qty))
+            totals.hydration = totals.hydration + ((tonumber(entry.totalHydration) or math.max(0, tonumber(entry.hydration) or 0) * qty))
+            totals.medicalUnits = totals.medicalUnits + ((tonumber(entry.totalTreatmentUnits) or math.max(0, tonumber(entry.treatmentUnits) or 0) * qty))
         end
     end
 
@@ -42,14 +43,16 @@ function Internal.getWarehouseLedgerWeight(worker, tabID)
 
     if tabID == Internal.Tabs.Provisions then
         for _, entry in ipairs(ledgers.provisions or {}) do
-            totalWeight = totalWeight + math.max(0, tonumber(config.GetItemWeight and config.GetItemWeight(entry and entry.fullType)) or 0)
+            local qty = math.max(1, tonumber(entry and entry.qty) or 1)
+            totalWeight = totalWeight + (math.max(0, tonumber(config.GetItemWeight and config.GetItemWeight(entry and entry.fullType)) or 0) * qty)
         end
         return totalWeight
     end
 
     if tabID == Internal.Tabs.Equipment then
         for _, entry in ipairs(ledgers.equipment or {}) do
-            totalWeight = totalWeight + math.max(0, tonumber(config.GetItemWeight and config.GetItemWeight(entry and entry.fullType)) or 0)
+            local qty = math.max(1, tonumber(entry and entry.qty) or 1)
+            totalWeight = totalWeight + (math.max(0, tonumber(config.GetItemWeight and config.GetItemWeight(entry and entry.fullType)) or 0) * qty)
         end
         return totalWeight
     end

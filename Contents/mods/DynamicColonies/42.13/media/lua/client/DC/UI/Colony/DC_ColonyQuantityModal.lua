@@ -2,6 +2,7 @@ require "ISUI/ISCollapsableWindow"
 require "ISUI/ISButton"
 require "ISUI/ISLabel"
 require "ISUI/ISTextEntryBox"
+require "RadioCom/ISUIRadio/ISSliderPanel"
 
 DC_ColonyQuantityModal = ISCollapsableWindow:derive("DC_ColonyQuantityModal")
 DC_ColonyQuantityModal.instance = nil
@@ -22,6 +23,30 @@ function DC_ColonyQuantityModal:initialise()
     self:setResizable(false)
 end
 
+function DC_ColonyQuantityModal:syncQuantityUI(quantity, syncSlider)
+    local clamped = clampQuantity(quantity, self.maxValue or 1)
+
+    if self.quantityEntry then
+        local textValue = tostring(clamped)
+        if self.quantityEntry:getText() ~= textValue then
+            self.quantityEntry:setText(textValue)
+        end
+        self.lastQuantityText = textValue
+    end
+
+    if self.selectedLabel then
+        self.selectedLabel:setName("Selected: " .. tostring(clamped))
+    end
+
+    if syncSlider and self.quantitySlider then
+        self.quantitySlider:setCurrentValue(clamped, true)
+    end
+end
+
+function DC_ColonyQuantityModal:onSliderChange(value, slider)
+    self:syncQuantityUI(value, false)
+end
+
 function DC_ColonyQuantityModal:createChildren()
     ISCollapsableWindow.createChildren(self)
 
@@ -35,15 +60,39 @@ function DC_ColonyQuantityModal:createChildren()
     self.promptLabel:instantiate()
     self:addChild(self.promptLabel)
 
-    self.quantityEntry = ISTextEntryBox:new(tostring(self.defaultValue or 1), pad, contentY + 28, contentWidth, 24)
+    self.quantitySlider = ISSliderPanel:new(pad, contentY + 28, contentWidth, 18, self, self.onSliderChange)
+    self.quantitySlider:initialise()
+    self.quantitySlider:instantiate()
+    self.quantitySlider:setValues(1, math.max(2, self.maxValue or 1), 1, math.max(1, math.floor((self.maxValue or 1) / 10)), true)
+    self.quantitySlider:setCurrentValue(self.defaultValue or 1, true)
+    self.quantitySlider.disabled = (self.maxValue or 1) <= 1
+    self:addChild(self.quantitySlider)
+
+    self.quantityEntry = ISTextEntryBox:new(tostring(self.defaultValue or 1), pad, contentY + 54, contentWidth, 24)
     self.quantityEntry:initialise()
     self.quantityEntry:instantiate()
     self.quantityEntry:setOnlyNumbers(true)
     self:addChild(self.quantityEntry)
 
+    self.selectedLabel = ISLabel:new(
+        pad,
+        contentY + 84,
+        20,
+        "Selected: " .. tostring(self.defaultValue or 1),
+        1,
+        1,
+        1,
+        1,
+        UIFont.Small,
+        true
+    )
+    self.selectedLabel:initialise()
+    self.selectedLabel:instantiate()
+    self:addChild(self.selectedLabel)
+
     self.maxLabel = ISLabel:new(
         pad,
-        contentY + 60,
+        contentY + 104,
         20,
         "Available: " .. tostring(self.maxValue or 1),
         0.75,
@@ -68,6 +117,15 @@ function DC_ColonyQuantityModal:createChildren()
     self:addChild(self.btnCancel)
 end
 
+function DC_ColonyQuantityModal:update()
+    ISCollapsableWindow.update(self)
+
+    local currentText = self.quantityEntry and self.quantityEntry:getText() or ""
+    if currentText ~= (self.lastQuantityText or "") then
+        self:syncQuantityUI(currentText, true)
+    end
+end
+
 function DC_ColonyQuantityModal:onConfirm()
     local quantity = clampQuantity(self.quantityEntry and self.quantityEntry:getText() or 1, self.maxValue or 1)
     if self.onConfirmCallback then
@@ -90,8 +148,8 @@ function DC_ColonyQuantityModal.Open(args)
 
     local modal = DC_ColonyQuantityModal.instance
     if not modal then
-        local width = 320
-        local height = 150
+        local width = 340
+        local height = 190
         local x = (getCore():getScreenWidth() - width) / 2
         local y = (getCore():getScreenHeight() - height) / 2
         modal = DC_ColonyQuantityModal:new(x, y, width, height)
@@ -109,12 +167,14 @@ function DC_ColonyQuantityModal.Open(args)
     if modal.promptLabel then
         modal.promptLabel:setName(modal.promptText)
     end
+    if modal.quantitySlider then
+        modal.quantitySlider:setValues(1, math.max(2, modal.maxValue), 1, math.max(1, math.floor(modal.maxValue / 10)), true)
+        modal.quantitySlider.disabled = modal.maxValue <= 1
+    end
     if modal.maxLabel then
         modal.maxLabel:setName("Available: " .. tostring(modal.maxValue))
     end
-    if modal.quantityEntry then
-        modal.quantityEntry:setText(tostring(modal.defaultValue))
-    end
+    modal:syncQuantityUI(modal.defaultValue, true)
 
     modal:setVisible(true)
     modal:addToUIManager()
@@ -136,6 +196,7 @@ function DC_ColonyQuantityModal:new(x, y, width, height)
     o.defaultValue = 1
     o.maxValue = 1
     o.onConfirmCallback = nil
+    o.lastQuantityText = "1"
     return o
 end
 

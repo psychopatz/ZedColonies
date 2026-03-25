@@ -98,7 +98,27 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
     if side == "worker" then
         text = text .. " <RGB:1,1,1> <SIZE:Large> " .. Internal.getActiveWorkerTabLabel(self) .. " <LINE> <LINE> "
         text = text .. " <RGB:0.82,0.82,0.82> Item: <RGB:1,1,1> " .. tostring(Internal.formatEntryLabel(entry)) .. " <LINE> "
-        if entry.kind == "placeholder" then
+        if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
+            setDetailSupportPanel(self, "", {})
+            text = appendWeightLine(text, entry)
+            text = text .. " <RGB:0.82,0.82,0.82> Group Size: <RGB:1,1,1> " .. tostring(entry.childCount or 0) .. " entries <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Full Type: <RGB:1,1,1> " .. tostring(entry.fullType or "Mixed") .. " <LINE> "
+            if self.activeTab == Internal.Tabs.Output then
+                text = text .. " <RGB:0.82,0.82,0.82> Total Quantity: <RGB:1,1,1> " .. tostring(entry.totalQty or entry.qty or 0) .. " <LINE> "
+            elseif self.activeTab == Internal.Tabs.Equipment then
+                local tags = entry.tags or {}
+                text = text .. " <RGB:0.82,0.82,0.82> Tool Tags: <RGB:1,1,1> "
+                    .. ((#tags > 0 and table.concat(tags, ", ")) or "None")
+                    .. " <LINE> "
+            else
+                text = text .. " <RGB:0.82,0.82,0.82> Total Calories: <RGB:1,1,1> " .. string.format("%.0f", entry.calories or 0) .. " <LINE> "
+                text = text .. " <RGB:0.82,0.82,0.82> Total Hydration: <RGB:1,1,1> " .. string.format("%.0f", entry.hydration or 0) .. " <LINE> "
+                if (tonumber(entry.treatmentUnits) or 0) > 0 then
+                    text = text .. " <RGB:0.82,0.82,0.82> Treatment Units: <RGB:1,1,1> " .. tostring(math.floor((tonumber(entry.treatmentUnits) or 0) + 0.5)) .. " <LINE> "
+                end
+            end
+            text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use < to collect the whole group, or click the left arrow to expand it for individual transfers. <LINE> "
+        elseif entry.kind == "placeholder" then
             local supportDisplay = Internal.getPlaceholderSupportDisplay(self, entry)
             text = text .. " <RGB:0.82,0.82,0.82> Needed For: <RGB:1,1,1> " .. tostring(entry.reasonText or "This tool unlocks additional work options for the worker.") .. " <LINE> "
             setDetailSupportPanel(self, supportDisplay.title, supportDisplay.entries)
@@ -109,6 +129,8 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         if entry.kind == "money" then
             text = text .. " <RGB:0.82,0.82,0.82> Stored Dollars: <RGB:1,1,1> $" .. tostring(math.max(0, math.floor(tonumber(entry.amount) or 0))) .. " <LINE> "
             text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use < to withdraw a chosen amount. <LINE> "
+        elseif Internal.isGroupEntry and Internal.isGroupEntry(entry) then
+            -- Group details were already rendered above.
         elseif self.activeTab == Internal.Tabs.Equipment then
             text = appendWeightLine(text, entry)
             local tags = entry.tags or {}
@@ -126,18 +148,47 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
                 text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Drop to discard this hauled item and free carry weight. <LINE> "
             end
         else
+            if (tonumber(entry.qty) or 1) > 1 then
+                text = text .. " <RGB:0.82,0.82,0.82> Quantity: <RGB:1,1,1> " .. tostring(entry.qty or 1) .. " <LINE> "
+            end
             text = appendWeightLine(text, entry)
-            text = text .. " <RGB:0.82,0.82,0.82> Remaining Calories: <RGB:1,1,1> " .. string.format("%.0f", entry.calories or 0) .. " <LINE> "
-            text = text .. " <RGB:0.82,0.82,0.82> Remaining Hydration: <RGB:1,1,1> " .. string.format("%.0f", entry.hydration or 0) .. " <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Remaining Calories: <RGB:1,1,1> " .. string.format("%.0f", entry.totalCalories or entry.calories or 0) .. " <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Remaining Hydration: <RGB:1,1,1> " .. string.format("%.0f", entry.totalHydration or entry.hydration or 0) .. " <LINE> "
+            if (tonumber(entry.totalTreatmentUnits) or 0) > 0 then
+                text = text .. " <RGB:0.82,0.82,0.82> Treatment Units: <RGB:1,1,1> " .. tostring(math.floor((tonumber(entry.totalTreatmentUnits) or 0) + 0.5)) .. " <LINE> "
+            end
         end
     else
         setDetailSupportPanel(self, "", {})
         text = text .. " <RGB:1,1,1> <SIZE:Large> Player Item <LINE> <LINE> "
         text = text .. " <RGB:0.82,0.82,0.82> Item: <RGB:1,1,1> " .. tostring(Internal.formatEntryLabel(entry)) .. " <LINE> "
-        text = text .. " <RGB:0.82,0.82,0.82> Full Type: <RGB:1,1,1> " .. tostring(entry.fullType or "Unknown") .. " <LINE> "
+        if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
+            text = text .. " <RGB:0.82,0.82,0.82> Group Size: <RGB:1,1,1> " .. tostring(entry.childCount or 0) .. " entries <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Full Type: <RGB:1,1,1> " .. tostring(entry.fullType or "Unknown") .. " <LINE> "
+            text = appendWeightLine(text, entry)
+            if self.activeTab == Internal.Tabs.Equipment then
+                local tags = entry.tags or {}
+                text = text .. " <RGB:0.82,0.82,0.82> Tool Tags: <RGB:1,1,1> "
+                    .. ((#tags > 0 and table.concat(tags, ", ")) or "None")
+                    .. " <LINE> "
+            elseif self.activeTab == Internal.Tabs.Output and Internal.isWarehouseView and Internal.isWarehouseView(self) then
+                text = text .. " <RGB:0.82,0.82,0.82> Total Quantity: <RGB:1,1,1> " .. tostring(entry.totalQty or entry.qty or 0) .. " <LINE> "
+            else
+                text = text .. " <RGB:0.82,0.82,0.82> Total Calories: <RGB:1,1,1> " .. string.format("%.0f", entry.calories or 0) .. " <LINE> "
+                text = text .. " <RGB:0.82,0.82,0.82> Total Hydration: <RGB:1,1,1> " .. string.format("%.0f", entry.hydration or 0) .. " <LINE> "
+                if (tonumber(entry.treatmentUnits) or 0) > 0 then
+                    text = text .. " <RGB:0.82,0.82,0.82> Treatment Units: <RGB:1,1,1> " .. tostring(math.floor((tonumber(entry.treatmentUnits) or 0) + 0.5)) .. " <LINE> "
+                end
+            end
+            text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use > to move the whole visible group, or click the left arrow to expand it for precise transfers. <LINE> "
+        else
+            text = text .. " <RGB:0.82,0.82,0.82> Full Type: <RGB:1,1,1> " .. tostring(entry.fullType or "Unknown") .. " <LINE> "
+        end
         if entry.kind == "money" then
             text = text .. " <RGB:0.82,0.82,0.82> Available Dollars: <RGB:1,1,1> $" .. tostring(math.max(0, math.floor(tonumber(entry.amount) or 0))) .. " <LINE> "
             text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use > to deposit a chosen amount. <LINE> "
+        elseif Internal.isGroupEntry and Internal.isGroupEntry(entry) then
+            -- Group details were already rendered above.
         elseif self.activeTab == Internal.Tabs.Equipment then
             text = appendWeightLine(text, entry)
             local tags = entry.tags or {}

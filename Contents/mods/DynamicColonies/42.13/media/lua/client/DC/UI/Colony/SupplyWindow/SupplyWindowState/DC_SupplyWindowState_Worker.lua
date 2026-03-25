@@ -69,34 +69,22 @@ function DC_SupplyWindow:rebuildWorkerList()
         return
     end
 
-    local selectedKey = self.selectedWorkerEntry and (self.selectedWorkerEntry.itemID or self.selectedWorkerEntry.ledgerIndex) or nil
+    local selectedKey = Internal.getEntrySelectionKey(self.selectedWorkerEntry)
     local filterText = Internal.getSearchText(self.workerSearch)
-
-    self.workerList:clear()
-    self.workerList.selected = -1
-    self.selectedWorkerEntry = nil
-
-    local selectedIndex = nil
+    local visibleEntries = {}
     for _, entry in ipairs(self.workerEntries or {}) do
         if Internal.shouldShowWorkerEntry(entry, self.activeTab or Internal.Tabs.Provisions)
             and Internal.matchesFilter(entry, filterText) then
-            self.workerList:addItem(Internal.formatEntryLabel(entry), entry)
-            local rowIndex = #self.workerList.items
-            entry.rowIndex = rowIndex
-            local entryKey = entry.itemID or entry.ledgerIndex
-            if selectedKey and entryKey == selectedKey then
-                selectedIndex = rowIndex
-            end
+            visibleEntries[#visibleEntries + 1] = entry
         end
     end
 
-    if self.workerList.items and #self.workerList.items > 0 then
-        local targetIndex = selectedIndex or 1
-        self.workerList.selected = targetIndex
-        self.selectedWorkerEntry = self.workerList.items[targetIndex].item
-    end
-
-    self:refreshDetailSelection()
+    self.workerVisibleEntries = visibleEntries
+    self:beginChunkedListBuild(
+        "worker",
+        Internal.buildGroupedRows(visibleEntries, self.activeTab or Internal.Tabs.Provisions, "worker", self),
+        selectedKey
+    )
 end
 
 function DC_SupplyWindow:setWorkerData(worker)

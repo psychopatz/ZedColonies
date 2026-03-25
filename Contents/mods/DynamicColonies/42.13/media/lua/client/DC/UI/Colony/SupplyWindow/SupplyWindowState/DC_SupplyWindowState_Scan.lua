@@ -9,14 +9,21 @@ function DC_SupplyWindow:startInventoryScan()
 
     self.playerEntries = {}
     self.playerEntriesByID = {}
+    self.playerVisibleEntries = {}
     self.selectedPlayerEntry = nil
     self.scanStack = {}
     self.scanProcessed = 0
     self.scanning = false
+    self.pendingPlayerListRows = nil
+    self.pendingPlayerListNextIndex = nil
+    self.pendingPlayerListSelectedKey = nil
+    self.pendingPlayerListSelectedRowIndex = nil
 
     if self.playerList then
         self.playerList:clear()
         self.playerList.selected = -1
+        self.playerList:setScrollHeight(0)
+        self.playerList:setYScroll(0)
     end
 
     if not rootContainer then
@@ -102,4 +109,3 @@ function DC_SupplyWindow:processInventoryScan(batchSize)
         )
     end
 end
-

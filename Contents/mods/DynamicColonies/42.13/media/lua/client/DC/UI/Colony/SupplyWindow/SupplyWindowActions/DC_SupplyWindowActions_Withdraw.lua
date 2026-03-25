@@ -96,13 +96,12 @@ function DC_SupplyWindow:onWithdrawSelected()
         return
     end
 
-    self:withdrawWorkerEntries({ selectedEntry })
+    self:withdrawWorkerEntries(Internal.getConcreteTransferEntries(selectedEntry))
 end
 
 function DC_SupplyWindow:onWithdrawVisible()
     local visibleEntries = {}
-    for _, row in ipairs(self.workerList and self.workerList.items or {}) do
-        local entry = row and row.item or nil
+    for _, entry in ipairs(self.workerVisibleEntries or {}) do
         if entry and entry.kind ~= "money" and entry.kind ~= "placeholder" then
             visibleEntries[#visibleEntries + 1] = entry
         end

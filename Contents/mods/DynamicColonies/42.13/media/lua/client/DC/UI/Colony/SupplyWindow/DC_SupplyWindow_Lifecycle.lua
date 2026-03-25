@@ -25,6 +25,8 @@ function DC_SupplyWindow.Open(worker, viewMode)
     window.activeTab = DC_SupplyWindow.Internal and DC_SupplyWindow.Internal.Tabs and DC_SupplyWindow.Internal.Tabs.Provisions or "provisions"
     window.selectedPlayerEntry = nil
     window.selectedWorkerEntry = nil
+    window.playerExpandedGroups = {}
+    window.workerExpandedGroups = {}
     local subjectName = tostring(window.workerName)
     if window.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse)
         and DC_SupplyWindow.Internal
@@ -69,5 +71,17 @@ function DC_SupplyWindow:new(x, y, width, height)
     o.detailRefreshTicks = 0
     o.lastPlayerFilter = ""
     o.lastWorkerFilter = ""
+    o.playerExpandedGroups = {}
+    o.workerExpandedGroups = {}
+    o.playerVisibleEntries = {}
+    o.workerVisibleEntries = {}
+    o.pendingPlayerListRows = nil
+    o.pendingPlayerListNextIndex = nil
+    o.pendingPlayerListSelectedKey = nil
+    o.pendingPlayerListSelectedRowIndex = nil
+    o.pendingWorkerListRows = nil
+    o.pendingWorkerListNextIndex = nil
+    o.pendingWorkerListSelectedKey = nil
+    o.pendingWorkerListSelectedRowIndex = nil
     return o
 end

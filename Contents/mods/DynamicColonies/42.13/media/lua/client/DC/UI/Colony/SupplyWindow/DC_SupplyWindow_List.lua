@@ -44,6 +44,29 @@ function ColonySupplyList:new(x, y, width, height, mode)
     return o
 end
 
+function ColonySupplyList:onMouseDown(x, y)
+    if #self.items <= 0 then
+        return
+    end
+
+    local row = self:rowAt(x, y)
+    if row < 1 or row > #self.items then
+        return
+    end
+
+    local rowItem = self.items[row]
+    local entry = rowItem and rowItem.item or nil
+    if entry and Internal.isGroupEntry and Internal.isGroupEntry(entry) and x <= (Internal.GROUP_TOGGLE_HIT_WIDTH or 18) then
+        getSoundManager():playUISound("UISelectListItem")
+        self.selected = row
+        self:invokeOnMouseDownFunction()
+        Internal.toggleGroupExpanded(self.target, self.mode, entry)
+        return
+    end
+
+    return ISScrollingListBox.onMouseDown(self, x, y)
+end
+
 function ColonySupplyList:doDrawItem(y, item, alt)
     local entry = item.item
     if not entry then
@@ -56,6 +79,11 @@ function ColonySupplyList:doDrawItem(y, item, alt)
         or Internal.getPlayerEntryPresentation(entry, activeTab, self.target and self.target.workerData or nil, self.target)
     local width = self:getWidth()
     local isSelected = self.selected == item.index
+    local isGroup = Internal.isGroupEntry and Internal.isGroupEntry(entry)
+    local isChild = entry.groupChild == true
+    local toggleWidth = isGroup and (Internal.GROUP_TOGGLE_HIT_WIDTH or 18) or 0
+    local childIndent = isChild and (Internal.GROUP_CHILD_INDENT or 14) or 0
+    local contentX = 6 + toggleWidth + childIndent
     if isSelected then
         self:drawRect(0, y, width, self.itemheight, 0.25, 0.18, 0.38, 0.62)
     elseif presentation.dimmed then
@@ -66,12 +94,17 @@ function ColonySupplyList:doDrawItem(y, item, alt)
 
     self:drawRectBorder(0, y, width, self.itemheight, 0.08, 1, 1, 1)
 
+    if isGroup then
+        local arrow = Internal.isGroupExpanded(self.target, self.mode, entry.groupKey) and "v" or ">"
+        self:drawText(arrow, 8, y + 13, 0.88, 0.88, 0.88, 1, UIFont.Small)
+    end
+
     if entry.texture then
         local alpha = 1
         if presentation.dimmed then
             alpha = 0.35
         end
-        self:drawTextureScaled(entry.texture, 6, y + 7, 28, 28, alpha, 1, 1, 1)
+        self:drawTextureScaled(entry.texture, contentX, y + 7, 28, 28, alpha, 1, 1, 1)
     end
 
     local textR, textG, textB = 0.9, 0.9, 0.9
@@ -103,12 +136,13 @@ function ColonySupplyList:doDrawItem(y, item, alt)
 
     local rightPadding = 20
     local badgeWidth = (badgeText ~= "") and getTextManager():MeasureStringX(UIFont.Small, badgeText) or 0
-    local textMaxWidth = math.max(60, width - 42 - badgeWidth - rightPadding - 12)
+    local textX = contentX + 36
+    local textMaxWidth = math.max(60, width - textX - badgeWidth - rightPadding - 12)
     local titleText = fitTextToWidth(UIFont.Small, Internal.formatEntryLabel(entry), textMaxWidth)
     local statText = fitTextToWidth(UIFont.Small, presentation.statText or "", textMaxWidth)
 
-    self:drawText(titleText, 42, y + 5, textR, textG, textB, 1, UIFont.Small)
-    self:drawText(statText, 42, y + 23, 0.65, 0.8, 0.95, 1, UIFont.Small)
+    self:drawText(titleText, textX, y + 5, textR, textG, textB, 1, UIFont.Small)
+    self:drawText(statText, textX, y + 23, 0.65, 0.8, 0.95, 1, UIFont.Small)
     if badgeText ~= "" then
         self:drawTextRight(badgeText, width - rightPadding, y + 5, badgeR, badgeG, badgeB, 1, UIFont.Small)
     end

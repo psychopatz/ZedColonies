@@ -8,6 +8,11 @@ function Internal.formatEntryLabel(entry)
         return "Unknown Item"
     end
 
+    if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
+        local baseName = tostring(entry.displayName or entry.fullType or "Unknown Item")
+        return baseName .. " x" .. tostring(math.max(1, tonumber(entry.childCount) or 1))
+    end
+
     return tostring(entry.displayName or entry.fullType or "Unknown Item")
 end
 

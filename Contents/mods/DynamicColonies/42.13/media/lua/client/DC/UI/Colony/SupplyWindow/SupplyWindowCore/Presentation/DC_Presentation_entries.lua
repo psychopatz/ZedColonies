@@ -4,6 +4,10 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 local Internal = DC_SupplyWindow.Internal
 
 local function entryMatchesAnyRequirementTag(entry, requirementTags)
+    if entry and entry.kind == "player" and Internal.ensurePlayerEntryEquipmentData then
+        Internal.ensurePlayerEntryEquipmentData(entry)
+    end
+
     if not entry or entry.kind == "money" or entry.canAssignTool ~= true then
         return false
     end
@@ -104,6 +108,10 @@ local function getEquipmentMatchSummary(entry, worker)
         return nil
     end
 
+    if entry.kind == "player" and Internal.ensurePlayerEntryEquipmentData then
+        Internal.ensurePlayerEntryEquipmentData(entry)
+    end
+
     local matches = config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, worker.jobType) or {}
     if #matches <= 0 then
         return nil
@@ -117,6 +125,11 @@ local function getEquipmentMatchSummary(entry, worker)
     return table.concat(labels, ", ")
 end
 
+local function getGroupCountLabel(entry)
+    local count = math.max(1, tonumber(entry and entry.childCount) or 1)
+    return tostring(count) .. " item" .. (count == 1 and "" or "s")
+end
+
 function Internal.getWorkerTabSummary(window, entries)
     local activeTab = window and window.activeTab or Internal.Tabs.Provisions
 
@@ -127,7 +140,7 @@ function Internal.getWorkerTabSummary(window, entries)
             if entry and entry.kind == "placeholder" then
                 missingCount = missingCount + 1
             else
-                equippedCount = equippedCount + 1
+                equippedCount = equippedCount + math.max(1, tonumber(entry and entry.qty) or 1)
             end
         end
 
@@ -191,6 +204,66 @@ function Internal.getWorkerTabSummary(window, entries)
 end
 
 function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
+    if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
+        if activeTab == Internal.Tabs.Equipment then
+            if entry.canAssignTool then
+                return {
+                    statText = appendWeightText(getGroupCountLabel(entry) .. " ready for assignment", entry),
+                    badgeText = "Tool",
+                    dimmed = false,
+                }
+            end
+            return {
+                statText = appendWeightText(getGroupCountLabel(entry) .. " not usable for labour", entry),
+                badgeText = "Preview",
+                dimmed = true,
+            }
+        end
+
+        if activeTab == Internal.Tabs.Output then
+            if Internal.isWarehouseView and Internal.isWarehouseView(window) then
+                return {
+                    statText = appendWeightText(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), entry),
+                    badgeText = "Ready",
+                    dimmed = false,
+                }
+            end
+            return {
+                statText = appendWeightText(getGroupCountLabel(entry) .. " in worker storage view", entry),
+                badgeText = "Read Only",
+                dimmed = true,
+            }
+        end
+
+        if isMedicalProvisionEntry(entry) then
+            return {
+                statText = appendWeightText(
+                    getGroupCountLabel(entry) .. " | " .. tostring(math.floor((tonumber(entry.treatmentUnits) or 0) + 0.5)) .. " treatment total",
+                    entry
+                ),
+                badgeText = "Medical",
+                dimmed = false,
+            }
+        end
+
+        if entry.canDeposit then
+            return {
+                statText = appendWeightText(
+                    getGroupCountLabel(entry) .. " | +" .. string.format("%.0f cal | +%.0f hyd", entry.calories or 0, entry.hydration or 0),
+                    entry
+                ),
+                badgeText = "Ready",
+                dimmed = false,
+            }
+        end
+
+        return {
+            statText = appendWeightText(getGroupCountLabel(entry) .. " not valid as provisions", entry),
+            badgeText = "Preview",
+            dimmed = true,
+        }
+    end
+
     if entry.kind == "money" then
         return {
             statText = "$" .. tostring(math.max(0, math.floor(tonumber(entry.amount) or 0))) .. " available to deposit",
@@ -200,6 +273,9 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
     end
 
     if activeTab == Internal.Tabs.Equipment then
+        if entry.kind == "player" and Internal.ensurePlayerEntryEquipmentData then
+            Internal.ensurePlayerEntryEquipmentData(entry)
+        end
         if entry.canAssignTool then
             local matchSummary = getEquipmentMatchSummary(entry, worker)
             return {
@@ -254,6 +330,40 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
 end
 
 function Internal.getWorkerEntryPresentation(entry, activeTab)
+    if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
+        if activeTab == Internal.Tabs.Equipment then
+            return {
+                statText = appendWeightText(getGroupCountLabel(entry) .. " assigned", entry),
+                badgeText = "",
+            }
+        end
+
+        if activeTab == Internal.Tabs.Output then
+            return {
+                statText = appendWeightText(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), entry),
+                badgeText = "",
+            }
+        end
+
+        if isMedicalProvisionEntry(entry) then
+            return {
+                statText = appendWeightText(
+                    getGroupCountLabel(entry) .. " | " .. tostring(math.floor((tonumber(entry.treatmentUnits) or 0) + 0.5)) .. " treatment total",
+                    entry
+                ),
+                badgeText = "Medical",
+            }
+        end
+
+        return {
+            statText = appendWeightText(
+                getGroupCountLabel(entry) .. " | " .. string.format("%.0f cal | %.0f hyd", entry.calories or 0, entry.hydration or 0),
+                entry
+            ),
+            badgeText = "",
+        }
+    end
+
     if entry.kind == "money" then
         return {
             statText = "$" .. tostring(math.max(0, math.floor(tonumber(entry.amount) or 0))) .. " stored with the worker",
@@ -272,6 +382,9 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
 
         local tags = entry.tags or {}
         local tagText = (#tags > 0) and table.concat(tags, ", ") or "Assigned labour tool"
+        if (tonumber(entry.qty) or 1) > 1 then
+            tagText = "Qty " .. tostring(entry.qty) .. " | " .. tagText
+        end
         return {
             statText = appendWeightText(tagText, entry),
             badgeText = "",
@@ -286,14 +399,27 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
     end
 
     if isMedicalProvisionEntry(entry) then
+        local qty = math.max(1, tonumber(entry.qty) or 1)
+        local totalUnits = tonumber(entry.totalTreatmentUnits) or ((tonumber(entry.treatmentUnits) or 0) * qty)
+        local unitText = tostring(math.floor(totalUnits + 0.5)) .. " treatment units"
+        if qty > 1 then
+            unitText = "Qty " .. tostring(qty) .. " | " .. unitText
+        end
         return {
-            statText = appendWeightText(tostring(math.floor((tonumber(entry.treatmentUnits) or 0) + 0.5)) .. " treatment units left", entry),
+            statText = appendWeightText(unitText, entry),
             badgeText = "Medical",
         }
     end
 
+    local qty = math.max(1, tonumber(entry.qty) or 1)
+    local calories = tonumber(entry.totalCalories) or ((tonumber(entry.calories) or 0) * qty)
+    local hydration = tonumber(entry.totalHydration) or ((tonumber(entry.hydration) or 0) * qty)
+    local statText = string.format("%.0f cal left | %.0f hyd left", calories, hydration)
+    if qty > 1 then
+        statText = "Qty " .. tostring(qty) .. " | " .. statText
+    end
     return {
-        statText = appendWeightText(string.format("%.0f cal left | %.0f hyd left", entry.calories or 0, entry.hydration or 0), entry),
+        statText = appendWeightText(statText, entry),
         badgeText = "",
     }
 end

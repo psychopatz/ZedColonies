@@ -11,6 +11,63 @@ local function getTotalWeight(fullType, qty)
     return getUnitWeight(fullType) * math.max(1, tonumber(qty) or 1)
 end
 
+function Internal.getCachedInventoryEntryStaticData(fullType)
+    local key = tostring(fullType or "")
+    if key == "" then
+        return {
+            treatmentUnits = 0,
+            provisionType = "nutrition",
+            unitWeight = 0,
+            texture = nil,
+            isMedicalProvision = false,
+        }
+    end
+
+    local cache = Internal.InventoryEntryStaticCache or {}
+    if cache[key] then
+        return cache[key]
+    end
+
+    local isMedicalProvision = Internal.Config.IsMedicalProvisionFullType and Internal.Config.IsMedicalProvisionFullType(key) or false
+    local staticData = {
+        treatmentUnits = isMedicalProvision and (Internal.Config.GetMedicalProvisionUnits and Internal.Config.GetMedicalProvisionUnits(key) or 0) or 0,
+        provisionType = isMedicalProvision and "medical" or "nutrition",
+        unitWeight = getUnitWeight(key),
+        texture = Internal.getTextureForFullType and Internal.getTextureForFullType(key) or nil,
+        isMedicalProvision = isMedicalProvision,
+    }
+
+    cache[key] = staticData
+    Internal.InventoryEntryStaticCache = cache
+    return staticData
+end
+
+function Internal.ensurePlayerEntryEquipmentData(entry)
+    if not entry or entry.kind ~= "player" or entry.equipmentDataReady == true then
+        return entry
+    end
+
+    local fullType = tostring(entry.fullType or "")
+    local matchingEquipmentRequirements = Internal.Config.GetMatchingEquipmentRequirementDefinitions
+        and Internal.Config.GetMatchingEquipmentRequirementDefinitions(fullType)
+        or {}
+    local tags = Internal.Config.GetItemCombinedTags and Internal.Config.GetItemCombinedTags(fullType)
+        or (Internal.Config.FindItemTags and Internal.Config.FindItemTags(fullType))
+        or {}
+    local searchTerms = {}
+    for _, definition in ipairs(matchingEquipmentRequirements) do
+        searchTerms[#searchTerms + 1] = tostring(definition.label or definition.requirementKey or "")
+        searchTerms[#searchTerms + 1] = tostring(definition.searchText or "")
+    end
+
+    entry.canAssignTool = #matchingEquipmentRequirements > 0
+    entry.equipmentRequirementKeys = matchingEquipmentRequirements
+    entry.tags = tags
+    entry.searchText = table.concat(searchTerms, " ")
+    entry.equipmentDataReady = true
+    return entry
+end
+
 function Internal.getCachedNutritionPreview(invItem)
     if not invItem then
         return 0, 0
@@ -42,37 +99,26 @@ end
 function Internal.buildInventoryEntry(invItem)
     local calories, hydration = Internal.getCachedNutritionPreview(invItem)
     local fullType = invItem:getFullType()
-    local isMedicalProvision = Internal.Config.IsMedicalProvisionFullType and Internal.Config.IsMedicalProvisionFullType(fullType) or false
-    local treatmentUnits = isMedicalProvision and (Internal.Config.GetMedicalProvisionUnits and Internal.Config.GetMedicalProvisionUnits(fullType) or 0) or 0
-    local matchingEquipmentRequirements = Internal.Config.GetMatchingEquipmentRequirementDefinitions
-        and Internal.Config.GetMatchingEquipmentRequirementDefinitions(fullType)
-        or {}
-    local tags = Internal.Config.GetItemCombinedTags and Internal.Config.GetItemCombinedTags(fullType)
-        or (Internal.Config.FindItemTags and Internal.Config.FindItemTags(fullType))
-        or {}
-    local searchTerms = {}
-    for _, definition in ipairs(matchingEquipmentRequirements) do
-        searchTerms[#searchTerms + 1] = tostring(definition.label or definition.requirementKey or "")
-        searchTerms[#searchTerms + 1] = tostring(definition.searchText or "")
-    end
+    local staticData = Internal.getCachedInventoryEntryStaticData(fullType)
     return {
         kind = "player",
         invItem = invItem,
         itemID = invItem:getID(),
         displayName = invItem:getDisplayName(),
         fullType = fullType,
-        provisionType = isMedicalProvision and "medical" or "nutrition",
-        treatmentUnits = treatmentUnits,
+        provisionType = staticData.provisionType,
+        treatmentUnits = staticData.treatmentUnits,
         calories = calories,
         hydration = hydration,
-        unitWeight = getUnitWeight(fullType),
-        totalWeight = getTotalWeight(fullType, 1),
-        canDeposit = isMedicalProvision or calories > 0 or hydration > 0,
-        canAssignTool = #matchingEquipmentRequirements > 0,
-        equipmentRequirementKeys = matchingEquipmentRequirements,
-        tags = tags,
-        searchText = table.concat(searchTerms, " "),
-        texture = invItem.getTex and invItem:getTex() or nil,
+        unitWeight = staticData.unitWeight,
+        totalWeight = staticData.unitWeight,
+        canDeposit = staticData.isMedicalProvision or calories > 0 or hydration > 0,
+        canAssignTool = false,
+        equipmentRequirementKeys = nil,
+        tags = nil,
+        searchText = "",
+        equipmentDataReady = false,
+        texture = staticData.texture or (invItem.getTex and invItem:getTex() or nil),
     }
 end
 
@@ -94,6 +140,11 @@ function Internal.buildWorkerSupplyEntry(entry, index)
         return nil
     end
 
+    local qty = math.max(1, tonumber(entry.qty) or 1)
+    local caloriesPerItem = math.max(0, tonumber(entry.caloriesRemaining) or 0)
+    local hydrationPerItem = math.max(0, tonumber(entry.hydrationRemaining) or 0)
+    local treatmentPerItem = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0)
+
     return {
         kind = "worker",
         itemID = entry.itemID,
@@ -101,12 +152,16 @@ function Internal.buildWorkerSupplyEntry(entry, index)
         displayName = entry.displayName,
         fullType = entry.fullType,
         provisionType = entry.provisionType or ((Internal.Config.IsMedicalProvisionEntry and Internal.Config.IsMedicalProvisionEntry(entry)) and "medical" or "nutrition"),
-        treatmentUnits = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0),
+        treatmentUnits = treatmentPerItem,
         medicalUse = entry.medicalUse,
-        calories = math.max(0, tonumber(entry.caloriesRemaining) or 0),
-        hydration = math.max(0, tonumber(entry.hydrationRemaining) or 0),
+        calories = caloriesPerItem,
+        hydration = hydrationPerItem,
+        totalCalories = caloriesPerItem * qty,
+        totalHydration = hydrationPerItem * qty,
+        totalTreatmentUnits = treatmentPerItem * qty,
+        qty = qty,
         unitWeight = getUnitWeight(entry.fullType),
-        totalWeight = getTotalWeight(entry.fullType, 1),
+        totalWeight = getTotalWeight(entry.fullType, qty),
         texture = entry.texture or Internal.getTextureForFullType(entry.fullType),
         pending = entry.pending == true,
     }
@@ -128,6 +183,7 @@ function Internal.buildWorkerToolEntry(entry, index)
         return nil
     end
 
+    local qty = math.max(1, tonumber(entry.qty) or 1)
     local tags = entry.tags or {}
     if Internal.Config.GetItemCombinedTags and entry.fullType then
         tags = Internal.Config.GetItemCombinedTags(entry.fullType)
@@ -139,8 +195,9 @@ function Internal.buildWorkerToolEntry(entry, index)
         displayName = entry.displayName,
         fullType = entry.fullType,
         tags = tags,
+        qty = qty,
         unitWeight = getUnitWeight(entry.fullType),
-        totalWeight = getTotalWeight(entry.fullType, 1),
+        totalWeight = getTotalWeight(entry.fullType, qty),
         texture = entry.texture or Internal.getTextureForFullType(entry.fullType),
         pending = entry.pending == true,
     }

@@ -31,6 +31,45 @@ local function getDepositTargetLabel(window)
     return "NPC inventory"
 end
 
+local function takeEntrySubset(entries, quantity)
+    local result = {}
+    local limit = math.max(1, math.floor(tonumber(quantity) or 1))
+    for index = 1, math.min(limit, #entries) do
+        result[#result + 1] = entries[index]
+    end
+    return result
+end
+
+function DC_SupplyWindow:openGroupedDepositQuantityModal(selectedEntry, concreteEntries)
+    local available = #(concreteEntries or {})
+    if available <= 1 then
+        return false
+    end
+
+    local activeTab = self.activeTab or Internal.Tabs.Provisions
+    local itemLabel = tostring(selectedEntry and (selectedEntry.displayName or selectedEntry.fullType) or "selected item")
+    local actionVerb = activeTab == Internal.Tabs.Equipment and "assign"
+        or (activeTab == Internal.Tabs.Output and "store")
+        or "deposit"
+
+    DC_ColonyQuantityModal.Open({
+        title = "Choose Quantity",
+        promptText = "How many " .. itemLabel .. " entries do you want to " .. actionVerb .. "?",
+        maxValue = available,
+        defaultValue = available,
+        onConfirm = function(quantity)
+            local pickedEntries = takeEntrySubset(concreteEntries, quantity)
+            if activeTab == Internal.Tabs.Equipment then
+                self:assignToolEntries(pickedEntries)
+            else
+                self:depositEntries(pickedEntries)
+            end
+        end
+    })
+
+    return true
+end
+
 function DC_SupplyWindow:depositEntries(entries)
     if not self.workerID then
         self:updateStatus("No worker selected.")
@@ -174,12 +213,18 @@ function DC_SupplyWindow:onDepositSelected()
         return
     end
 
+    local concreteEntries = Internal.getConcreteTransferEntries(selectedEntry)
+    if Internal.isGroupEntry and Internal.isGroupEntry(selectedEntry) and #concreteEntries > 1 then
+        self:openGroupedDepositQuantityModal(selectedEntry, concreteEntries)
+        return
+    end
+
     if activeTab == Internal.Tabs.Equipment then
         if not selectedEntry.canAssignTool then
             self:updateStatus("Select a valid labour tool first.")
             return
         end
-        self:assignToolEntries({ selectedEntry })
+        self:assignToolEntries(concreteEntries)
         return
     end
 
@@ -188,7 +233,7 @@ function DC_SupplyWindow:onDepositSelected()
             self:updateStatus("That item cannot be stored in warehouse storage.")
             return
         end
-        self:depositEntries({ selectedEntry })
+        self:depositEntries(concreteEntries)
         return
     end
 
@@ -197,7 +242,7 @@ function DC_SupplyWindow:onDepositSelected()
         return
     end
 
-    self:depositEntries({ selectedEntry })
+    self:depositEntries(concreteEntries)
 end
 
 function DC_SupplyWindow:onDepositVisible()
@@ -214,8 +259,7 @@ function DC_SupplyWindow:onDepositVisible()
     end
 
     local visibleEntries = {}
-    for _, row in ipairs(self.playerList and self.playerList.items or {}) do
-        local entry = row and row.item or nil
+    for _, entry in ipairs(self.playerVisibleEntries or {}) do
         if entry
             and entry.kind ~= "money"
             and ((activeTab == Internal.Tabs.Equipment and entry.canAssignTool)

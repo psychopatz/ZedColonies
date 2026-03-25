@@ -4,6 +4,10 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 local Internal = DC_SupplyWindow.Internal
 
 local function isRelevantEquipmentEntry(entry, window)
+    if entry and entry.kind == "player" and Internal.ensurePlayerEntryEquipmentData then
+        Internal.ensurePlayerEntryEquipmentData(entry)
+    end
+
     if not entry or entry.kind == "money" or entry.canAssignTool ~= true then
         return false
     end

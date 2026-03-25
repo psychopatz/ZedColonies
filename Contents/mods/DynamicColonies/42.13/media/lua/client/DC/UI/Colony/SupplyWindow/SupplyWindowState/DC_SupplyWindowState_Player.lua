@@ -4,29 +4,7 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 local Internal = DC_SupplyWindow.Internal
 
 function DC_SupplyWindow:registerVisiblePlayerEntry(entry)
-    if not self.playerList or not entry then
-        return
-    end
-
-    if not Internal.shouldShowPlayerEntry(entry, self.activeTab or Internal.Tabs.Provisions, self) then
-        return
-    end
-
-    if not Internal.matchesFilter(entry, Internal.getSearchText(self.playerSearch)) then
-        return
-    end
-
-    self.playerList:addItem(Internal.formatEntryLabel(entry), entry)
-    entry.rowIndex = #self.playerList.items
-
-    if not self.selectedPlayerEntry then
-        self.playerList.selected = entry.rowIndex
-        self.selectedPlayerEntry = entry
-        if self.activeSelectionSide ~= "worker" then
-            self.activeSelectionSide = "player"
-            self:updateItemDetail(entry, "player")
-        end
-    end
+    return entry ~= nil
 end
 
 function DC_SupplyWindow:addScannedItem(invItem)
@@ -51,48 +29,32 @@ function DC_SupplyWindow:rebuildPlayerList()
         return
     end
 
-    local selectedID = self.selectedPlayerEntry and self.selectedPlayerEntry.itemID or nil
+    local selectedKey = Internal.getEntrySelectionKey(self.selectedPlayerEntry)
     local filterText = Internal.getSearchText(self.playerSearch)
-
-    self.playerList:clear()
-    self.playerList.selected = -1
-    self.selectedPlayerEntry = nil
-
-    local selectedIndex = nil
+    local visibleEntries = {}
     if (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Provisions
         and Internal.isInventoryView
         and Internal.isInventoryView(self) then
         local moneyEntry = Internal.buildPlayerMoneyEntry(Internal.getLocalPlayer and Internal.getLocalPlayer() or nil)
         if Internal.shouldShowPlayerEntry(moneyEntry, self.activeTab or Internal.Tabs.Provisions, self)
             and Internal.matchesFilter(moneyEntry, filterText) then
-            self.playerList:addItem(Internal.formatEntryLabel(moneyEntry), moneyEntry)
-            local rowIndex = #self.playerList.items
-            moneyEntry.rowIndex = rowIndex
-            if selectedID and moneyEntry.itemID == selectedID then
-                selectedIndex = rowIndex
-            end
+            visibleEntries[#visibleEntries + 1] = moneyEntry
         end
     end
 
     for _, entry in ipairs(self.playerEntries or {}) do
         if Internal.shouldShowPlayerEntry(entry, self.activeTab or Internal.Tabs.Provisions, self)
             and Internal.matchesFilter(entry, filterText) then
-            self.playerList:addItem(Internal.formatEntryLabel(entry), entry)
-            local rowIndex = #self.playerList.items
-            entry.rowIndex = rowIndex
-            if selectedID and entry.itemID == selectedID then
-                selectedIndex = rowIndex
-            end
+            visibleEntries[#visibleEntries + 1] = entry
         end
     end
 
-    if self.playerList.items and #self.playerList.items > 0 then
-        local targetIndex = selectedIndex or 1
-        self.playerList.selected = targetIndex
-        self.selectedPlayerEntry = self.playerList.items[targetIndex].item
-    end
-
-    self:refreshDetailSelection()
+    self.playerVisibleEntries = visibleEntries
+    self:beginChunkedListBuild(
+        "player",
+        Internal.buildGroupedRows(visibleEntries, self.activeTab or Internal.Tabs.Provisions, "player", self),
+        selectedKey
+    )
 end
 
 function DC_SupplyWindow:removePlayerEntryByID(itemID)

@@ -5,8 +5,8 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/DC_SupplyWindowCore_Bootstrap"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/DC_SupplyWindowCore_PlayerAccess"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/DC_SupplyWindowCore_Search"
+require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/DC_SupplyWindowCore_Grouping"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/DC_SupplyWindowCore_Textures"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/DC_SupplyWindowCore_EntryBuilders"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/Presentation/DC_Presentation"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowCore/DC_SupplyWindowCore_ColonyCommands"
-

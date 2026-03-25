@@ -7,8 +7,6 @@ function DC_SupplyWindow:render()
     ISCollapsableWindow.render(self)
 
     local layout = self.layout or {}
-    local playerVisible = self.playerList and self.playerList.items and #self.playerList.items or 0
-    local playerTotal = #(self.playerEntries or {})
     local rightHeader = Internal.getWorkerHeaderTitle(self)
     local rightSummary = Internal.getActiveWorkerTabLabel(self) .. " | " .. Internal.getWorkerTabSummary(self, self.workerEntries)
 
@@ -18,8 +16,7 @@ function DC_SupplyWindow:render()
 
     self:drawText("Player Inventory", layout.leftX or 12, layout.headerY or 36, 0.94, 0.96, 1, 1, UIFont.Medium)
     self:drawText(
-        self.scanning and ("Scanning " .. tostring(self.scanProcessed or 0) .. " items...")
-            or (tostring(playerVisible) .. " visible / " .. tostring(playerTotal) .. " cached"),
+        self.scanning and "Scanning inventory..." or "",
         layout.leftX or 12,
         (layout.headerY or 36) + 18,
         0.7,
