@@ -67,6 +67,9 @@ function Sim.ProcessBuilderJob(worker, ctx)
             and DC_Buildings.ProcessWorkerProject(worker, currentHour, workableHours, speedMultiplier)
             or nil
         didWorkThisTick = buildResult and buildResult.didWork == true or false
+        if didWorkThisTick then
+            Sim.ApplyWearForRequiredTools(worker, profile, currentHour, 1)
+        end
         waitingForProjectMaterials = buildResult and buildResult.waitingForMaterials == true or false
         if buildResult and buildResult.completed and buildResult.project then
             local xpResult = buildResult.xpResult or nil

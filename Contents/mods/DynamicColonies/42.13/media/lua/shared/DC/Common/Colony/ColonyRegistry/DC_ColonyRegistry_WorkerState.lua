@@ -176,12 +176,15 @@ function Registry.RecalculateWorker(worker)
         tags = {}
         for i = #worker.toolLedger, 1, -1 do
             local entry = worker.toolLedger[i]
-            if not entry or not entry.fullType then
+            local normalized = Internal.NormalizeEquipmentEntry and Internal.NormalizeEquipmentEntry(entry) or nil
+            if not normalized or not normalized.fullType then
                 table.remove(worker.toolLedger, i)
             else
-                entry.tags = (Config.GetItemCombinedTags and Config.GetItemCombinedTags(entry.fullType)) or entry.tags or {}
-                for _, tag in ipairs(entry.tags or {}) do
-                    tags[tag] = true
+                worker.toolLedger[i] = normalized
+                if not (Internal.IsEquipmentEntryUsable and not Internal.IsEquipmentEntryUsable(normalized)) then
+                    for _, tag in ipairs(normalized.tags or {}) do
+                        tags[tag] = true
+                    end
                 end
             end
         end
@@ -191,12 +194,14 @@ function Registry.RecalculateWorker(worker)
 
     for i = #worker.outputLedger, 1, -1 do
         local entry = worker.outputLedger[i]
-        if not entry or not entry.fullType then
+        local normalized = Internal.NormalizeOutputEntry and Internal.NormalizeOutputEntry(entry) or nil
+        if not normalized or not normalized.fullType then
             table.remove(worker.outputLedger, i)
         else
-            local qty = math.max(1, tonumber(entry.qty) or 1)
+            worker.outputLedger[i] = normalized
+            local qty = math.max(1, tonumber(normalized.qty) or 1)
             outputCount = outputCount + qty
-            outputWeight = outputWeight + (Config.GetItemWeight(entry.fullType) * qty)
+            outputWeight = outputWeight + (Config.GetItemWeight(normalized.fullType) * qty)
         end
     end
     worker.outputCount = outputCount

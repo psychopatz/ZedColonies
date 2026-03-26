@@ -11,6 +11,73 @@ local function getTotalWeight(fullType, qty)
     return getUnitWeight(fullType) * math.max(1, tonumber(qty) or 1)
 end
 
+local function getRegistryInternal()
+    return DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal or nil
+end
+
+local function copyEquipmentState(target, source)
+    if type(target) ~= "table" or type(source) ~= "table" then
+        return target
+    end
+
+    target.condition = source.condition
+    target.conditionMax = source.conditionMax
+    target.isDrainable = source.isDrainable == true
+    target.useDelta = source.useDelta
+    target.usedDelta = source.usedDelta
+    target.keepOnDeplete = source.keepOnDeplete == true
+    return target
+end
+
+local function copyOutputState(target, source)
+    if type(target) ~= "table" or type(source) ~= "table" then
+        return target
+    end
+
+    target.fluidAmount = source.fluidAmount
+    return target
+end
+
+local function getNormalizedEquipmentEntry(entry)
+    local registryInternal = getRegistryInternal()
+    if not registryInternal or not registryInternal.NormalizeEquipmentEntry then
+        return nil
+    end
+    return registryInternal.NormalizeEquipmentEntry(entry)
+end
+
+local function getInventoryEquipmentEntry(invItem)
+    local registryInternal = getRegistryInternal()
+    if not registryInternal or not registryInternal.BuildEquipmentEntryFromInventoryItem then
+        return nil
+    end
+    return registryInternal.BuildEquipmentEntryFromInventoryItem(invItem)
+end
+
+local function isUsableEquipmentEntry(entry)
+    local registryInternal = getRegistryInternal()
+    if not registryInternal or not registryInternal.IsEquipmentEntryUsable then
+        return false
+    end
+    return registryInternal.IsEquipmentEntryUsable(entry)
+end
+
+local function getNormalizedOutputEntry(entry)
+    local registryInternal = getRegistryInternal()
+    if not registryInternal or not registryInternal.NormalizeOutputEntry then
+        return nil
+    end
+    return registryInternal.NormalizeOutputEntry(entry)
+end
+
+local function getInventoryOutputEntry(invItem)
+    local registryInternal = getRegistryInternal()
+    if not registryInternal or not registryInternal.BuildOutputEntryFromInventoryItem then
+        return nil
+    end
+    return registryInternal.BuildOutputEntryFromInventoryItem(invItem)
+end
+
 function Internal.getCachedInventoryEntryStaticData(fullType)
     local key = tostring(fullType or "")
     if key == "" then
@@ -60,7 +127,8 @@ function Internal.ensurePlayerEntryEquipmentData(entry)
         searchTerms[#searchTerms + 1] = tostring(definition.searchText or "")
     end
 
-    entry.canAssignTool = #matchingEquipmentRequirements > 0
+    entry.hasEquipmentRequirementMatch = #matchingEquipmentRequirements > 0
+    entry.canAssignTool = entry.hasEquipmentRequirementMatch and entry.isUsableEquipment == true
     entry.equipmentRequirementKeys = matchingEquipmentRequirements
     entry.tags = tags
     entry.searchText = table.concat(searchTerms, " ")
@@ -124,7 +192,13 @@ function Internal.buildInventoryEntry(invItem)
     local calories, hydration = Internal.getCachedNutritionPreview(invItem)
     local fullType = invItem:getFullType()
     local staticData = Internal.getCachedInventoryEntryStaticData(fullType)
-    return {
+    local equipmentEntry = getInventoryEquipmentEntry(invItem)
+    local outputEntry = getInventoryOutputEntry(invItem)
+    local isRottenProvision = not staticData.isMedicalProvision
+        and Internal.Nutrition
+        and Internal.Nutrition.IsRottenProvisionItem
+        and Internal.Nutrition.IsRottenProvisionItem(invItem, calories, hydration)
+    local entry = {
         kind = "player",
         invItem = invItem,
         itemID = invItem:getID(),
@@ -136,14 +210,20 @@ function Internal.buildInventoryEntry(invItem)
         hydration = hydration,
         unitWeight = staticData.unitWeight,
         totalWeight = staticData.unitWeight,
-        canDeposit = staticData.isMedicalProvision or calories > 0 or hydration > 0,
+        canDeposit = staticData.isMedicalProvision or ((calories > 0 or hydration > 0) and not isRottenProvision),
         canAssignTool = false,
+        hasEquipmentRequirementMatch = false,
+        isUsableEquipment = isUsableEquipmentEntry(equipmentEntry),
+        isRottenProvision = isRottenProvision == true,
+        provisionBlockedReason = isRottenProvision and "Rotten items cannot be used as colony provisions." or nil,
         equipmentRequirementKeys = nil,
         tags = nil,
         searchText = "",
         equipmentDataReady = false,
         texture = staticData.texture or (invItem.getTex and invItem:getTex() or nil),
     }
+    copyEquipmentState(entry, equipmentEntry)
+    return copyOutputState(entry, outputEntry)
 end
 
 function Internal.buildPlayerMoneyEntry(player)
@@ -207,24 +287,22 @@ function Internal.buildWorkerToolEntry(entry, index)
         return nil
     end
 
-    local qty = math.max(1, tonumber(entry.qty) or 1)
-    local tags = entry.tags or {}
-    if Internal.Config.GetItemCombinedTags and entry.fullType then
-        tags = Internal.Config.GetItemCombinedTags(entry.fullType)
-    end
-
-    return {
+    local normalizedEntry = getNormalizedEquipmentEntry(entry) or entry
+    local tags = normalizedEntry.tags or {}
+    local toolEntry = {
         kind = "tool",
         ledgerIndex = index,
-        displayName = entry.displayName,
-        fullType = entry.fullType,
+        displayName = normalizedEntry.displayName,
+        fullType = normalizedEntry.fullType,
         tags = tags,
-        qty = qty,
-        unitWeight = getUnitWeight(entry.fullType),
-        totalWeight = getTotalWeight(entry.fullType, qty),
-        texture = entry.texture or Internal.getTextureForFullType(entry.fullType),
+        qty = math.max(1, tonumber(normalizedEntry.qty) or 1),
+        unitWeight = getUnitWeight(normalizedEntry.fullType),
+        totalWeight = getTotalWeight(normalizedEntry.fullType, normalizedEntry.qty),
+        texture = entry.texture or normalizedEntry.texture or Internal.getTextureForFullType(normalizedEntry.fullType),
         pending = entry.pending == true,
+        isUsableEquipment = isUsableEquipmentEntry(normalizedEntry),
     }
+    return copyEquipmentState(toolEntry, normalizedEntry)
 end
 
 function Internal.buildWorkerToolPlaceholderEntry(definition)
@@ -253,16 +331,18 @@ function Internal.buildWorkerOutputEntry(entry, index)
         return nil
     end
 
-    return {
+    local normalizedEntry = getNormalizedOutputEntry(entry) or entry
+    return copyOutputState({
         kind = "output",
         ledgerIndex = index,
-        displayName = Internal.getDisplayNameForFullType(entry.fullType),
-        fullType = entry.fullType,
-        qty = math.max(1, tonumber(entry.qty) or 1),
-        unitWeight = getUnitWeight(entry.fullType),
-        totalWeight = getTotalWeight(entry.fullType, entry.qty),
-        texture = entry.texture or Internal.getTextureForFullType(entry.fullType),
-    }
+        displayName = normalizedEntry.displayName or Internal.getDisplayNameForFullType(normalizedEntry.fullType),
+        fullType = normalizedEntry.fullType,
+        qty = math.max(1, tonumber(normalizedEntry.qty) or 1),
+        unitWeight = getUnitWeight(normalizedEntry.fullType),
+        totalWeight = getTotalWeight(normalizedEntry.fullType, normalizedEntry.qty),
+        texture = entry.texture or normalizedEntry.texture or Internal.getTextureForFullType(normalizedEntry.fullType),
+        pending = entry.pending == true,
+    }, normalizedEntry)
 end
 
 function Internal.buildWorkerEntryFromPlayerEntry(entry)
@@ -291,7 +371,7 @@ function Internal.buildWorkerToolEntryFromPlayerEntry(entry)
         return nil
     end
 
-    return {
+    local workerEntry = {
         kind = "tool",
         displayName = entry.displayName,
         fullType = entry.fullType,
@@ -300,5 +380,7 @@ function Internal.buildWorkerToolEntryFromPlayerEntry(entry)
         totalWeight = tonumber(entry.totalWeight) or getTotalWeight(entry.fullType, 1),
         texture = entry.texture,
         pending = true,
+        isUsableEquipment = entry.isUsableEquipment == true,
     }
+    return copyEquipmentState(workerEntry, entry)
 end

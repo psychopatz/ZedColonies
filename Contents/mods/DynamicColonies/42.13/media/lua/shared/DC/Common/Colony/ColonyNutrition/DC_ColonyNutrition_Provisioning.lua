@@ -6,6 +6,29 @@ local Config = DC_Colony.Config
 local Nutrition = DC_Colony.Nutrition
 local Internal = Nutrition.Internal
 
+local function queueConsumedOutput(worker, entry)
+    if not worker or type(entry) ~= "table" then
+        return
+    end
+
+    local registry = DC_Colony and DC_Colony.Registry or nil
+    if not registry or not registry.AddOutputEntry then
+        return
+    end
+
+    local outputFullType = tostring(entry.consumedOutputFullType or "")
+    if outputFullType == "" then
+        return
+    end
+
+    registry.AddOutputEntry(worker, {
+        fullType = outputFullType,
+        displayName = entry.consumedOutputDisplayName or outputFullType,
+        fluidAmount = entry.consumedOutputFluidAmount,
+        qty = 1,
+    })
+end
+
 local function buildConsumedProvisionSample(consumedEntries)
     local countsByName = {}
     local orderedNames = {}
@@ -115,6 +138,7 @@ function Nutrition.ConsumeProvisionItem(worker, ledgerIndex, caloriesCap, hydrat
     local calories, hydration, changed = Internal.NormalizeLedgerEntry(entry)
     table.remove(worker.nutritionLedger, index)
     Nutrition.AddReserveAmounts(worker, calories, hydration, caloriesCap, hydrationCap)
+    queueConsumedOutput(worker, entry)
     if not changed then
         local registryInternal = DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal or nil
         if not (registryInternal and registryInternal.ApplyNutritionCacheDelta and registryInternal.ApplyNutritionCacheDelta(worker, -calories, -hydration)) then

@@ -37,18 +37,25 @@ local function mergeOutputLikeEntry(targetLedger, entry)
         return false
     end
 
-    local qtyDelta = math.max(1, tonumber(entry.qty) or 1)
+    local normalized = Internal.NormalizeOutputEntry and Internal.NormalizeOutputEntry(entry) or entry
+    if not normalized or not normalized.fullType then
+        return false
+    end
+
+    local qtyDelta = math.max(1, tonumber(normalized.qty) or 1)
+    local entrySignature = Internal.GetOutputEntryStateSignature and Internal.GetOutputEntryStateSignature(normalized)
+        or tostring(normalized.fullType)
     for _, existing in ipairs(targetLedger) do
-        if existing.fullType == entry.fullType then
+        local existingSignature = Internal.GetOutputEntryStateSignature and Internal.GetOutputEntryStateSignature(existing)
+            or tostring(existing and existing.fullType or "")
+        if existingSignature == entrySignature then
             existing.qty = (existing.qty or 0) + qtyDelta
             return true
         end
     end
 
-    targetLedger[#targetLedger + 1] = {
-        fullType = entry.fullType,
-        qty = qtyDelta
-    }
+    normalized.qty = qtyDelta
+    targetLedger[#targetLedger + 1] = normalized
     return true
 end
 
@@ -107,13 +114,18 @@ end
 
 function Registry.AddToolEntry(worker, entry)
     if not worker or not entry then return false end
-    local requestedQty = math.max(1, tonumber(entry.qty) or 1)
-    if Registry.GetFittingInventoryQuantity(worker, entry.fullType, requestedQty) < requestedQty then
+    local normalized = Internal.NormalizeEquipmentEntry and Internal.NormalizeEquipmentEntry(entry) or entry
+    if not normalized or not normalized.fullType or not (Internal.IsEquipmentEntryUsable and Internal.IsEquipmentEntryUsable(normalized)) then
+        return false
+    end
+
+    local requestedQty = math.max(1, tonumber(normalized.qty) or 1)
+    if Registry.GetFittingInventoryQuantity(worker, normalized.fullType, requestedQty) < requestedQty then
         return false
     end
     worker.toolLedger = worker.toolLedger or {}
-    worker.toolLedger[#worker.toolLedger + 1] = entry
-    if not Internal.ApplyToolTags(worker, entry.tags or {}) then
+    worker.toolLedger[#worker.toolLedger + 1] = normalized
+    if not Internal.ApplyToolTags(worker, normalized.tags or {}) then
         Internal.MarkToolCacheDirty(worker)
     end
     return true
@@ -121,15 +133,18 @@ end
 
 function Registry.AddOutputEntry(worker, entry)
     if not worker or not entry or not entry.fullType then return 0 end
-    local fitQty = Registry.GetFittingInventoryQuantity(worker, entry.fullType, math.max(1, tonumber(entry.qty) or 1))
+    local normalized = Internal.NormalizeOutputEntry and Internal.NormalizeOutputEntry(entry) or entry
+    if not normalized or not normalized.fullType then
+        return 0
+    end
+
+    local fitQty = Registry.GetFittingInventoryQuantity(worker, normalized.fullType, math.max(1, tonumber(normalized.qty) or 1))
     if fitQty <= 0 then
         return 0
     end
     worker.outputLedger = worker.outputLedger or {}
-    if mergeOutputLikeEntry(worker.outputLedger, {
-            fullType = entry.fullType,
-            qty = fitQty
-        }) then
+    normalized.qty = fitQty
+    if mergeOutputLikeEntry(worker.outputLedger, normalized) then
         Internal.MarkOutputCacheDirty(worker)
     end
     return fitQty
@@ -188,10 +203,9 @@ function Registry.DumpCarriedHaul(worker)
 
         local leftoverQty = requestedQty - movedQty
         if leftoverQty > 0 then
-            remainingEntries[#remainingEntries + 1] = {
-                fullType = entry.fullType,
-                qty = leftoverQty
-            }
+            local leftoverEntry = Internal.NormalizeOutputEntry and Internal.NormalizeOutputEntry(entry) or Internal.CopyShallow(entry)
+            leftoverEntry.qty = leftoverQty
+            remainingEntries[#remainingEntries + 1] = leftoverEntry
         end
     end
 

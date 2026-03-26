@@ -15,7 +15,10 @@ local function getProvisionStackKey(entry)
         tostring(math.max(0, tonumber(entry and entry.caloriesRemaining) or 0)),
         tostring(math.max(0, tonumber(entry and entry.hydrationRemaining) or 0)),
         tostring(math.max(0, tonumber(entry and entry.treatmentUnitsRemaining) or 0)),
-        tostring(entry and entry.medicalUse or "")
+        tostring(entry and entry.medicalUse or ""),
+        tostring(entry and entry.consumedOutputFullType or ""),
+        tostring(entry and entry.consumedOutputDisplayName or ""),
+        tostring(entry and entry.consumedOutputFluidAmount ~= nil and string.format("%.4f", entry.consumedOutputFluidAmount) or "")
     }, "|")
 end
 
@@ -39,6 +42,13 @@ local function appendProvisionEntry(warehouse, entry)
         medicalUse = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and tostring(entry.medicalUse or "bandage") or nil,
         qty = math.max(1, math.floor(tonumber(entry.qty) or 1))
     }
+    if entry.consumedOutputFullType then
+        normalized.consumedOutputFullType = tostring(entry.consumedOutputFullType)
+        normalized.consumedOutputDisplayName = tostring(entry.consumedOutputDisplayName or Registry.Internal.GetDisplayNameForFullType(entry.consumedOutputFullType))
+        if entry.consumedOutputFluidAmount ~= nil then
+            normalized.consumedOutputFluidAmount = math.max(0, tonumber(entry.consumedOutputFluidAmount) or 0)
+        end
+    end
 
     local stackKey = getProvisionStackKey(normalized)
     for _, existing in ipairs(warehouse.ledgers.provisions) do
@@ -58,31 +68,19 @@ local function appendProvisionEntry(warehouse, entry)
     return true
 end
 
-local function appendEquipmentEntry(warehouse, entry)
+local function appendEquipmentEntry(warehouse, entry, ignoreCapacity)
     if not warehouse or not entry or not entry.fullType then
         return false
     end
 
-    local weight = Internal.GetEntryWeight(entry.fullType, 1)
-    if weight > 0 and weight > Warehouse.GetRemainingCapacity(warehouse) then
+    local normalized = Registry.Internal.NormalizeEquipmentEntry and Registry.Internal.NormalizeEquipmentEntry(entry) or nil
+    if not normalized then
         return false
     end
 
-    local normalized = {
-        fullType = entry.fullType,
-        displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
-        tags = entry.tags or (Config.GetItemCombinedTags and Config.GetItemCombinedTags(entry.fullType)) or {},
-        qty = math.max(1, math.floor(tonumber(entry.qty) or 1))
-    }
-
-    for _, existing in ipairs(warehouse.ledgers.equipment) do
-        if existing.fullType == normalized.fullType then
-            existing.qty = math.max(1, math.floor(tonumber(existing.qty) or 1)) + normalized.qty
-            Warehouse.TouchItemsVersion(warehouse.ownerUsername)
-            Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
-            Warehouse.Recalculate(warehouse)
-            return true
-        end
+    local weight = Internal.GetEntryWeight(normalized.fullType, 1)
+    if ignoreCapacity ~= true and weight > 0 and weight > Warehouse.GetRemainingCapacity(warehouse) then
+        return false
     end
 
     warehouse.ledgers.equipment[#warehouse.ledgers.equipment + 1] = normalized
@@ -92,12 +90,14 @@ local function appendEquipmentEntry(warehouse, entry)
     return true
 end
 
-local function mergeOutputEntry(warehouse, fullType, qty)
-    if not warehouse or not fullType or qty <= 0 then
+local function mergeOutputEntry(warehouse, entry)
+    local normalized = Registry.Internal.NormalizeOutputEntry and Registry.Internal.NormalizeOutputEntry(entry) or nil
+    if not warehouse or not normalized or not normalized.fullType then
         return 0
     end
 
-    local unitWeight = Internal.GetEntryWeight(fullType, 1)
+    local qty = math.max(1, tonumber(normalized.qty) or 1)
+    local unitWeight = Internal.GetEntryWeight(normalized.fullType, 1)
     local remainingCapacity = Warehouse.GetRemainingCapacity(warehouse)
     local fitQty = qty
 
@@ -112,8 +112,12 @@ local function mergeOutputEntry(warehouse, fullType, qty)
         fitQty = qty
     end
 
+    local stackKey = Registry.Internal.GetOutputEntryStateSignature and Registry.Internal.GetOutputEntryStateSignature(normalized)
+        or normalized.fullType
     for _, existing in ipairs(warehouse.ledgers.output) do
-        if existing.fullType == fullType then
+        local existingKey = Registry.Internal.GetOutputEntryStateSignature and Registry.Internal.GetOutputEntryStateSignature(existing)
+            or tostring(existing and existing.fullType or "")
+        if existingKey == stackKey then
             existing.qty = math.max(1, tonumber(existing.qty) or 1) + fitQty
             Warehouse.TouchItemsVersion(warehouse.ownerUsername)
             Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
@@ -122,10 +126,8 @@ local function mergeOutputEntry(warehouse, fullType, qty)
         end
     end
 
-    warehouse.ledgers.output[#warehouse.ledgers.output + 1] = {
-        fullType = fullType,
-        qty = fitQty
-    }
+    normalized.qty = fitQty
+    warehouse.ledgers.output[#warehouse.ledgers.output + 1] = normalized
     Warehouse.TouchItemsVersion(warehouse.ownerUsername)
     Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
     Warehouse.Recalculate(warehouse)
@@ -133,6 +135,14 @@ local function mergeOutputEntry(warehouse, fullType, qty)
 end
 
 local function buildProvisionEntryFromFullType(fullType)
+    if Nutrition and Nutrition.BuildEntryFromItem and Nutrition.Internal and Nutrition.Internal.CreateItemByFullType then
+        local createdItem = Nutrition.Internal.CreateItemByFullType(fullType)
+        local entry = createdItem and Nutrition.BuildEntryFromItem(createdItem) or nil
+        if entry then
+            return entry
+        end
+    end
+
     if Config.IsMedicalProvisionFullType and Config.IsMedicalProvisionFullType(fullType) then
         return {
             fullType = fullType,
@@ -169,11 +179,11 @@ local function buildEquipmentEntryFromFullType(fullType)
         return nil
     end
 
-    return {
+    return Registry.Internal.NormalizeEquipmentEntry and Registry.Internal.NormalizeEquipmentEntry({
         fullType = fullType,
         displayName = Registry.Internal.GetDisplayNameForFullType(fullType),
         tags = (Config.GetItemCombinedTags and Config.GetItemCombinedTags(fullType)) or {}
-    }
+    }) or nil
 end
 
 function Warehouse.DepositProvisionEntry(ownerUsername, entry)
@@ -181,9 +191,9 @@ function Warehouse.DepositProvisionEntry(ownerUsername, entry)
     return appendProvisionEntry(warehouse, entry)
 end
 
-function Warehouse.DepositEquipmentEntry(ownerUsername, entry)
+function Warehouse.DepositEquipmentEntry(ownerUsername, entry, ignoreCapacity)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
-    return appendEquipmentEntry(warehouse, entry)
+    return appendEquipmentEntry(warehouse, entry, ignoreCapacity)
 end
 
 function Warehouse.DepositOutputEntry(ownerUsername, entry)
@@ -191,7 +201,7 @@ function Warehouse.DepositOutputEntry(ownerUsername, entry)
         return 0
     end
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
-    return mergeOutputEntry(warehouse, entry.fullType, math.max(1, tonumber(entry.qty) or 1))
+    return mergeOutputEntry(warehouse, entry)
 end
 
 function Warehouse.DepositHaulEntry(ownerUsername, entry)
@@ -240,10 +250,7 @@ function Warehouse.DepositHaulEntry(ownerUsername, entry)
                 end
             end
         else
-            movedQty = Warehouse.DepositOutputEntry(ownerUsername, {
-                fullType = fullType,
-                qty = totalQty
-            })
+            movedQty = Warehouse.DepositOutputEntry(ownerUsername, entry)
         end
     end
 
@@ -271,20 +278,65 @@ function Warehouse.DepositWorkerHaul(worker)
         end
         if leftoverQty > 0 then
             leftoverCount = leftoverCount + leftoverQty
-            remainingEntries[#remainingEntries + 1] = {
-                fullType = entry.fullType,
-                qty = leftoverQty
-            }
+            local leftoverEntry = Registry.Internal.NormalizeOutputEntry and Registry.Internal.NormalizeOutputEntry(entry) or Registry.Internal.CopyShallow(entry)
+            leftoverEntry.qty = leftoverQty
+            remainingEntries[#remainingEntries + 1] = leftoverEntry
         elseif movedQty <= 0 then
             leftoverCount = leftoverCount + qty
-            remainingEntries[#remainingEntries + 1] = {
-                fullType = entry.fullType,
-                qty = qty
-            }
+            local leftoverEntry = Registry.Internal.NormalizeOutputEntry and Registry.Internal.NormalizeOutputEntry(entry) or Registry.Internal.CopyShallow(entry)
+            leftoverEntry.qty = qty
+            remainingEntries[#remainingEntries + 1] = leftoverEntry
         end
     end
 
     worker.haulLedger = remainingEntries
+    return movedStacks, movedCount, movedWeight, leftoverCount
+end
+
+function Warehouse.DepositWorkerOutput(worker)
+    if not worker then
+        return 0, 0, 0, 0
+    end
+
+    local remainingEntries = {}
+    local movedStacks = 0
+    local movedCount = 0
+    local movedWeight = 0
+    local leftoverCount = 0
+
+    for _, entry in ipairs(worker.outputLedger or {}) do
+        local normalized = Registry.Internal.NormalizeOutputEntry and Registry.Internal.NormalizeOutputEntry(entry) or nil
+        if normalized then
+            local requestedQty = math.max(1, tonumber(normalized.qty) or 1)
+            local movedQty = Warehouse.DepositOutputEntry(worker.ownerUsername, normalized)
+            if movedQty > 0 then
+                movedStacks = movedStacks + 1
+                movedCount = movedCount + movedQty
+                movedWeight = movedWeight + Internal.GetEntryWeight(normalized.fullType, movedQty)
+            end
+
+            local leftoverQty = requestedQty - movedQty
+            if leftoverQty > 0 then
+                leftoverCount = leftoverCount + leftoverQty
+                normalized.qty = leftoverQty
+                remainingEntries[#remainingEntries + 1] = normalized
+            elseif movedQty <= 0 then
+                leftoverCount = leftoverCount + requestedQty
+                normalized.qty = requestedQty
+                remainingEntries[#remainingEntries + 1] = normalized
+            end
+        end
+    end
+
+    if movedCount > 0 then
+        worker.outputLedger = remainingEntries
+        if Registry.Internal and Registry.Internal.MarkOutputCacheDirty then
+            Registry.Internal.MarkOutputCacheDirty(worker)
+        end
+    else
+        worker.outputLedger = remainingEntries
+    end
+
     return movedStacks, movedCount, movedWeight, leftoverCount
 end
 

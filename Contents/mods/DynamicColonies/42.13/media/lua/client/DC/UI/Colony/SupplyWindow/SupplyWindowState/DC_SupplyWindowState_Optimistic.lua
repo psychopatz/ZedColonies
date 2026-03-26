@@ -108,20 +108,16 @@ local function addOptimisticTool(window, entry)
         if not warehouse then
             return false
         end
-        for _, existing in ipairs(warehouse.ledgers.equipment) do
-            if existing.fullType == entry.fullType then
-                existing.qty = math.max(1, tonumber(existing.qty) or 1) + 1
-                existing.pending = true
-                applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))
-                return true
-            end
-        end
-
         warehouse.ledgers.equipment[#warehouse.ledgers.equipment + 1] = {
             fullType = entry.fullType,
             displayName = entry.displayName,
             tags = entry.tags or {},
-            qty = 1,
+            condition = entry.condition,
+            conditionMax = entry.conditionMax,
+            isDrainable = entry.isDrainable == true,
+            useDelta = entry.useDelta,
+            usedDelta = entry.usedDelta,
+            keepOnDeplete = entry.keepOnDeplete == true,
             pending = true,
         }
         applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))
@@ -134,6 +130,12 @@ local function addOptimisticTool(window, entry)
         fullType = entry.fullType,
         displayName = entry.displayName,
         tags = entry.tags or {},
+        condition = entry.condition,
+        conditionMax = entry.conditionMax,
+        isDrainable = entry.isDrainable == true,
+        useDelta = entry.useDelta,
+        usedDelta = entry.usedDelta,
+        keepOnDeplete = entry.keepOnDeplete == true,
         pending = true,
     }
     return true
@@ -149,8 +151,21 @@ local function addOptimisticOutput(window, entry)
         return false
     end
 
+    local registryInternal = DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal or nil
+    local normalizedEntry = registryInternal and registryInternal.NormalizeOutputEntry and registryInternal.NormalizeOutputEntry(entry)
+        or {
+            fullType = entry.fullType,
+            displayName = entry.displayName,
+            qty = 1,
+            fluidAmount = entry.fluidAmount,
+        }
+    local stackKey = registryInternal and registryInternal.GetOutputEntryStateSignature and registryInternal.GetOutputEntryStateSignature(normalizedEntry)
+        or tostring(normalizedEntry and normalizedEntry.fullType or "")
+
     for _, existing in ipairs(warehouse.ledgers.output) do
-        if existing.fullType == entry.fullType then
+        local existingKey = registryInternal and registryInternal.GetOutputEntryStateSignature and registryInternal.GetOutputEntryStateSignature(existing)
+            or tostring(existing and existing.fullType or "")
+        if existingKey == stackKey then
             existing.qty = math.max(1, tonumber(existing.qty) or 1) + 1
             existing.pending = true
             applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))
@@ -159,8 +174,10 @@ local function addOptimisticOutput(window, entry)
     end
 
     warehouse.ledgers.output[#warehouse.ledgers.output + 1] = {
-        fullType = entry.fullType,
+        fullType = normalizedEntry.fullType,
+        displayName = normalizedEntry.displayName,
         qty = 1,
+        fluidAmount = normalizedEntry.fluidAmount,
         pending = true,
     }
     applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))

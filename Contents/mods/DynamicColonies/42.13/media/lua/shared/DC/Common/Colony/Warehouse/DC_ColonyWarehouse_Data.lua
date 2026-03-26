@@ -91,7 +91,7 @@ local function normalizeProvisionEntry(entry)
         return nil
     end
 
-    return {
+    local normalized = {
         fullType = tostring(entry.fullType),
         displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
         provisionType = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and "medical" or tostring(entry.provisionType or "nutrition"),
@@ -101,30 +101,22 @@ local function normalizeProvisionEntry(entry)
         medicalUse = entry.medicalUse and tostring(entry.medicalUse) or nil,
         qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
     }
+    if entry.consumedOutputFullType then
+        normalized.consumedOutputFullType = tostring(entry.consumedOutputFullType)
+        normalized.consumedOutputDisplayName = tostring(entry.consumedOutputDisplayName or Registry.Internal.GetDisplayNameForFullType(entry.consumedOutputFullType))
+        if entry.consumedOutputFluidAmount ~= nil then
+            normalized.consumedOutputFluidAmount = math.max(0, tonumber(entry.consumedOutputFluidAmount) or 0)
+        end
+    end
+    return normalized
 end
 
 local function normalizeEquipmentEntry(entry)
-    if type(entry) ~= "table" or not entry.fullType then
-        return nil
-    end
-
-    return {
-        fullType = tostring(entry.fullType),
-        displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
-        tags = entry.tags or (Config.GetItemCombinedTags and Config.GetItemCombinedTags(entry.fullType)) or {},
-        qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
-    }
+    return Registry.Internal.NormalizeEquipmentEntry and Registry.Internal.NormalizeEquipmentEntry(entry) or nil
 end
 
 local function normalizeOutputEntry(entry)
-    if type(entry) ~= "table" or not entry.fullType then
-        return nil
-    end
-
-    return {
-        fullType = tostring(entry.fullType),
-        qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
-    }
+    return Registry.Internal.NormalizeOutputEntry and Registry.Internal.NormalizeOutputEntry(entry) or nil
 end
 
 local function stackProvisionEntries(entries)
@@ -140,7 +132,10 @@ local function stackProvisionEntries(entries)
                 tostring(entry.caloriesRemaining or 0),
                 tostring(entry.hydrationRemaining or 0),
                 tostring(entry.treatmentUnitsRemaining or 0),
-                tostring(entry.medicalUse or "")
+                tostring(entry.medicalUse or ""),
+                tostring(entry.consumedOutputFullType or ""),
+                tostring(entry.consumedOutputDisplayName or ""),
+                tostring(entry.consumedOutputFluidAmount ~= nil and string.format("%.4f", entry.consumedOutputFluidAmount) or "")
             }, "|")
             local existing = byKey[key]
             if existing then
@@ -156,24 +151,15 @@ local function stackProvisionEntries(entries)
 end
 
 local function stackEquipmentEntries(entries)
-    local stacked = {}
-    local byKey = {}
-
+    local normalizedEntries = {}
     for _, raw in ipairs(entries or {}) do
         local entry = normalizeEquipmentEntry(raw)
         if entry then
-            local key = entry.fullType
-            local existing = byKey[key]
-            if existing then
-                existing.qty = existing.qty + entry.qty
-            else
-                byKey[key] = entry
-                stacked[#stacked + 1] = entry
-            end
+            normalizedEntries[#normalizedEntries + 1] = entry
         end
     end
 
-    return stacked
+    return normalizedEntries
 end
 
 local function stackOutputEntries(entries)
@@ -183,7 +169,8 @@ local function stackOutputEntries(entries)
     for _, raw in ipairs(entries or {}) do
         local entry = normalizeOutputEntry(raw)
         if entry then
-            local key = entry.fullType
+            local key = Registry.Internal.GetOutputEntryStateSignature and Registry.Internal.GetOutputEntryStateSignature(entry)
+                or entry.fullType
             local existing = byKey[key]
             if existing then
                 existing.qty = existing.qty + entry.qty

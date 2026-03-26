@@ -30,13 +30,11 @@ end
 local function takeFirstEquipmentEntry(ownerUsername, predicate)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     for index, entry in ipairs(warehouse.ledgers.equipment or {}) do
-        if predicate(entry) then
+        local usable = Registry.Internal.IsEquipmentEntryUsable and Registry.Internal.IsEquipmentEntryUsable(entry) or true
+        if usable and predicate(entry) then
             local removed = Registry.Internal.CopyShallow(entry)
             removed.qty = 1
-            entry.qty = math.max(1, math.floor(tonumber(entry.qty) or 1)) - 1
-            if entry.qty <= 0 then
-                table.remove(warehouse.ledgers.equipment, index)
-            end
+            table.remove(warehouse.ledgers.equipment, index)
             Warehouse.TouchItemsVersion(ownerUsername)
             Warehouse.TouchSummaryVersion(ownerUsername)
             Warehouse.Recalculate(warehouse)

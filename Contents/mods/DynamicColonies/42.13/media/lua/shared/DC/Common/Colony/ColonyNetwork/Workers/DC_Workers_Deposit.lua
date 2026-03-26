@@ -25,6 +25,26 @@ local function getInventoryItemQuantity(item)
     return 1
 end
 
+local function isRottenProvisionRejection(reason)
+    local nutritionInternal = Nutrition and Nutrition.Internal or nil
+    return tostring(reason or "") ~= ""
+        and nutritionInternal
+        and tostring(reason) == tostring(nutritionInternal.ROTTEN_PROVISION_MESSAGE or "")
+end
+
+local function syncRottenProvisionNotice(player, rottenCount)
+    if rottenCount <= 0 then
+        return
+    end
+
+    Internal.syncNotice(
+        player,
+        "Rotten items cannot be used as colony provisions. Rejected " .. tostring(rottenCount) .. " item" .. (rottenCount == 1 and "" or "s") .. ".",
+        "error",
+        true
+    )
+end
+
 Network.Handlers.DepositWorkerSupplies = function(player, args)
     if not args or not args.workerID then return end
 
@@ -40,10 +60,11 @@ Network.Handlers.DepositWorkerSupplies = function(player, args)
     local eligibleCount = 0
     local movedCount = 0
     local blockedCount = 0
+    local rottenCount = 0
     for _, itemID in ipairs(itemIDs) do
         local invItem = Internal.getInventoryItemByID(player, itemID)
         if invItem then
-            local entry = Nutrition.BuildEntryFromItem(invItem)
+            local entry, reason = Nutrition.BuildEntryFromItem(invItem)
             if entry then
                 eligibleCount = eligibleCount + 1
                 if Registry.AddNutritionEntry(worker, entry) then
@@ -52,12 +73,20 @@ Network.Handlers.DepositWorkerSupplies = function(player, args)
                 else
                     blockedCount = blockedCount + 1
                 end
+            elseif isRottenProvisionRejection(reason) then
+                rottenCount = rottenCount + 1
             end
         end
     end
 
     if movedCount <= 0 and eligibleCount > 0 then
         Internal.syncNotice(player, "NPC inventory is full. No provisions could be deposited.", "error", true)
+        Shared.saveAndRefreshBasic(player, worker)
+        return
+    end
+
+    if movedCount <= 0 and eligibleCount <= 0 and rottenCount > 0 then
+        syncRottenProvisionNotice(player, rottenCount)
         Shared.saveAndRefreshBasic(player, worker)
         return
     end
@@ -70,6 +99,7 @@ Network.Handlers.DepositWorkerSupplies = function(player, args)
             true
         )
     end
+    syncRottenProvisionNotice(player, rottenCount)
 
     Shared.saveAndRefreshProcessed(player, worker)
 end
@@ -89,10 +119,11 @@ Network.Handlers.DepositWarehouseSupplies = function(player, args)
     local eligibleCount = 0
     local movedCount = 0
     local blockedCount = 0
+    local rottenCount = 0
     for _, itemID in ipairs(itemIDs) do
         local invItem = Internal.getInventoryItemByID(player, itemID)
         if invItem then
-            local entry = Nutrition.BuildEntryFromItem(invItem)
+            local entry, reason = Nutrition.BuildEntryFromItem(invItem)
             if entry then
                 eligibleCount = eligibleCount + 1
                 if Warehouse.DepositProvisionEntry(owner, entry) then
@@ -101,12 +132,20 @@ Network.Handlers.DepositWarehouseSupplies = function(player, args)
                 else
                     blockedCount = blockedCount + 1
                 end
+            elseif isRottenProvisionRejection(reason) then
+                rottenCount = rottenCount + 1
             end
         end
     end
 
     if movedCount <= 0 and eligibleCount > 0 then
         Internal.syncNotice(player, "Warehouse is full. No supplies could be stored.", "error", true)
+        Shared.saveAndRefreshBasic(player, worker, true)
+        return
+    end
+
+    if movedCount <= 0 and eligibleCount <= 0 and rottenCount > 0 then
+        syncRottenProvisionNotice(player, rottenCount)
         Shared.saveAndRefreshBasic(player, worker, true)
         return
     end
@@ -119,6 +158,7 @@ Network.Handlers.DepositWarehouseSupplies = function(player, args)
             true
         )
     end
+    syncRottenProvisionNotice(player, rottenCount)
 
     Shared.saveAndRefreshProcessed(player, worker, true)
 end
@@ -156,11 +196,14 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
                     end
                 else
                     eligibleCount = eligibleCount + 1
-                    local availableQty = getInventoryItemQuantity(invItem)
-                    local movedQty = Warehouse.DepositOutputEntry(owner, {
-                        fullType = fullType,
-                        qty = availableQty
-                    })
+                    local outputEntry = Registry.Internal.BuildOutputEntryFromInventoryItem
+                        and Registry.Internal.BuildOutputEntryFromInventoryItem(invItem)
+                        or {
+                            fullType = fullType,
+                            qty = getInventoryItemQuantity(invItem)
+                        }
+                    local availableQty = math.max(1, tonumber(outputEntry and outputEntry.qty) or getInventoryItemQuantity(invItem))
+                    local movedQty = Warehouse.DepositOutputEntry(owner, outputEntry)
                     if movedQty > 0 then
                         local container = invItem:getContainer()
                         Internal.removeInventoryItem(invItem)

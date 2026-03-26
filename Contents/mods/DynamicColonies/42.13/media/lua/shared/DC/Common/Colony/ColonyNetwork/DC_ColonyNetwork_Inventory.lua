@@ -19,13 +19,33 @@ local function removeInventoryItem(item)
     end
 end
 
-local function addInventoryItem(container, fullType, count)
-    if DynamicTrading and DynamicTrading.ServerHelpers and DynamicTrading.ServerHelpers.AddItem then
-        return DynamicTrading.ServerHelpers.AddItem(container, fullType, count)
+local function addInventoryItem(container, fullType, count, customData)
+    if DynamicTrading and DynamicTrading.ServerHelpers then
+        if customData and DynamicTrading.ServerHelpers.AddItemWithCondition then
+            return DynamicTrading.ServerHelpers.AddItemWithCondition(container, fullType, count, customData)
+        end
+        if DynamicTrading.ServerHelpers.AddItem then
+            return DynamicTrading.ServerHelpers.AddItem(container, fullType, count)
+        end
     end
 
     if not container or not fullType then return nil end
-    return container:AddItems(fullType, count or 1)
+    local items = container:AddItems(fullType, count or 1)
+    if items and customData then
+        for i = 0, items:size() - 1 do
+            local item = items:get(i)
+            if customData.condition ~= nil and item.getConditionMax and item:getConditionMax() > 0 then
+                item:setCondition(math.max(0, math.min(item:getConditionMax(), math.floor(tonumber(customData.condition) or item:getConditionMax()))))
+            end
+            if customData.usedDelta ~= nil and item.IsDrainable and item:IsDrainable() then
+                item:setUsedDelta(math.max(0, math.min(1, tonumber(customData.usedDelta) or 0)))
+            end
+            if customData.fluidAmount ~= nil and item.getFluidContainer and item:getFluidContainer() then
+                item:getFluidContainer():setAmount(math.max(0, tonumber(customData.fluidAmount) or 0))
+            end
+        end
+    end
+    return items
 end
 
 local function removePlayerMoney(player, amount)

@@ -33,6 +33,13 @@ local function fitTextToWidth(font, text, maxWidth)
     return ellipsis
 end
 
+local function getTitleParts(entry, presentation)
+    local baseText = Internal.formatEntryLabel(entry)
+    local suffixText = tostring(presentation and presentation.titleSuffixText or "")
+    local suffixColor = presentation and presentation.titleSuffixColor or nil
+    return baseText, suffixText, suffixColor
+end
+
 function ColonySupplyList:new(x, y, width, height, mode)
     local o = ISScrollingListBox:new(x, y, width, height)
     setmetatable(o, self)
@@ -138,10 +145,21 @@ function ColonySupplyList:doDrawItem(y, item, alt)
     local badgeWidth = (badgeText ~= "") and getTextManager():MeasureStringX(UIFont.Small, badgeText) or 0
     local textX = contentX + 36
     local textMaxWidth = math.max(60, width - textX - badgeWidth - rightPadding - 12)
-    local titleText = fitTextToWidth(UIFont.Small, Internal.formatEntryLabel(entry), textMaxWidth)
+    local titleBaseText, titleSuffixText, titleSuffixColor = getTitleParts(entry, presentation)
+    local suffixWidth = (titleSuffixText ~= "") and getTextManager():MeasureStringX(UIFont.Small, titleSuffixText) or 0
+    local titleBaseMaxWidth = math.max(20, textMaxWidth - suffixWidth)
+    local titleText = fitTextToWidth(UIFont.Small, titleBaseText, titleBaseMaxWidth)
     local statText = fitTextToWidth(UIFont.Small, presentation.statText or "", textMaxWidth)
 
     self:drawText(titleText, textX, y + 5, textR, textG, textB, 1, UIFont.Small)
+    if titleSuffixText ~= "" then
+        local suffixX = textX + getTextManager():MeasureStringX(UIFont.Small, titleText)
+        local suffixR = titleSuffixColor and titleSuffixColor.r or textR
+        local suffixG = titleSuffixColor and titleSuffixColor.g or textG
+        local suffixB = titleSuffixColor and titleSuffixColor.b or textB
+        local suffixA = presentation.dimmed and 0.9 or 1
+        self:drawText(titleSuffixText, suffixX, y + 5, suffixR, suffixG, suffixB, suffixA, UIFont.Small)
+    end
     self:drawText(statText, textX, y + 23, 0.65, 0.8, 0.95, 1, UIFont.Small)
     if badgeText ~= "" then
         self:drawTextRight(badgeText, width - rightPadding, y + 5, badgeR, badgeG, badgeB, 1, UIFont.Small)

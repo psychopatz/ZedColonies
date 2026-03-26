@@ -85,7 +85,11 @@ function Internal.shouldShowPlayerEntry(entry, activeTab, window)
         return true
     end
 
-    return entry.canDeposit == true
+    if entry.canDeposit == true then
+        return true
+    end
+
+    return activeTab == Internal.Tabs.Provisions and tostring(entry.provisionBlockedReason or "") ~= ""
 end
 
 function Internal.shouldShowWorkerEntry(entry, activeTab)

@@ -58,6 +58,9 @@ function Nutrition.SanitizeLedgerEntry(entry)
 
     entry.caloriesRemaining = calories
     entry.hydrationRemaining = hydration
+    if Internal.ApplyConsumedOutputMetadata then
+        Internal.ApplyConsumedOutputMetadata(entry, nil, entry.fullType, entry.displayName)
+    end
     return calories, hydration, originalCalories ~= calories or originalHydration ~= hydration
 end
 

@@ -199,7 +199,7 @@ Config.ScavengeSiteProfiles = {
         failureWeightDelta = -1,
         secondarySkillWeights = {
             Social = 0.35,
-            Artistic = 0.15
+            Maintenance = 0.15
         },
         ruleWeights = {
             open_food = 0.8,
@@ -266,7 +266,7 @@ Config.ScavengeLootRules = {
         minQty = 1,
         maxQty = 1,
         difficulty = 3,
-        skillWeights = { Crafting = 0.45, Artistic = 0.35 }
+        skillWeights = { Crafting = 0.45, Maintenance = 0.35 }
     },
     {
         id = "open_media",

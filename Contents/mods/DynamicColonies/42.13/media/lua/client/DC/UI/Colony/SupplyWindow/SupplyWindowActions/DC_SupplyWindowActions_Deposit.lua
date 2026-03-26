@@ -329,7 +329,9 @@ function DC_SupplyWindow:onDepositSelected()
     end
 
     if not selectedEntry.canDeposit then
-        self:updateStatus("That item is visible for preview, but it cannot be stored as provisions.")
+        self:updateStatus(
+            tostring(selectedEntry.provisionBlockedReason or "That item is visible for preview, but it cannot be stored as provisions.")
+        )
         return
     end
 

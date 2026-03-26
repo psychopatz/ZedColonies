@@ -146,6 +146,59 @@ local function appendWorkerInventoryWeight(summary, worker)
         .. Internal.formatWeightValue(inventoryState.maxWeight)
 end
 
+local function appendSegment(baseText, extraText)
+    local normalizedExtra = tostring(extraText or "")
+    if normalizedExtra == "" then
+        return baseText
+    end
+    if not baseText or baseText == "" then
+        return normalizedExtra
+    end
+    return tostring(baseText) .. " | " .. normalizedExtra
+end
+
+local function getDurabilityText(entry)
+    if type(entry) ~= "table" then
+        return ""
+    end
+
+    local parts = {}
+    local conditionMax = math.max(0, tonumber(entry.conditionMax) or 0)
+    if conditionMax > 0 then
+        local condition = math.max(0, math.floor(tonumber(entry.condition) or 0))
+        parts[#parts + 1] = "Cond " .. tostring(condition) .. "/" .. tostring(conditionMax)
+        if condition <= 0 then
+            parts[#parts + 1] = "Broken"
+        end
+    end
+
+    if entry.isDrainable == true then
+        local remaining = math.max(0, tonumber(entry.usedDelta) or 0)
+        local percent = math.max(0, math.min(100, math.floor((remaining * 100) + 0.5)))
+        parts[#parts + 1] = "Charge " .. tostring(percent) .. "%"
+
+        local useDelta = math.max(0, tonumber(entry.useDelta) or 0)
+        if useDelta > 0 and remaining + 0.0001 < useDelta then
+            parts[#parts + 1] = entry.keepOnDeplete == true and "Empty" or "Depleted"
+        end
+    end
+
+    return table.concat(parts, " | ")
+end
+
+local function getOutputStateText(entry)
+    if type(entry) ~= "table" or entry.fluidAmount == nil then
+        return ""
+    end
+
+    local fluidAmount = math.max(0, tonumber(entry.fluidAmount) or 0)
+    if fluidAmount <= 0.0001 then
+        return "Empty"
+    end
+
+    return "Fluid " .. string.format("%.0f", fluidAmount)
+end
+
 function Internal.getWorkerTabSummary(window, entries)
     local activeTab = window and window.activeTab or Internal.Tabs.Provisions
 
@@ -233,15 +286,22 @@ end
 function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
     if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
         if activeTab == Internal.Tabs.Equipment then
+            local durabilityText = getDurabilityText(entry)
             if entry.canAssignTool then
                 return {
-                    statText = appendWeightText(getGroupCountLabel(entry) .. " ready for assignment", entry),
+                    statText = appendWeightText(appendSegment(getGroupCountLabel(entry) .. " ready for assignment", durabilityText), entry),
                     badgeText = "Tool",
                     dimmed = false,
                 }
             end
             return {
-                statText = appendWeightText(getGroupCountLabel(entry) .. " not usable for labour", entry),
+                statText = appendWeightText(
+                    appendSegment(
+                        getGroupCountLabel(entry) .. ((entry.hasEquipmentRequirementMatch or durabilityText ~= "") and " not usable for labour" or " not a labour tool"),
+                        durabilityText
+                    ),
+                    entry
+                ),
                 badgeText = "Preview",
                 dimmed = true,
             }
@@ -250,13 +310,19 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
         if activeTab == Internal.Tabs.Output then
             if Internal.isWarehouseView and Internal.isWarehouseView(window) then
                 return {
-                    statText = appendWeightText(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), entry),
+                    statText = appendWeightText(
+                        appendSegment(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), getOutputStateText(entry)),
+                        entry
+                    ),
                     badgeText = "Ready",
                     dimmed = false,
                 }
             end
             return {
-                statText = appendWeightText(getGroupCountLabel(entry) .. " in worker storage view", entry),
+                statText = appendWeightText(
+                    appendSegment(getGroupCountLabel(entry) .. " in worker storage view", getOutputStateText(entry)),
+                    entry
+                ),
                 badgeText = "Read Only",
                 dimmed = true,
             }
@@ -284,6 +350,19 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
             }
         end
 
+        if tostring(entry.provisionBlockedReason or "") ~= "" then
+            return {
+                statText = appendWeightText(
+                    getGroupCountLabel(entry) .. " | +" .. string.format("%.0f cal | +%.0f hyd", entry.calories or 0, entry.hydration or 0),
+                    entry
+                ),
+                badgeText = "",
+                dimmed = true,
+                titleSuffixText = " (Rotten)",
+                titleSuffixColor = { r = 0.92, g = 0.34, b = 0.34 },
+            }
+        end
+
         return {
             statText = appendWeightText(getGroupCountLabel(entry) .. " not valid as provisions", entry),
             badgeText = "Preview",
@@ -303,16 +382,26 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
         if entry.kind == "player" and Internal.ensurePlayerEntryEquipmentData then
             Internal.ensurePlayerEntryEquipmentData(entry)
         end
+        local durabilityText = getDurabilityText(entry)
         if entry.canAssignTool then
             local matchSummary = getEquipmentMatchSummary(entry, worker)
             return {
-                statText = appendWeightText(matchSummary and ("Matches: " .. matchSummary) or "Relevant labour equipment", entry),
+                statText = appendWeightText(
+                    appendSegment(matchSummary and ("Matches: " .. matchSummary) or "Relevant labour equipment", durabilityText),
+                    entry
+                ),
                 badgeText = "Tool",
                 dimmed = false,
             }
         end
         return {
-            statText = appendWeightText("Not a labour tool", entry),
+            statText = appendWeightText(
+                appendSegment(
+                    entry.hasEquipmentRequirementMatch and "Not usable for labour" or "Not a labour tool",
+                    durabilityText
+                ),
+                entry
+            ),
             badgeText = "Preview",
             dimmed = true,
         }
@@ -321,13 +410,13 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
     if activeTab == Internal.Tabs.Output then
         if Internal.isWarehouseView and Internal.isWarehouseView(window) then
             return {
-                statText = appendWeightText("Store in warehouse storage", entry),
+                statText = appendWeightText(appendSegment("Store in warehouse storage", getOutputStateText(entry)), entry),
                 badgeText = "Ready",
                 dimmed = false,
             }
         end
         return {
-            statText = appendWeightText("Worker storage tab", entry),
+            statText = appendWeightText(appendSegment("Worker storage tab", getOutputStateText(entry)), entry),
             badgeText = "Read Only",
             dimmed = true,
         }
@@ -349,6 +438,16 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
         }
     end
 
+    if tostring(entry.provisionBlockedReason or "") ~= "" then
+        return {
+            statText = appendWeightText(string.format("+%.0f cal | +%.0f hyd", entry.calories or 0, entry.hydration or 0), entry),
+            badgeText = "",
+            dimmed = true,
+            titleSuffixText = " (Rotten)",
+            titleSuffixColor = { r = 0.92, g = 0.34, b = 0.34 },
+        }
+    end
+
     return {
         statText = appendWeightText("Not a valid provision item", entry),
         badgeText = "Preview",
@@ -360,14 +459,17 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
     if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
         if activeTab == Internal.Tabs.Equipment then
             return {
-                statText = appendWeightText(getGroupCountLabel(entry) .. " assigned", entry),
+                statText = appendWeightText(appendSegment(getGroupCountLabel(entry) .. " assigned", getDurabilityText(entry)), entry),
                 badgeText = "",
             }
         end
 
         if activeTab == Internal.Tabs.Output then
             return {
-                statText = appendWeightText(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), entry),
+                statText = appendWeightText(
+                    appendSegment(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), getOutputStateText(entry)),
+                    entry
+                ),
                 badgeText = "",
             }
         end
@@ -412,6 +514,7 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
         if (tonumber(entry.qty) or 1) > 1 then
             tagText = "Qty " .. tostring(entry.qty) .. " | " .. tagText
         end
+        tagText = appendSegment(tagText, getDurabilityText(entry))
         return {
             statText = appendWeightText(tagText, entry),
             badgeText = "",
@@ -420,7 +523,7 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
 
     if activeTab == Internal.Tabs.Output then
         return {
-            statText = appendWeightText("Qty " .. tostring(entry.qty or 1), entry),
+            statText = appendWeightText(appendSegment("Qty " .. tostring(entry.qty or 1), getOutputStateText(entry)), entry),
             badgeText = "",
         }
     end

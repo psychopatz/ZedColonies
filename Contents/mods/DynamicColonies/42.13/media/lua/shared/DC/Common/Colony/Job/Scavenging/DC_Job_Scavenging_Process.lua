@@ -94,6 +94,7 @@ function Sim.ProcessScavengeJob(worker, ctx)
                 worker.workProgress = worker.workProgress - cycleHours
 
                 local scavengeRun = Output.GenerateScavengeRun and Output.GenerateScavengeRun(worker) or { entries = {} }
+                Sim.ApplyWearForScavengeTools(worker, currentHour, 1)
                 worker.scavengeBonusRareRolls = scavengeRun.bonusRareRolls or 0
                 worker.scavengeRareFinds = scavengeRun.rareFinds or 0
                 worker.scavengeBotchedRolls = scavengeRun.botchedRolls or 0

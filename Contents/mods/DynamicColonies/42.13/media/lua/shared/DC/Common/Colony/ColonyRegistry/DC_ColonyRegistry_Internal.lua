@@ -197,4 +197,257 @@ function Internal.GetStarterReserveTotals(template)
     return starterCalories, starterHydration
 end
 
+local function copyStringArray(values)
+    local copy = {}
+    local seen = {}
+    for _, value in ipairs(values or {}) do
+        local key = tostring(value or "")
+        if key ~= "" and not seen[key] then
+            seen[key] = true
+            copy[#copy + 1] = key
+        end
+    end
+    return copy
+end
+
+local function resolveKeepOnDeplete(item, scriptItem)
+    if item then
+        if item.isKeepOnDeplete and item:isKeepOnDeplete() then
+            return true
+        end
+        if item.getKeepOnDeplete and item:getKeepOnDeplete() then
+            return true
+        end
+        if item.getScriptItem and not scriptItem then
+            scriptItem = item:getScriptItem()
+        end
+    end
+
+    if scriptItem then
+        if scriptItem.isKeepOnDeplete and scriptItem:isKeepOnDeplete() then
+            return true
+        end
+        if scriptItem.getKeepOnDeplete and scriptItem:getKeepOnDeplete() then
+            return true
+        end
+    end
+
+    return false
+end
+
+function Internal.CreateTransientInventoryItem(fullType)
+    if not fullType or not InventoryItemFactory or not InventoryItemFactory.CreateItem then
+        return nil
+    end
+
+    local ok, item = pcall(InventoryItemFactory.CreateItem, fullType)
+    if ok then
+        return item
+    end
+
+    return nil
+end
+
+function Internal.ApplyEquipmentEntryState(item, entry)
+    if not item or type(entry) ~= "table" then
+        return item
+    end
+
+    if item.getConditionMax and item:getConditionMax() > 0 and entry.condition ~= nil then
+        item:setCondition(math.max(0, math.min(item:getConditionMax(), math.floor(tonumber(entry.condition) or item:getConditionMax()))))
+    end
+
+    if item.IsDrainable and item:IsDrainable() and entry.usedDelta ~= nil then
+        item:setUsedDelta(math.max(0, math.min(1, tonumber(entry.usedDelta) or 0)))
+    end
+
+    return item
+end
+
+function Internal.NormalizeEquipmentEntry(entry)
+    if type(entry) ~= "table" or not entry.fullType then
+        return nil
+    end
+
+    local fullType = tostring(entry.fullType)
+    if fullType == "" then
+        return nil
+    end
+
+    local tempItem = Internal.CreateTransientInventoryItem(fullType)
+    local scriptItem = tempItem and tempItem.getScriptItem and tempItem:getScriptItem() or (getScriptManager and getScriptManager():getItem(fullType)) or nil
+    local defaultTags = entry.tags
+        or (Config.GetItemCombinedTags and Config.GetItemCombinedTags(fullType))
+        or {}
+    local conditionMax = tempItem and tempItem.getConditionMax and tempItem:getConditionMax() or (scriptItem and scriptItem.getConditionMax and scriptItem:getConditionMax()) or 0
+    local isDrainable = tempItem and tempItem.IsDrainable and tempItem:IsDrainable() or false
+    local useDelta = tempItem and tempItem.getUseDelta and tempItem:getUseDelta() or (scriptItem and scriptItem.getUseDelta and scriptItem:getUseDelta()) or 0
+    local usedDelta = tonumber(entry.usedDelta)
+    if usedDelta == nil and isDrainable then
+        usedDelta = tempItem and tempItem.getCurrentUsesFloat and tempItem:getCurrentUsesFloat()
+            or tempItem and tempItem.getUsedDelta and tempItem:getUsedDelta()
+            or 1
+    end
+
+    local condition = tonumber(entry.condition)
+    if condition == nil and conditionMax > 0 then
+        condition = conditionMax
+    end
+
+    return {
+        fullType = fullType,
+        displayName = tostring(entry.displayName or Internal.GetDisplayNameForFullType(fullType)),
+        tags = copyStringArray(defaultTags),
+        qty = 1,
+        condition = conditionMax > 0 and math.max(0, math.min(conditionMax, math.floor(condition or conditionMax))) or nil,
+        conditionMax = conditionMax > 0 and conditionMax or nil,
+        isDrainable = isDrainable == true,
+        useDelta = isDrainable and math.max(0, tonumber(useDelta) or 0) or nil,
+        usedDelta = isDrainable and math.max(0, math.min(1, tonumber(usedDelta) or 0)) or nil,
+        keepOnDeplete = resolveKeepOnDeplete(tempItem, scriptItem),
+    }
+end
+
+function Internal.BuildEquipmentEntryFromInventoryItem(invItem, overrideDisplayName)
+    if not invItem or not invItem.getFullType then
+        return nil
+    end
+
+    return Internal.NormalizeEquipmentEntry({
+        fullType = invItem:getFullType(),
+        displayName = overrideDisplayName or (invItem.getDisplayName and invItem:getDisplayName() or nil),
+        tags = (Config.GetItemCombinedTags and Config.GetItemCombinedTags(invItem:getFullType()))
+            or (Config.FindItemTags and Config.FindItemTags(invItem:getFullType()))
+            or {},
+        condition = invItem.getCondition and invItem:getCondition() or nil,
+        usedDelta = invItem.getCurrentUsesFloat and invItem:getCurrentUsesFloat()
+            or invItem.getUsedDelta and invItem:getUsedDelta()
+            or nil,
+    })
+end
+
+function Internal.BuildEquipmentAddItemCustomData(entry)
+    local normalized = Internal.NormalizeEquipmentEntry(entry)
+    if not normalized then
+        return nil
+    end
+
+    local customData = {}
+    if normalized.condition ~= nil then
+        customData.condition = normalized.condition
+    end
+    if normalized.usedDelta ~= nil then
+        customData.usedDelta = normalized.usedDelta
+    end
+    return customData
+end
+
+function Internal.NormalizeOutputEntry(entry)
+    if type(entry) ~= "table" or not entry.fullType then
+        return nil
+    end
+
+    local fullType = tostring(entry.fullType or "")
+    if fullType == "" then
+        return nil
+    end
+
+    local normalized = {
+        fullType = fullType,
+        displayName = tostring(entry.displayName or Internal.GetDisplayNameForFullType(fullType)),
+        qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
+    }
+
+    if entry.fluidAmount ~= nil then
+        normalized.fluidAmount = math.max(0, tonumber(entry.fluidAmount) or 0)
+    end
+
+    return normalized
+end
+
+function Internal.BuildOutputEntryFromInventoryItem(invItem, overrideDisplayName)
+    if not invItem or not invItem.getFullType then
+        return nil
+    end
+
+    local entry = {
+        fullType = invItem:getFullType(),
+        displayName = overrideDisplayName or (invItem.getDisplayName and invItem:getDisplayName() or nil),
+        qty = math.max(1, math.floor(tonumber(invItem.getCount and invItem:getCount() or 1) or 1)),
+    }
+
+    if invItem.getFluidContainer and invItem:getFluidContainer() then
+        local fluidContainer = invItem:getFluidContainer()
+        if fluidContainer and fluidContainer.getAmount then
+            entry.fluidAmount = math.max(0, tonumber(fluidContainer:getAmount()) or 0)
+        end
+    end
+
+    return Internal.NormalizeOutputEntry(entry)
+end
+
+function Internal.BuildOutputAddItemCustomData(entry)
+    local normalized = Internal.NormalizeOutputEntry(entry)
+    if not normalized then
+        return nil
+    end
+
+    local customData = {}
+    if normalized.fluidAmount ~= nil then
+        customData.fluidAmount = normalized.fluidAmount
+    end
+
+    return next(customData) ~= nil and customData or nil
+end
+
+function Internal.GetOutputEntryStateSignature(entry)
+    local normalized = Internal.NormalizeOutputEntry(entry)
+    if not normalized then
+        return ""
+    end
+
+    return table.concat({
+        tostring(normalized.fullType or ""),
+        tostring(normalized.displayName or ""),
+        tostring(normalized.fluidAmount ~= nil and string.format("%.4f", normalized.fluidAmount) or ""),
+    }, "|")
+end
+
+function Internal.GetEquipmentDurabilitySignature(entry)
+    local normalized = Internal.NormalizeEquipmentEntry(entry)
+    if not normalized then
+        return ""
+    end
+
+    return table.concat({
+        tostring(normalized.fullType or ""),
+        tostring(normalized.condition ~= nil and normalized.condition or ""),
+        tostring(normalized.conditionMax ~= nil and normalized.conditionMax or ""),
+        tostring(normalized.usedDelta ~= nil and string.format("%.4f", normalized.usedDelta) or ""),
+        tostring(normalized.useDelta ~= nil and string.format("%.4f", normalized.useDelta) or ""),
+        tostring(normalized.keepOnDeplete == true and "1" or "0"),
+    }, "|")
+end
+
+function Internal.IsEquipmentEntryUsable(entry)
+    local normalized = Internal.NormalizeEquipmentEntry(entry)
+    if not normalized then
+        return false
+    end
+
+    if normalized.condition ~= nil and normalized.condition <= 0 then
+        return false
+    end
+
+    if normalized.isDrainable == true then
+        local remaining = math.max(0, tonumber(normalized.usedDelta) or 0)
+        local step = math.max(0, tonumber(normalized.useDelta) or 0)
+        if step > 0 and remaining + 0.0001 < step then
+            return false
+        end
+    end
+
+    return true
+end
+
 return Internal

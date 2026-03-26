@@ -14,17 +14,20 @@ end
 local function getWorkerToolTagMap(worker)
     local tagMap = {}
     local config = Internal.Config or {}
+    local registryInternal = DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal or nil
 
     for _, ledgerEntry in ipairs(worker and worker.toolLedger or {}) do
-        local tags = ledgerEntry and ledgerEntry.tags or {}
-        if config.GetItemCombinedTags and ledgerEntry and ledgerEntry.fullType then
-            tags = config.GetItemCombinedTags(ledgerEntry.fullType)
-        end
+        if not registryInternal or not registryInternal.IsEquipmentEntryUsable or registryInternal.IsEquipmentEntryUsable(ledgerEntry) then
+            local tags = ledgerEntry and ledgerEntry.tags or {}
+            if config.GetItemCombinedTags and ledgerEntry and ledgerEntry.fullType then
+                tags = config.GetItemCombinedTags(ledgerEntry.fullType)
+            end
 
-        for _, tag in ipairs(tags or {}) do
-            local key = tostring(tag or "")
-            if key ~= "" then
-                tagMap[key] = true
+            for _, tag in ipairs(tags or {}) do
+                local key = tostring(tag or "")
+                if key ~= "" then
+                    tagMap[key] = true
+                end
             end
         end
     end

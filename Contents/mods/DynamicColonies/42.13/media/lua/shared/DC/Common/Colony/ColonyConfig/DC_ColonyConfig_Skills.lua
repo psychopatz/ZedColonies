@@ -3,7 +3,7 @@ DC_Colony.Config = DC_Colony.Config or {}
 
 local Config = DC_Colony.Config
 
-Config.SKILL_MODEL_VERSION = 3
+Config.SKILL_MODEL_VERSION = 4
 
 Config.SkillDefinitions = {}
 Config.SkillOrder = {}

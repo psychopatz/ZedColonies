@@ -40,11 +40,18 @@ Network.Handlers.AssignWorkerToolset = function(player, args)
     local isRequiredEquipment = Config.IsRequiredEquipmentFullType and Config.IsRequiredEquipmentFullType(fullType, worker.jobType)
     if not isRequiredEquipment then return end
 
-    local stored = Registry.AddToolEntry(worker, {
+    local toolEntry = Registry.Internal.BuildEquipmentEntryFromInventoryItem and Registry.Internal.BuildEquipmentEntryFromInventoryItem(invItem, invItem:getDisplayName()) or {
         fullType = fullType,
         displayName = invItem:getDisplayName(),
         tags = tags
-    })
+    }
+    if Registry.Internal.IsEquipmentEntryUsable and not Registry.Internal.IsEquipmentEntryUsable(toolEntry) then
+        Internal.syncNotice(player, "That tool is broken or empty and cannot be assigned.", "error", true)
+        Shared.saveAndRefreshBasic(player, worker)
+        return
+    end
+
+    local stored = Registry.AddToolEntry(worker, toolEntry)
     if not stored then
         Internal.syncNotice(player, "NPC inventory is full. No space for that equipment.", "error", true)
         Shared.saveAndRefreshBasic(player, worker)
@@ -68,11 +75,18 @@ Network.Handlers.AssignWarehouseToolset = function(player, args)
     local isRequiredEquipment = Config.IsRequiredEquipmentFullType and Config.IsRequiredEquipmentFullType(fullType, worker.jobType)
     if not isRequiredEquipment then return end
 
-    local stored = Warehouse.DepositEquipmentEntry(owner, {
+    local toolEntry = Registry.Internal.BuildEquipmentEntryFromInventoryItem and Registry.Internal.BuildEquipmentEntryFromInventoryItem(invItem, invItem:getDisplayName()) or {
         fullType = fullType,
         displayName = invItem:getDisplayName(),
         tags = tags
-    })
+    }
+    if Registry.Internal.IsEquipmentEntryUsable and not Registry.Internal.IsEquipmentEntryUsable(toolEntry) then
+        Internal.syncNotice(player, "That tool is broken or empty and cannot be assigned.", "error", true)
+        Shared.saveAndRefreshBasic(player, worker, true)
+        return
+    end
+
+    local stored = Warehouse.DepositEquipmentEntry(owner, toolEntry)
     if not stored then
         Internal.syncNotice(player, "Warehouse is full. No space for that equipment.", "error", true)
         Shared.saveAndRefreshBasic(player, worker, true)

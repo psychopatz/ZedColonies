@@ -146,6 +146,10 @@ function Sim.ProcessWorker(worker, currentHour)
     local dailyCaloriesNeed = Config.GetEffectiveDailyCaloriesNeed(worker, profile)
     local dailyHydrationNeed = Config.GetEffectiveDailyHydrationNeed(worker, profile)
 
+    if worker.presenceState == Config.PresenceStates.Home and Warehouse and Warehouse.DepositWorkerOutput then
+        Warehouse.DepositWorkerOutput(worker)
+    end
+
     if worker.presenceState == Config.PresenceStates.Home and Warehouse and Warehouse.RestockWorker then
         local restock = Warehouse.RestockWorker(worker, dailyCaloriesNeed, dailyHydrationNeed)
         if restock and (tonumber(restock.provisionCount) or 0) > 0 then
@@ -243,6 +247,10 @@ function Sim.ProcessWorker(worker, currentHour)
         Sim.ProcessFishingJob(worker, ctx)
     else
         Sim.ProcessGenericJob(worker, ctx)
+    end
+
+    if worker.presenceState == Config.PresenceStates.Home and Warehouse and Warehouse.DepositWorkerOutput then
+        Warehouse.DepositWorkerOutput(worker)
     end
 
     if deltaHours > 0 then

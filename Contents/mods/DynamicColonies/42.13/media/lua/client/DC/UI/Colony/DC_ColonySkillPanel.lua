@@ -17,7 +17,7 @@ local DISPLAY_ORDER = {
     "Plants",
     "Animals",
     "Crafting",
-    "Artistic",
+    "Maintenance",
     "Medical",
     "Social",
     "Intellectual"

@@ -27,6 +27,32 @@ local function canGroupEntry(entry)
         and entry.kind ~= "group"
 end
 
+local function getStateGroupKey(entry, activeTab)
+    local registryInternal = DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal or nil
+    if activeTab == Internal.Tabs.Equipment then
+        if not registryInternal or not registryInternal.GetEquipmentDurabilitySignature then
+            return ""
+        end
+        return registryInternal.GetEquipmentDurabilitySignature(entry)
+    end
+
+    if activeTab == Internal.Tabs.Output then
+        if not registryInternal or not registryInternal.GetOutputEntryStateSignature then
+            return ""
+        end
+        return registryInternal.GetOutputEntryStateSignature(entry)
+    end
+
+    return ""
+end
+
+local function getDurabilityGroupKey(entry, activeTab)
+    if activeTab ~= Internal.Tabs.Equipment and activeTab ~= Internal.Tabs.Output then
+        return ""
+    end
+    return getStateGroupKey(entry, activeTab)
+end
+
 local function buildGroupKey(entry, activeTab, side)
     local parts = {
         tostring(side or "player"),
@@ -39,6 +65,7 @@ local function buildGroupKey(entry, activeTab, side)
         boolKey(entry.canAssignTool),
         boolKey(entry.pending),
         normalizeTagKey(entry.tags),
+        getDurabilityGroupKey(entry, activeTab),
     }
     return table.concat(parts, "|")
 end
@@ -168,8 +195,18 @@ function Internal.buildGroupedRows(entries, activeTab, side, window)
                     amount = 0,
                     canDeposit = false,
                     canAssignTool = false,
+                    provisionBlockedReason = first.provisionBlockedReason,
+                    isRottenProvision = first.isRottenProvision == true,
+                    hasEquipmentRequirementMatch = first.hasEquipmentRequirementMatch == true,
+                    isUsableEquipment = first.isUsableEquipment == true,
                     pending = false,
                     tags = first.tags or {},
+                    condition = first.condition,
+                    conditionMax = first.conditionMax,
+                    isDrainable = first.isDrainable == true,
+                    useDelta = first.useDelta,
+                    usedDelta = first.usedDelta,
+                    keepOnDeplete = first.keepOnDeplete == true,
                 }
 
                 for _, child in ipairs(entriesForGroup) do
@@ -181,6 +218,12 @@ function Internal.buildGroupedRows(entries, activeTab, side, window)
                     header.amount = header.amount + math.max(0, tonumber(child.amount) or 0)
                     header.canDeposit = header.canDeposit or child.canDeposit == true
                     header.canAssignTool = header.canAssignTool or child.canAssignTool == true
+                    header.isRottenProvision = header.isRottenProvision or child.isRottenProvision == true
+                    if tostring(header.provisionBlockedReason or "") == "" and tostring(child.provisionBlockedReason or "") ~= "" then
+                        header.provisionBlockedReason = child.provisionBlockedReason
+                    end
+                    header.hasEquipmentRequirementMatch = header.hasEquipmentRequirementMatch or child.hasEquipmentRequirementMatch == true
+                    header.isUsableEquipment = header.isUsableEquipment or child.isUsableEquipment == true
                     header.pending = header.pending or child.pending == true
                 end
 

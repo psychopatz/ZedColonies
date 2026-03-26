@@ -38,6 +38,7 @@ function Sim.ProcessGenericJob(worker, ctx)
         while worker.workProgress >= cycleHours do
             worker.workProgress = worker.workProgress - cycleHours
             local jobResult = Output.GenerateForJob(profile, worker)
+            Sim.ApplyWearForRequiredTools(worker, profile, currentHour, 1)
             local warehouseBlocked = 0
             for _, entry in ipairs(jobResult.entries or {}) do
                 local movedQty, leftoverQty = Warehouse.DepositHaulEntry(worker.ownerUsername, entry)

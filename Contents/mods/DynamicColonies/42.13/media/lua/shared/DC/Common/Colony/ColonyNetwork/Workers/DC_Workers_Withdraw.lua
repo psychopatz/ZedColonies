@@ -49,7 +49,12 @@ local function withdrawWorkerToolEntries(worker, inventory, indexes)
     for _, index in ipairs(indexes or {}) do
         local entry = worker and worker.toolLedger and worker.toolLedger[index] or nil
         if entry and entry.fullType then
-            Internal.addInventoryItem(inventory, entry.fullType, 1)
+            Internal.addInventoryItem(
+                inventory,
+                entry.fullType,
+                1,
+                DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData and DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData(entry) or nil
+            )
             table.remove(worker.toolLedger, index)
             moved = moved + 1
         end
@@ -65,7 +70,12 @@ local function withdrawWarehouseToolEntries(ownerUsername, inventory, indexes)
     for _, entry in ipairs(Warehouse.TakeEquipmentEntries(ownerUsername, indexes) or {}) do
         if entry and entry.fullType then
             local qty = math.max(1, tonumber(entry.qty) or 1)
-            Internal.addInventoryItem(inventory, entry.fullType, qty)
+            Internal.addInventoryItem(
+                inventory,
+                entry.fullType,
+                qty,
+                DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData and DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData(entry) or nil
+            )
             moved = moved + qty
         end
     end
@@ -80,7 +90,12 @@ local function withdrawWorkerOutputEntries(worker, inventory, indexes)
     for _, index in ipairs(indexes or {}) do
         local entry = worker and worker.outputLedger and worker.outputLedger[index] or nil
         if entry and entry.fullType and (tonumber(entry.qty) or 0) > 0 then
-            Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+            Internal.addInventoryItem(
+                inventory,
+                entry.fullType,
+                entry.qty,
+                DC_Colony.Registry.Internal.BuildOutputAddItemCustomData and DC_Colony.Registry.Internal.BuildOutputAddItemCustomData(entry) or nil
+            )
             table.remove(worker.outputLedger, index)
             moved = moved + 1
         end
@@ -95,7 +110,12 @@ local function withdrawWarehouseOutputEntries(ownerUsername, inventory, indexes)
     local moved = 0
     for _, entry in ipairs(Warehouse.TakeOutputEntries(ownerUsername, indexes) or {}) do
         if entry and entry.fullType and (tonumber(entry.qty) or 0) > 0 then
-            Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+            Internal.addInventoryItem(
+                inventory,
+                entry.fullType,
+                entry.qty,
+                DC_Colony.Registry.Internal.BuildOutputAddItemCustomData and DC_Colony.Registry.Internal.BuildOutputAddItemCustomData(entry) or nil
+            )
             moved = moved + 1
         end
     end
@@ -114,7 +134,12 @@ Network.Handlers.CollectWorkerOutput = function(player, args)
     if inventory then
         for _, entry in ipairs(collected) do
             if entry.fullType and (entry.qty or 0) > 0 then
-                Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+                Internal.addInventoryItem(
+                    inventory,
+                    entry.fullType,
+                    entry.qty,
+                    DC_Colony.Registry.Internal.BuildOutputAddItemCustomData and DC_Colony.Registry.Internal.BuildOutputAddItemCustomData(entry) or nil
+                )
             end
         end
     end
@@ -134,7 +159,12 @@ Network.Handlers.CollectWarehouseOutput = function(player, args)
     if inventory then
         for _, entry in ipairs(collected) do
             if entry.fullType and (entry.qty or 0) > 0 then
-                Internal.addInventoryItem(inventory, entry.fullType, entry.qty)
+                Internal.addInventoryItem(
+                    inventory,
+                    entry.fullType,
+                    entry.qty,
+                    DC_Colony.Registry.Internal.BuildOutputAddItemCustomData and DC_Colony.Registry.Internal.BuildOutputAddItemCustomData(entry) or nil
+                )
             end
         end
     end
