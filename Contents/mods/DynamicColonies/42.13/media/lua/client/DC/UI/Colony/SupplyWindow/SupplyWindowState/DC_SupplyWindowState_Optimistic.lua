@@ -178,6 +178,14 @@ local function addOptimisticOutput(window, entry)
         displayName = normalizedEntry.displayName,
         qty = 1,
         fluidAmount = normalizedEntry.fluidAmount,
+        isRottenProvision = normalizedEntry.isRottenProvision == true,
+        provisionBlockedReason = normalizedEntry.provisionBlockedReason,
+        condition = normalizedEntry.condition,
+        conditionMax = normalizedEntry.conditionMax,
+        isDrainable = normalizedEntry.isDrainable == true,
+        useDelta = normalizedEntry.useDelta,
+        usedDelta = normalizedEntry.usedDelta,
+        keepOnDeplete = normalizedEntry.keepOnDeplete == true,
         pending = true,
     }
     applyWarehouseWeightDelta(window.workerData, getEntryUnitWeight(entry))

@@ -350,6 +350,7 @@ function Internal.NormalizeEquipmentEntry(entry)
         quality = quality ~= nil and math.max(0, math.floor(tonumber(quality) or 0)) or nil,
         haveBeenRepaired = haveBeenRepaired ~= nil and math.max(0, math.floor(tonumber(haveBeenRepaired) or 0)) or nil,
         keepOnDeplete = resolveKeepOnDeplete(tempItem, scriptItem),
+        pendingVanillaBreak = entry.pendingVanillaBreak == true,
     }
 end
 
@@ -414,9 +415,30 @@ function Internal.NormalizeOutputEntry(entry)
         displayName = tostring(entry.displayName or Internal.GetDisplayNameForFullType(fullType)),
         qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
     }
+    local isColonyTool = Config.IsColonyToolFullType and Config.IsColonyToolFullType(fullType) or false
+    local equipmentState = isColonyTool and Internal.NormalizeEquipmentEntry(entry) or nil
+    if equipmentState then
+        normalized.condition = equipmentState.condition
+        normalized.conditionMax = equipmentState.conditionMax
+        normalized.headCondition = equipmentState.headCondition
+        normalized.headConditionMax = equipmentState.headConditionMax
+        normalized.isDrainable = equipmentState.isDrainable == true
+        normalized.useDelta = equipmentState.useDelta
+        normalized.usedDelta = equipmentState.usedDelta
+        normalized.keepOnDeplete = equipmentState.keepOnDeplete == true
+    end
 
     if entry.fluidAmount ~= nil then
         normalized.fluidAmount = math.max(0, tonumber(entry.fluidAmount) or 0)
+    end
+
+    if entry.isRottenProvision == true or entry.isRotten == true or tostring(entry.provisionBlockedReason or "") ~= "" then
+        normalized.isRottenProvision = true
+        normalized.provisionBlockedReason = tostring(
+            entry.provisionBlockedReason
+                or (Nutrition and Nutrition.Internal and Nutrition.Internal.ROTTEN_PROVISION_MESSAGE)
+                or "Rotten items cannot be used as colony provisions."
+        )
     end
 
     return normalized
@@ -427,17 +449,35 @@ function Internal.BuildOutputEntryFromInventoryItem(invItem, overrideDisplayName
         return nil
     end
 
+    local fullType = invItem:getFullType()
+    local isColonyTool = Config.IsColonyToolFullType and Config.IsColonyToolFullType(fullType) or false
     local entry = {
-        fullType = invItem:getFullType(),
+        fullType = fullType,
         displayName = overrideDisplayName or (invItem.getDisplayName and invItem:getDisplayName() or nil),
         qty = math.max(1, math.floor(tonumber(invItem.getCount and invItem:getCount() or 1) or 1)),
     }
+
+    if isColonyTool then
+        entry.condition = invItem.getCondition and invItem:getCondition() or nil
+        entry.headCondition = invItem.getHeadCondition and invItem:getHeadCondition() or nil
+        entry.usedDelta = invItem.getCurrentUsesFloat and invItem:getCurrentUsesFloat()
+            or invItem.getUsedDelta and invItem:getUsedDelta()
+            or nil
+    end
 
     if invItem.getFluidContainer and invItem:getFluidContainer() then
         local fluidContainer = invItem:getFluidContainer()
         if fluidContainer and fluidContainer.getAmount then
             entry.fluidAmount = math.max(0, tonumber(fluidContainer:getAmount()) or 0)
         end
+    end
+
+    if invItem.isRotten and invItem:isRotten() then
+        entry.isRottenProvision = true
+        entry.provisionBlockedReason = Nutrition
+            and Nutrition.Internal
+            and tostring(Nutrition.Internal.ROTTEN_PROVISION_MESSAGE or "")
+            or "Rotten items cannot be used as colony provisions."
     end
 
     return Internal.NormalizeOutputEntry(entry)
@@ -450,11 +490,24 @@ function Internal.BuildOutputAddItemCustomData(entry)
     end
 
     local customData = {}
+    if normalized.condition ~= nil then
+        customData.condition = normalized.condition
+    end
+    if normalized.headCondition ~= nil then
+        customData.headCondition = normalized.headCondition
+    end
+    if normalized.usedDelta ~= nil then
+        customData.usedDelta = normalized.usedDelta
+    end
     if normalized.fluidAmount ~= nil then
         customData.fluidAmount = normalized.fluidAmount
     end
 
-    return next(customData) ~= nil and customData or nil
+    if next(customData) ~= nil then
+        return customData
+    end
+
+    return nil
 end
 
 function Internal.GetOutputEntryStateSignature(entry)
@@ -467,6 +520,12 @@ function Internal.GetOutputEntryStateSignature(entry)
         tostring(normalized.fullType or ""),
         tostring(normalized.displayName or ""),
         tostring(normalized.fluidAmount ~= nil and string.format("%.4f", normalized.fluidAmount) or ""),
+        tostring(normalized.isRottenProvision == true and "1" or "0"),
+        tostring(normalized.condition ~= nil and normalized.condition or ""),
+        tostring(normalized.conditionMax ~= nil and normalized.conditionMax or ""),
+        tostring(normalized.usedDelta ~= nil and string.format("%.4f", normalized.usedDelta) or ""),
+        tostring(normalized.useDelta ~= nil and string.format("%.4f", normalized.useDelta) or ""),
+        tostring(normalized.keepOnDeplete == true and "1" or "0"),
     }, "|")
 end
 

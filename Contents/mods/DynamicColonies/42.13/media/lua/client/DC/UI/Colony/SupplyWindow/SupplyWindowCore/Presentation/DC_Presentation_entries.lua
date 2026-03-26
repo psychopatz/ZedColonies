@@ -157,8 +157,50 @@ local function appendSegment(baseText, extraText)
     return tostring(baseText) .. " | " .. normalizedExtra
 end
 
+local function applyRottenTitleSuffix(presentation, entry)
+    if type(presentation) ~= "table" then
+        return presentation
+    end
+
+    if type(entry) ~= "table" then
+        return presentation
+    end
+
+    if entry.isRottenProvision == true or tostring(entry.provisionBlockedReason or "") ~= "" then
+        presentation.titleSuffixText = " (Rotten)"
+        presentation.titleSuffixColor = { r = 0.92, g = 0.34, b = 0.34 }
+    end
+
+    return presentation
+end
+
+local function shouldShowEquipmentDurability(entry)
+    if type(entry) ~= "table" then
+        return false
+    end
+
+    if entry.kind == "tool" then
+        return true
+    end
+
+    if entry.canAssignTool == true or entry.hasEquipmentRequirementMatch == true then
+        return true
+    end
+
+    local fullType = tostring(entry.fullType or "")
+    return fullType ~= ""
+        and Internal.Config
+        and Internal.Config.IsColonyToolFullType
+        and Internal.Config.IsColonyToolFullType(fullType)
+        or false
+end
+
 local function getDurabilityText(entry)
     if type(entry) ~= "table" then
+        return ""
+    end
+
+    if not shouldShowEquipmentDurability(entry) then
         return ""
     end
 
@@ -188,6 +230,10 @@ end
 
 local function getEquipmentConditionBarData(entry)
     if type(entry) ~= "table" then
+        return nil
+    end
+
+    if not shouldShowEquipmentDurability(entry) then
         return nil
     end
 
@@ -324,23 +370,29 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
 
         if activeTab == Internal.Tabs.Output then
             if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-                return {
+                return applyRottenTitleSuffix({
                     statText = appendWeightText(
-                        appendSegment(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), getOutputStateText(entry)),
+                        appendSegment(
+                            getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0),
+                            appendSegment(getDurabilityText(entry), getOutputStateText(entry))
+                        ),
                         entry
                     ),
                     badgeText = "Ready",
                     dimmed = false,
-                }
+                }, entry)
             end
-            return {
+            return applyRottenTitleSuffix({
                 statText = appendWeightText(
-                    appendSegment(getGroupCountLabel(entry) .. " in worker storage view", getOutputStateText(entry)),
+                    appendSegment(
+                        getGroupCountLabel(entry) .. " in worker storage view",
+                        appendSegment(getDurabilityText(entry), getOutputStateText(entry))
+                    ),
                     entry
                 ),
                 badgeText = "Read Only",
                 dimmed = true,
-            }
+            }, entry)
         end
 
         if isMedicalProvisionEntry(entry) then
@@ -355,27 +407,25 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
         end
 
         if entry.canDeposit then
-            return {
+            return applyRottenTitleSuffix({
                 statText = appendWeightText(
                     getGroupCountLabel(entry) .. " | +" .. string.format("%.0f cal | +%.0f hyd", entry.calories or 0, entry.hydration or 0),
                     entry
                 ),
                 badgeText = "Ready",
                 dimmed = false,
-            }
+            }, entry)
         end
 
         if tostring(entry.provisionBlockedReason or "") ~= "" then
-            return {
+            return applyRottenTitleSuffix({
                 statText = appendWeightText(
                     getGroupCountLabel(entry) .. " | +" .. string.format("%.0f cal | +%.0f hyd", entry.calories or 0, entry.hydration or 0),
                     entry
                 ),
                 badgeText = "",
                 dimmed = true,
-                titleSuffixText = " (Rotten)",
-                titleSuffixColor = { r = 0.92, g = 0.34, b = 0.34 },
-            }
+            }, entry)
         end
 
         return {
@@ -407,43 +457,47 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
 
     if activeTab == Internal.Tabs.Output then
         if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-            return {
-                statText = appendWeightText(appendSegment("Store in warehouse storage", getOutputStateText(entry)), entry),
+            return applyRottenTitleSuffix({
+                statText = appendWeightText(
+                    appendSegment("Store in warehouse storage", appendSegment(getDurabilityText(entry), getOutputStateText(entry))),
+                    entry
+                ),
                 badgeText = "Ready",
                 dimmed = false,
-            }
+            }, entry)
         end
-        return {
-            statText = appendWeightText(appendSegment("Worker storage tab", getOutputStateText(entry)), entry),
+        return applyRottenTitleSuffix({
+            statText = appendWeightText(
+                appendSegment("Worker storage tab", appendSegment(getDurabilityText(entry), getOutputStateText(entry))),
+                entry
+            ),
             badgeText = "Read Only",
             dimmed = true,
-        }
+        }, entry)
     end
 
     if entry.canDeposit and isMedicalProvisionEntry(entry) then
-        return {
+        return applyRottenTitleSuffix({
             statText = appendWeightText("+" .. tostring(math.floor((tonumber(entry.treatmentUnits) or 0) + 0.5)) .. " treatment units", entry),
             badgeText = "Medical",
             dimmed = false,
-        }
+        }, entry)
     end
 
     if entry.canDeposit then
-        return {
+        return applyRottenTitleSuffix({
             statText = appendWeightText(string.format("+%.0f cal | +%.0f hyd", entry.calories or 0, entry.hydration or 0), entry),
             badgeText = "Ready",
             dimmed = false,
-        }
+        }, entry)
     end
 
     if tostring(entry.provisionBlockedReason or "") ~= "" then
-        return {
+        return applyRottenTitleSuffix({
             statText = appendWeightText(string.format("+%.0f cal | +%.0f hyd", entry.calories or 0, entry.hydration or 0), entry),
             badgeText = "",
             dimmed = true,
-            titleSuffixText = " (Rotten)",
-            titleSuffixColor = { r = 0.92, g = 0.34, b = 0.34 },
-        }
+        }, entry)
     end
 
     return {
@@ -463,13 +517,16 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
         end
 
         if activeTab == Internal.Tabs.Output then
-            return {
+            return applyRottenTitleSuffix({
                 statText = appendWeightText(
-                    appendSegment(getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0), getOutputStateText(entry)),
+                    appendSegment(
+                        getGroupCountLabel(entry) .. " | Qty " .. tostring(entry.totalQty or entry.qty or 0),
+                        appendSegment(getDurabilityText(entry), getOutputStateText(entry))
+                    ),
                     entry
                 ),
                 badgeText = "",
-            }
+            }, entry)
         end
 
         if isMedicalProvisionEntry(entry) then
@@ -514,10 +571,13 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
     end
 
     if activeTab == Internal.Tabs.Output then
-        return {
-            statText = appendWeightText(appendSegment("Qty " .. tostring(entry.qty or 1), getOutputStateText(entry)), entry),
+        return applyRottenTitleSuffix({
+            statText = appendWeightText(
+                appendSegment("Qty " .. tostring(entry.qty or 1), appendSegment(getDurabilityText(entry), getOutputStateText(entry))),
+                entry
+            ),
             badgeText = "",
-        }
+        }, entry)
     end
 
     if isMedicalProvisionEntry(entry) then

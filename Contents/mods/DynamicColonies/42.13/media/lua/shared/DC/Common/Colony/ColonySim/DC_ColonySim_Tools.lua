@@ -55,11 +55,16 @@ local function moveBrokenToolToStorage(worker, index, entry, currentHour)
         return false
     end
 
+    local brokenEntry = Registry.Internal.NormalizeEquipmentEntry and Registry.Internal.NormalizeEquipmentEntry(entry) or entry
+    if brokenEntry then
+        brokenEntry.pendingVanillaBreak = true
+    end
+
     table.remove(worker.toolLedger, index)
     Registry.Internal.MarkToolCacheDirty(worker)
 
     if Warehouse and Warehouse.DepositEquipmentEntry then
-        Warehouse.DepositEquipmentEntry(worker.ownerUsername, entry, true)
+        Warehouse.DepositEquipmentEntry(worker.ownerUsername, brokenEntry or entry, true)
     end
 
     if Internal.appendWorkerLog then

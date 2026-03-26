@@ -35,7 +35,20 @@ local function copyOutputState(target, source)
     end
 
     target.fluidAmount = source.fluidAmount
+    target.isRottenProvision = source.isRottenProvision == true or source.isRotten == true
+    target.provisionBlockedReason = source.provisionBlockedReason
     return target
+end
+
+local function isInventoryItemRotten(invItem)
+    if not invItem or not invItem.isRotten then
+        return false
+    end
+
+    local ok, result = pcall(function()
+        return invItem:isRotten()
+    end)
+    return ok and result == true
 end
 
 local function getNormalizedEquipmentEntry(entry)
@@ -189,15 +202,30 @@ function Internal.getCachedNutritionPreview(invItem)
 end
 
 function Internal.buildInventoryEntry(invItem)
-    local calories, hydration = Internal.getCachedNutritionPreview(invItem)
     local fullType = invItem:getFullType()
     local staticData = Internal.getCachedInventoryEntryStaticData(fullType)
     local equipmentEntry = getInventoryEquipmentEntry(invItem)
     local outputEntry = getInventoryOutputEntry(invItem)
-    local isRottenProvision = not staticData.isMedicalProvision
-        and Internal.Nutrition
-        and Internal.Nutrition.IsRottenProvisionItem
-        and Internal.Nutrition.IsRottenProvisionItem(invItem, calories, hydration)
+    local rottenProvisionReason = Internal.Nutrition
+        and Internal.Nutrition.Internal
+        and tostring(Internal.Nutrition.Internal.ROTTEN_PROVISION_MESSAGE or "")
+        or "Rotten items cannot be used as colony provisions."
+    local isRottenProvision = not staticData.isMedicalProvision and isInventoryItemRotten(invItem)
+    local calories = 0
+    local hydration = 0
+
+    if not isRottenProvision then
+        calories, hydration = Internal.getCachedNutritionPreview(invItem)
+        isRottenProvision = not staticData.isMedicalProvision
+            and Internal.Nutrition
+            and Internal.Nutrition.IsRottenProvisionItem
+            and Internal.Nutrition.IsRottenProvisionItem(invItem, calories, hydration)
+        if isRottenProvision then
+            calories = 0
+            hydration = 0
+        end
+    end
+
     local entry = {
         kind = "player",
         invItem = invItem,
@@ -215,7 +243,7 @@ function Internal.buildInventoryEntry(invItem)
         hasEquipmentRequirementMatch = false,
         isUsableEquipment = isUsableEquipmentEntry(equipmentEntry),
         isRottenProvision = isRottenProvision == true,
-        provisionBlockedReason = isRottenProvision and "Rotten items cannot be used as colony provisions." or nil,
+        provisionBlockedReason = isRottenProvision and rottenProvisionReason or nil,
         equipmentRequirementKeys = nil,
         tags = nil,
         searchText = "",
@@ -332,7 +360,7 @@ function Internal.buildWorkerOutputEntry(entry, index)
     end
 
     local normalizedEntry = getNormalizedOutputEntry(entry) or entry
-    return copyOutputState({
+    local outputEntry = copyOutputState({
         kind = "output",
         ledgerIndex = index,
         displayName = normalizedEntry.displayName or Internal.getDisplayNameForFullType(normalizedEntry.fullType),
@@ -343,6 +371,7 @@ function Internal.buildWorkerOutputEntry(entry, index)
         texture = entry.texture or normalizedEntry.texture or Internal.getTextureForFullType(normalizedEntry.fullType),
         pending = entry.pending == true,
     }, normalizedEntry)
+    return copyEquipmentState(outputEntry, normalizedEntry)
 end
 
 function Internal.buildWorkerEntryFromPlayerEntry(entry)

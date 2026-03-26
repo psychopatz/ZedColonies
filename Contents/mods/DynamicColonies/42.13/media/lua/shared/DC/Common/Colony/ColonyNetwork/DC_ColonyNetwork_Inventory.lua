@@ -54,6 +54,9 @@ local function addInventoryItem(container, fullType, count, customData)
             if customData.fluidAmount ~= nil and item.getFluidContainer and item:getFluidContainer() then
                 item:getFluidContainer():setAmount(math.max(0, tonumber(customData.fluidAmount) or 0))
             end
+            if isServer() and item.syncItemFields then
+                item:syncItemFields()
+            end
         end
     end
     return items

@@ -208,8 +208,11 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
                         local container = invItem:getContainer()
                         Internal.removeInventoryItem(invItem)
                         if availableQty > movedQty and container then
+                            local customData = Registry.Internal.BuildOutputAddItemCustomData
+                                and Registry.Internal.BuildOutputAddItemCustomData(outputEntry)
+                                or nil
                             if Internal.addInventoryItem then
-                                Internal.addInventoryItem(container, fullType, availableQty - movedQty)
+                                Internal.addInventoryItem(container, fullType, availableQty - movedQty, customData)
                             else
                                 container:AddItems(fullType, availableQty - movedQty)
                             end
