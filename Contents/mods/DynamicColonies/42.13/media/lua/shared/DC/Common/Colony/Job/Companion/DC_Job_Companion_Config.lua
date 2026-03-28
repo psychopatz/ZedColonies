@@ -344,6 +344,30 @@ local function clearCompanionControlData(npcData)
     npcData.anchorZ = nil
 end
 
+local function pushCompanionAmbientNotice(uuid, npcData, text, sentiment)
+    if not uuid or not npcData or not text or text == "" then
+        return false
+    end
+
+    if not DTNPCProtect or not DTNPCProtect.PushFallbackNotice then
+        return false
+    end
+
+    local pushed = DTNPCProtect.PushFallbackNotice(npcData, text, sentiment or "warning")
+    if not pushed then
+        return false
+    end
+
+    if DTNPCServerCore and DTNPCServerCore.FindZombieByUUID and DTNPCServerCore.SyncToAllClients then
+        local zombie = DTNPCServerCore.FindZombieByUUID(uuid)
+        if zombie then
+            DTNPCServerCore.SyncToAllClients(zombie, npcData)
+        end
+    end
+
+    return true
+end
+
 local function persistCompanionSoulState(uuid, worker, npcData, returnTime)
     if not uuid or not npcData or not DynamicTrading_Roster or not DynamicTrading_Roster.SaveSoul then
         return false
@@ -531,6 +555,14 @@ function Config.CanWorkerTakeFollowPlayerJob(worker)
         return false, "Only recruited V2 NPC workers can use Follow Player."
     end
 
+    local energy = DC_Colony and DC_Colony.Energy or nil
+    if energy then
+        local isResting = energy.IsForcedRest and energy.IsForcedRest(worker) or false
+        if isResting then
+            return false, "This companion is still resting and can't follow again yet."
+        end
+    end
+
     return true, nil
 end
 
@@ -599,13 +631,16 @@ function Config.SyncWorkerCompanionLoadout(worker)
     return true
 end
 
-function Config.ReleaseWorkerCompanionControl(worker)
+function Config.ReleaseWorkerCompanionControl(worker, returnReason, noticeText, noticeSentiment)
     if (isClient() and not isServer()) or not Config.IsDynamicTradingV2Active() then
         return false
     end
 
     if Config.UpdateWorkerCompanionReturnState and Config.UpdateWorkerCompanionReturnState(worker) then
         if worker and worker.companionReturnPending == true then
+            if returnReason then
+                worker.returnReason = returnReason
+            end
             return true
         end
     end
@@ -645,6 +680,7 @@ function Config.ReleaseWorkerCompanionControl(worker)
     local targetZ = tonumber(worker and worker.homeZ) or (currentData and currentData.homeCoords and currentData.homeCoords.z) or 0
 
     if currentData then
+        pushCompanionAmbientNotice(uuid, currentData, noticeText, noticeSentiment)
         clearCompanionControlData(currentData)
     end
 
@@ -676,7 +712,7 @@ function Config.ReleaseWorkerCompanionControl(worker)
         worker.state = Config.States and Config.States.Working or "Working"
         worker.presenceState = Config.PresenceStates and Config.PresenceStates.AwayToHome or "AwayToHome"
         worker.travelHoursRemaining = travelHours
-        worker.returnReason = nil
+        worker.returnReason = returnReason or nil
         if not wasPending then
             local registryInternal = getRegistryInternal()
             if registryInternal and registryInternal.AppendActivityLog then

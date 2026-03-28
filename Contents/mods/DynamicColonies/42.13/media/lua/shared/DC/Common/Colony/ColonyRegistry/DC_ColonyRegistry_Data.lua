@@ -121,6 +121,7 @@ local function getSitesKey(colonyID)
 end
 
 local function normalizeIndex(data)
+    data = ensureTable(data)
     data.schemaVersion = Config.MOD_DATA_SCHEMA_VERSION or 3
     data.nextColonyID = math.max(1, math.floor(tonumber(data.nextColonyID) or 1))
     data.playerToColonyID = ensureTable(data.playerToColonyID)

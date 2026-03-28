@@ -1,6 +1,36 @@
 local Config = DC_Colony.Config
 local Sim = DC_Colony.Sim
 local Internal = Sim.Internal
+local Energy = DC_Colony.Energy
+
+local function getLiveCompanionData(worker)
+    if not worker or not Config or not Config.ResolveWorkerCompanionUUID then
+        return nil
+    end
+
+    local uuid = Config.ResolveWorkerCompanionUUID(worker)
+    if not uuid then
+        return nil
+    end
+
+    return DTNPCManager and DTNPCManager.Data and DTNPCManager.Data[uuid] or nil
+end
+
+local function isCompanionActivelyFighting(npcData)
+    if not npcData then
+        return false
+    end
+
+    if npcData.combatTargetID ~= nil then
+        return true
+    end
+
+    local state = tostring(npcData.state or "")
+    return state == "Attack"
+        or state == "AttackRange"
+        or state == "TradingDefenseRanged"
+        or state == "TradingDefenseMelee"
+end
 
 local function invalidateFollowJob(worker, currentHour, reason)
     if worker.jobEnabled == true or worker.state ~= Config.States.Idle then
@@ -24,10 +54,14 @@ end
 
 function Sim.ProcessCompanionJob(worker, ctx)
     local currentHour = ctx.currentHour
+    local profile = ctx.profile
     local hp = ctx.hp
     local hasCalories = ctx.hasCalories
     local hasHydration = ctx.hasHydration
     local forcedRest = ctx.forcedRest
+    local workableHours = ctx.workableHours
+    local deltaHours = ctx.deltaHours
+    local lowEnergyReason = ctx.lowEnergyReason
 
     worker.scavengeTier = nil
     worker.scavengeTierLabel = nil
@@ -55,6 +89,16 @@ function Sim.ProcessCompanionJob(worker, ctx)
             Config.UpdateWorkerCompanionReturnState(worker)
         end
         if worker.companionReturnPending == true then
+            return
+        end
+        if Energy and forcedRest and deltaHours > 0 and hp > 0 then
+            Energy.ApplyHomeRecovery(worker, deltaHours, profile)
+            Energy.CompleteForcedRest(worker, currentHour, "Fully rested again.")
+            if Energy.IsForcedRest(worker) then
+                worker.state = Config.States.Resting
+            else
+                worker.state = Config.States.Idle
+            end
             return
         end
         if Config.ReleaseWorkerCompanionControl then
@@ -86,8 +130,15 @@ function Sim.ProcessCompanionJob(worker, ctx)
     end
 
     if forcedRest then
+        worker.jobEnabled = false
         if Config.ReleaseWorkerCompanionControl then
-            Config.ReleaseWorkerCompanionControl(worker)
+            Config.ReleaseWorkerCompanionControl(worker, lowEnergyReason, "I need to rest. Heading home.", "warning")
+        end
+        if Config.UpdateWorkerCompanionReturnState then
+            Config.UpdateWorkerCompanionReturnState(worker)
+        end
+        if worker.companionReturnPending == true then
+            return
         end
         worker.state = Config.States.Resting
         return
@@ -99,6 +150,39 @@ function Sim.ProcessCompanionJob(worker, ctx)
         followed, reason = Config.SyncWorkerCompanionFollow(worker)
     end
     if followed then
+        if Energy and deltaHours > 0 and hp > 0 then
+            local companionData = getLiveCompanionData(worker)
+            local foughtThisTick = isCompanionActivelyFighting(companionData)
+
+            if foughtThisTick and workableHours > 0 then
+                Energy.ApplyWorkDrain(worker, workableHours, profile)
+            end
+
+            forcedRest = Energy.IsForcedRest(worker)
+            if forcedRest then
+                Energy.CompleteForcedRest(worker, currentHour, "Fully rested again.")
+            elseif foughtThisTick and Energy.IsDepleted(worker) then
+                forcedRest = true
+                Energy.BeginForcedRest(worker, currentHour, lowEnergyReason, "Too tired to keep fighting. Resting at home.")
+            end
+            forcedRest = Energy.IsForcedRest(worker)
+
+            if forcedRest then
+                worker.jobEnabled = false
+                if Config.ReleaseWorkerCompanionControl then
+                    Config.ReleaseWorkerCompanionControl(worker, lowEnergyReason, "I need to rest. Heading home.", "warning")
+                end
+                if Config.UpdateWorkerCompanionReturnState then
+                    Config.UpdateWorkerCompanionReturnState(worker)
+                end
+                if worker.companionReturnPending == true then
+                    return
+                end
+                worker.state = Config.States.Resting
+                return
+            end
+        end
+
         worker.state = Config.States.Working
         return
     end
