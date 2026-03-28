@@ -14,6 +14,9 @@ local function getJobDisplayColor(config, jobType)
     if normalized == tostring(jobTypes.Builder or "Builder") then
         return { r = 0.48, g = 0.9, b = 0.48, a = 1 }
     end
+    if normalized == tostring(jobTypes.FollowPlayer or "FollowPlayer") then
+        return { r = 0.52, g = 0.76, b = 1, a = 1 }
+    end
     if normalized == tostring(jobTypes.Scavenge or "Scavenge") then
         return { r = 0.95, g = 0.78, b = 0.36, a = 1 }
     end
@@ -51,6 +54,9 @@ local function buildOrderedJobOptions(config, worker)
         if normalized == "" or seen[normalized] then
             return
         end
+        if config.IsJobTypeVisible and config.IsJobTypeVisible(normalized, worker) == false then
+            return
+        end
 
         local profile = config.GetJobProfile and config.GetJobProfile(normalized) or {}
         local enabled = canSelectJob(config, worker, normalized)
@@ -68,18 +74,21 @@ local function buildOrderedJobOptions(config, worker)
     addJob(jobTypes.Scavenge)
     addJob(jobTypes.Farm)
     addJob(jobTypes.Fish)
+    addJob(jobTypes.FollowPlayer)
 
     for jobType, profile in pairs(config.JobProfiles or {}) do
         local normalized = config.NormalizeJobType and config.NormalizeJobType(jobType) or tostring(jobType or "")
         if normalized ~= "" and not seen[normalized] then
-            local enabled = canSelectJob(config, worker, normalized)
-            extras[#extras + 1] = {
-                jobType = normalized,
-                label = tostring(profile and profile.displayName or normalized),
-                enabled = enabled,
-                color = getJobDisplayColor(config, normalized),
-                disabledColor = enabled and nil or { r = 0.92, g = 0.28, b = 0.28, a = 1 }
-            }
+            if not (config.IsJobTypeVisible and config.IsJobTypeVisible(normalized, worker) == false) then
+                local enabled = canSelectJob(config, worker, normalized)
+                extras[#extras + 1] = {
+                    jobType = normalized,
+                    label = tostring(profile and profile.displayName or normalized),
+                    enabled = enabled,
+                    color = getJobDisplayColor(config, normalized),
+                    disabledColor = enabled and nil or { r = 0.92, g = 0.28, b = 0.28, a = 1 }
+                }
+            end
             seen[normalized] = true
         end
     end

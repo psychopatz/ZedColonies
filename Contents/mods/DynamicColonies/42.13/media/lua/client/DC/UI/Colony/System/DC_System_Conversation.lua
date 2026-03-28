@@ -1,14 +1,141 @@
 local System = DC_System
 local Internal = System.Internal
 
+local function normalizeText(value)
+    local text = value and tostring(value) or ""
+    return text ~= "" and text or nil
+end
+
+local function getConversationNPC(ui)
+    return ui and ui.interactionObj or nil
+end
+
+local function getConversationNPCData(ui)
+    local npc = getConversationNPC(ui)
+    return npc and DTNPC and DTNPC.GetData and DTNPC.GetData(npc) or nil
+end
+
+local function readNPCWorkerID(ui)
+    local npcData = getConversationNPCData(ui)
+    local workerID = npcData and normalizeText(npcData.linkedWorkerID) or nil
+    if workerID then
+        return workerID, npcData
+    end
+
+    return nil, npcData
+end
+
+local function getLocalOwnerUsername()
+    local config = Internal.GetConfig()
+    if config and config.GetOwnerUsername then
+        return config.GetOwnerUsername(Internal.GetLocalPlayer())
+    end
+    return nil
+end
+
+local function isOwnedByLocalPlayer(npcData)
+    local ownerUsername = normalizeText(npcData and npcData.ownerUsername)
+    local localOwner = normalizeText(getLocalOwnerUsername())
+    if not ownerUsername or not localOwner then
+        return false
+    end
+    return ownerUsername == localOwner
+end
+
+local function workerMatchesNPC(worker, npcData, sourceNPCID)
+    if type(worker) ~= "table" then
+        return false
+    end
+
+    local npcUUID = npcData and normalizeText(npcData.uuid) or nil
+    if npcUUID then
+        local candidates = {
+            worker.companionNPCUUID,
+            worker.recruitedTraderUUID,
+            worker.sourceNPCUUID,
+            worker.sourceNPCID,
+            worker.tradeSoulUUID,
+        }
+        for _, candidate in ipairs(candidates) do
+            if normalizeText(candidate) == npcUUID then
+                return true
+            end
+        end
+    end
+
+    if sourceNPCID then
+        return normalizeText(worker.sourceNPCID) == sourceNPCID
+    end
+
+    return false
+end
+
+local function resolveWorkerFromCaches(workerID, npcData, sourceNPCID)
+    local detailCache = DC_MainWindow and DC_MainWindow.cachedDetails or nil
+    if workerID and type(detailCache) == "table" and type(detailCache[workerID]) == "table" then
+        return detailCache[workerID]
+    end
+
+    local summaries = DC_MainWindow and DC_MainWindow.cachedWorkers or {}
+    for _, worker in ipairs(summaries) do
+        if normalizeText(worker and worker.workerID) == workerID then
+            return worker
+        end
+        if workerMatchesNPC(worker, npcData, sourceNPCID) then
+            return worker
+        end
+    end
+
+    if type(detailCache) == "table" then
+        for _, worker in pairs(detailCache) do
+            if workerMatchesNPC(worker, npcData, sourceNPCID) then
+                return worker
+            end
+        end
+    end
+
+    return nil
+end
+
+local function resolveWorkerFromRegistry(workerID, npcData, sourceNPCID)
+    if isClient() and not isServer() then
+        return nil
+    end
+
+    local owner = Internal.GetConfig() and Internal.GetConfig().GetOwnerUsername
+        and Internal.GetConfig().GetOwnerUsername(Internal.GetLocalPlayer())
+        or nil
+
+    if workerID
+        and DC_Colony
+        and DC_Colony.Registry
+        and DC_Colony.Registry.GetWorkerDetailsForOwner
+        and owner then
+        local detail = DC_Colony.Registry.GetWorkerDetailsForOwner(owner, workerID, false, true)
+        if detail then
+            return detail
+        end
+    end
+
+    if DC_Colony and DC_Colony.Registry and DC_Colony.Registry.GetWorkersForOwner and owner then
+        for _, worker in ipairs(DC_Colony.Registry.GetWorkersForOwner(owner)) do
+            if workerMatchesNPC(worker, npcData, sourceNPCID) then
+                return worker
+            end
+        end
+    end
+
+    return nil
+end
+
 function System.GetConversationSourceNPCID(ui)
     if not ui or not ui.interactionObj then
         return nil
     end
 
-    local npc = ui.interactionObj
+    local npc = getConversationNPC(ui)
     local target = ui.target or {}
-    local npcData = DTNPC and DTNPC.GetData and DTNPC.GetData(npc) or nil
+    local npcData = getConversationNPCData(ui)
 
     if npcData and npcData.uuid then
         return tostring(npcData.uuid)
@@ -27,8 +154,7 @@ function System.GetConversationSourceNPCID(ui)
 end
 
 function System.GetConversationTraderID(ui)
-    local npc = ui and ui.interactionObj or nil
-    local npcData = npc and DTNPC and DTNPC.GetData and DTNPC.GetData(npc) or nil
+    local npcData = getConversationNPCData(ui)
     if npcData and npcData.uuid then
         return tostring(npcData.uuid)
     end
@@ -40,8 +166,7 @@ end
 
 function System.GetConversationEffectiveReputation(ui)
     local traderID = System.GetConversationTraderID(ui)
-    local npc = ui and ui.interactionObj or nil
-    local npcData = npc and DTNPC and DTNPC.GetData and DTNPC.GetData(npc) or nil
+    local npcData = getConversationNPCData(ui)
     local factionID = (npcData and npcData.factionID) or (ui and ui.target and ui.target.factionID) or nil
     if not traderID or not DC_Reputation or not DC_Reputation.GetEffectiveRep then
         return 0
@@ -71,6 +196,27 @@ function System.ResolveArchetype(trader)
     return "General"
 end
 
+function System.GetConversationCompanionWorker(ui)
+    if not ui or not ui.interactionObj then
+        return nil
+    end
+
+    local workerID, npcData = readNPCWorkerID(ui)
+    local sourceNPCID = System.GetConversationSourceNPCID(ui)
+
+    return resolveWorkerFromCaches(workerID, npcData, sourceNPCID)
+        or resolveWorkerFromRegistry(workerID, npcData, sourceNPCID)
+        or (workerID and isOwnedByLocalPlayer(npcData) and {
+            workerID = workerID,
+            name = (npcData and npcData.name) or (ui.target and ui.target.name) or workerID,
+            linkedFromCompanion = true
+        } or nil)
+end
+
+function System.IsConversationWithCompanion(ui)
+    return System.GetConversationCompanionWorker(ui) ~= nil
+end
+
 function System.BuildRecruitArgs(ui, archetypeID)
     if not ui or not ui.interactionObj then
         return nil
@@ -79,7 +225,7 @@ function System.BuildRecruitArgs(ui, archetypeID)
     local config = Internal.GetConfig()
     local npc = ui.interactionObj
     local target = ui.target or {}
-    local npcData = DTNPC and DTNPC.GetData and DTNPC.GetData(npc) or nil
+    local npcData = getConversationNPCData(ui)
     local player = Internal.GetLocalPlayer()
 
     local sourceNPCID = System.GetConversationSourceNPCID(ui)

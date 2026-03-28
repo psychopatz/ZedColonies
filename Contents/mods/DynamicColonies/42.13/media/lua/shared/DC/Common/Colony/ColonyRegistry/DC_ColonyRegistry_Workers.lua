@@ -79,6 +79,10 @@ function Registry.CreateWorker(ownerUsername, template)
         identitySeed = template.identitySeed,
         visualID = template.visualID,
         sourceNPCID = template.sourceNPCID,
+        sourceNPCUUID = template.sourceNPCUUID,
+        recruitedTraderUUID = template.recruitedTraderUUID,
+        companionNPCUUID = template.companionNPCUUID,
+        companionFactionID = template.companionFactionID,
         sourceNPCType = template.sourceNPCType,
         detailVersion = tonumber(template.detailVersion) or 1
     }

@@ -286,6 +286,8 @@ function Sim.ProcessWorker(worker, currentHour)
         Sim.ProcessBuilderJob(worker, ctx)
     elseif isDoctorJob then
         Sim.ProcessDoctorJob(worker, ctx)
+    elseif normalizedJobType == Config.JobTypes.FollowPlayer then
+        Sim.ProcessCompanionJob(worker, ctx)
     elseif normalizedJobType == Config.JobTypes.Fish then
         Sim.ProcessFishingJob(worker, ctx)
     else

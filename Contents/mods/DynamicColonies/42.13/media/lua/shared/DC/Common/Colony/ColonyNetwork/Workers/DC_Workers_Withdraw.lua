@@ -71,7 +71,8 @@ local function materializeWithdrawnTool(player, inventory, entry)
     local customData = DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData
         and DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData(entry)
         or nil
-    local addedItems = Internal.addInventoryItem(inventory, entry.fullType, 1, customData)
+    local qty = math.max(1, math.floor(tonumber(entry.qty) or 1))
+    local addedItems = Internal.addInventoryItem(inventory, entry.fullType, qty, customData)
     local item = getFirstAddedItem(addedItems)
     if not item then
         return false

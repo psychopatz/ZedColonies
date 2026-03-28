@@ -26,6 +26,10 @@ function System.BuildConversationOptions(ui, options)
         merged[#merged + 1] = option
     end
 
+    if ui and ui.isCompanionConversation then
+        return merged
+    end
+
     local recruitOption = Internal.BuildRecruitOption and Internal.BuildRecruitOption(ui) or nil
     if recruitOption then
         merged[#merged + 1] = recruitOption

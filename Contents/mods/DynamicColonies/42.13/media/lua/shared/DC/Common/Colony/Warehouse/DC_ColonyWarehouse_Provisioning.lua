@@ -27,14 +27,28 @@ local function workerHasAnyRequirementTag(worker, requirementTags)
     return false
 end
 
-local function takeFirstEquipmentEntry(ownerUsername, predicate)
+local function takeFirstEquipmentEntry(ownerUsername, predicate, quantityMode, worker)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     for index, entry in ipairs(warehouse.ledgers.equipment or {}) do
         local usable = Registry.Internal.IsEquipmentEntryUsable and Registry.Internal.IsEquipmentEntryUsable(entry) or true
         if usable and predicate(entry) then
             local removed = Registry.Internal.CopyShallow(entry)
-            removed.qty = 1
-            table.remove(warehouse.ledgers.equipment, index)
+            local mode = tostring(quantityMode or "single")
+            local availableQty = math.max(1, math.floor(tonumber(entry.qty) or 1))
+            local removedQty = 1
+
+            if mode == "full_stack" then
+                removedQty = availableQty
+                if worker and Registry.GetFittingInventoryQuantity then
+                    removedQty = math.max(1, Registry.GetFittingInventoryQuantity(worker, entry.fullType, availableQty))
+                end
+            end
+
+            removed.qty = math.max(1, removedQty)
+            entry.qty = availableQty - removed.qty
+            if entry.qty <= 0 then
+                table.remove(warehouse.ledgers.equipment, index)
+            end
             Warehouse.TouchItemsVersion(ownerUsername)
             Warehouse.TouchSummaryVersion(ownerUsername)
             Warehouse.Recalculate(warehouse)
@@ -72,12 +86,14 @@ end
 local function takeFirstEquipmentEntryByTag(ownerUsername, requiredTag)
     return takeFirstEquipmentEntry(ownerUsername, function(candidate)
         return entryHasToolTag(candidate, requiredTag)
-    end)
+    end, "single", nil)
 end
 
-local function takeFirstEquipmentEntryByRequirementTags(ownerUsername, requirementTags)
+local function takeFirstEquipmentEntryByRequirementTags(ownerUsername, requirementTags, quantityMode, worker)
     for _, requirementTag in ipairs(requirementTags or {}) do
-        local entry = takeFirstEquipmentEntryByTag(ownerUsername, requirementTag)
+        local entry = takeFirstEquipmentEntry(ownerUsername, function(candidate)
+            return entryHasToolTag(candidate, requirementTag)
+        end, quantityMode, worker)
         if entry then
             return entry
         end
@@ -101,7 +117,12 @@ local function restockRequiredTools(worker)
             if Registry.GetInventoryRemainingCapacity(worker) <= 0 then
                 break
             end
-            local entry = takeFirstEquipmentEntryByRequirementTags(worker.ownerUsername, requirementTags)
+            local entry = takeFirstEquipmentEntryByRequirementTags(
+                worker.ownerUsername,
+                requirementTags,
+                definition.autoEquipTransfer,
+                worker
+            )
             if entry then
                 if Registry.AddToolEntry(worker, entry) then
                     added = added + 1

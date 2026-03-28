@@ -5,6 +5,7 @@ DC_Colony.Job = DC_Colony.Job or {}
 require "DC/Common/Colony/Job/Common/DC_Job_Config"
 require "DC/Common/Colony/Job/Common/DC_Job_ConfigLogic"
 require "DC/Common/Colony/ColonyEquipment/Requirements/DC_ColonyEquipment_Requirements"
+require "DC/Common/Colony/Job/Companion/DC_Job_Companion_Config"
 
 -- Scavenging Subsystem
 require "DC/Common/Colony/Job/Scavenging/DC_Job_Scavenging_ConfigTools"
@@ -30,5 +31,8 @@ require "DC/Common/Colony/Job/Farming/DC_Job_Farming_Process"
 -- Fishing Subsystem
 require "DC/Common/Colony/Job/Fishing/DC_Job_Fishing_ConfigTools"
 require "DC/Common/Colony/Job/Fishing/DC_Job_Fishing_Process"
+
+-- Companion Subsystem
+require "DC/Common/Colony/Job/Companion/DC_Job_Companion_Process"
 
 return DC_Colony.Job

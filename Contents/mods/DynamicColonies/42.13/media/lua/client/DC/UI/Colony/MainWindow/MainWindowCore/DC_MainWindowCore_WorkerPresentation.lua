@@ -109,12 +109,17 @@ end
 function Internal.getWorkerPresenceLabel(worker)
     local config = Internal.Config or {}
     local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
+    local presenceState = tostring(worker and worker.presenceState or (config.PresenceStates and config.PresenceStates.Home) or "Home")
+    local states = config.PresenceStates or {}
+
+    if presenceState == states.AwayToHome then
+        return "Walking Home"
+    end
+
     if normalizedJob ~= ((config.JobTypes or {}).Scavenge) then
         return tostring(worker and worker.state or "Idle")
     end
 
-    local presenceState = tostring(worker and worker.presenceState or (config.PresenceStates and config.PresenceStates.Home) or "Home")
-    local states = config.PresenceStates or {}
     if presenceState == states.Scavenging then
         return "Scavenging"
     end

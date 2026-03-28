@@ -52,7 +52,14 @@ function Config.GetWorkerJobCapability(worker, jobType)
         skillLevel = 0,
     }
 
-    if normalizedJobType == ((Config.JobTypes or {}).Builder) then
+    if normalizedJobType == ((Config.JobTypes or {}).FollowPlayer) then
+        if Config.CanWorkerTakeFollowPlayerJob then
+            capability.capable, capability.reason = Config.CanWorkerTakeFollowPlayerJob(worker)
+        else
+            capability.capable = false
+            capability.reason = "Follow Player requires DynamicTrading V2."
+        end
+    elseif normalizedJobType == ((Config.JobTypes or {}).Builder) then
         capability.skillID = "Construction"
         capability.skillLevel = getWorkerSkillLevel(worker, capability.skillID)
         capability.capable = capability.skillLevel > 0
@@ -110,6 +117,7 @@ function Config.GetNextJobType(jobType)
         Config.JobTypes.Unemployed,
         Config.JobTypes.Builder,
         Config.JobTypes.Doctor,
+        Config.JobTypes.FollowPlayer,
         Config.JobTypes.Scavenge,
         Config.JobTypes.Farm,
         Config.JobTypes.Fish

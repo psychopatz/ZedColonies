@@ -4,6 +4,14 @@ DC_MainWindow.Internal = DC_MainWindow.Internal or {}
 local Internal = DC_MainWindow.Internal
 local MainWindowLayout = Internal.MainWindowLayout or {}
 
+local function buildWorkerRequestArgs()
+    local config = Internal.Config or (DC_Colony and DC_Colony.Config) or nil
+    return {
+        knownVersion = DC_MainWindow.cachedWorkersVersion,
+        starterCount = config and config.GetStarterColonistCount and config.GetStarterColonistCount() or nil
+    }
+end
+
 local function autoRefreshWindow(window)
     if not window or not window:getIsVisible() then
         return
@@ -11,9 +19,7 @@ local function autoRefreshWindow(window)
 
     if isClient() and not isServer() then
         window.syncStatusMutedFrames = 120
-        window:sendColonyCommand("RequestPlayerWorkers", {
-            knownVersion = DC_MainWindow.cachedWorkersVersion
-        })
+        window:sendColonyCommand("RequestPlayerWorkers", buildWorkerRequestArgs())
         if window.selectedWorkerSummary and window.selectedWorkerSummary.workerID then
             local supplyWindow = DC_SupplyWindow and DC_SupplyWindow.instance or nil
             local supplyOwnsDetailSync = supplyWindow
@@ -32,6 +38,7 @@ local function autoRefreshWindow(window)
         return
     end
 
+    window:sendColonyCommand("RequestPlayerWorkers", buildWorkerRequestArgs())
     window:populateWorkerList(Internal.resolveWorkerSummaries())
     if window.selectedWorkerSummary and window.selectedWorkerSummary.workerID then
         local detail = Internal.resolveWorkerDetail(window.selectedWorkerSummary.workerID)

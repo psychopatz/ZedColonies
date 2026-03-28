@@ -116,6 +116,11 @@ function Interaction.GetDisplayStateLabel(worker)
     local presenceState = tostring(worker and worker.presenceState or "")
     local states = Config.PresenceStates or {}
 
+    if jobKey == tostring((Config.JobTypes or {}).FollowPlayer or "FollowPlayer")
+        and presenceState == tostring(states.AwayToHome or "AwayToHome") then
+        return "Returning"
+    end
+
     if jobKey == tostring((Config.JobTypes or {}).Scavenge or "Scavenge") then
         if presenceState == tostring(states.AwayToSite or "AwayToSite") then
             return tostring(Interaction.getInteractionEntry("Progress", "Common.TravelToSite.stateLabel") or "Walking")

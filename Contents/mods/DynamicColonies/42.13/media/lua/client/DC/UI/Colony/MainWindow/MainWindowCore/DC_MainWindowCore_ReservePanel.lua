@@ -185,6 +185,18 @@ local function getWorkerPortraitTexture(worker)
         or getTexture("media/ui/Portraits/General/" .. gender .. "/1.png")
 end
 
+local function hasWorkerTalkTarget(worker)
+    if type(worker) ~= "table" then
+        return false
+    end
+
+    return tostring(worker.companionNPCUUID or "") ~= ""
+        or tostring(worker.tradeSoulUUID or "") ~= ""
+        or tostring(worker.sourceNPCUUID or "") ~= ""
+        or tostring(worker.recruitedTraderUUID or "") ~= ""
+        or tostring(worker.sourceNPCID or "") ~= ""
+end
+
 function ColonyProfileCard:new(x, y, width, height)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
@@ -202,6 +214,11 @@ end
 
 function ColonyProfileCard:initialise()
     ISPanel.initialise(self)
+
+    self.btnTalk = ISButton:new(0, 0, 96, 24, "Talk", self, self.onOpenTalk)
+    self.btnTalk:initialise()
+    self.btnTalk:setEnable(false)
+    self:addChild(self.btnTalk)
 
     self.btnInventory = ISButton:new(0, 0, 96, 24, "Inventory", self, self.onOpenInventory)
     self.btnInventory:initialise()
@@ -221,6 +238,12 @@ end
 function ColonyProfileCard:onOpenInventory()
     if self.ownerWindow and self.ownerWindow.onOpenInventory then
         self.ownerWindow:onOpenInventory()
+    end
+end
+
+function ColonyProfileCard:onOpenTalk()
+    if self.ownerWindow and self.ownerWindow.onOpenTalk then
+        self.ownerWindow:onOpenTalk()
     end
 end
 
@@ -246,6 +269,9 @@ function ColonyProfileCard:setWorker(worker)
         self.healthTargetRatio = 0
         self.energyTargetRatio = 0
         self.activityTargetRatio = 0
+        if self.btnTalk then
+            self.btnTalk:setEnable(false)
+        end
         if self.btnInventory then
             self.btnInventory:setEnable(false)
         end
@@ -255,6 +281,9 @@ function ColonyProfileCard:setWorker(worker)
         return
     end
 
+    if self.btnTalk then
+        self.btnTalk:setEnable(hasWorkerTalkTarget(worker))
+    end
     if self.btnInventory then
         self.btnInventory:setEnable(true)
     end
@@ -367,6 +396,9 @@ function ColonyProfileCard:prerender()
     local actionButtonHeight = (self.btnInventory and self.btnInventory:getHeight()) or 24
     local actionButtonGap = self.btnInventory and 8 or 0
     local actionButtonCount = 0
+    if self.btnTalk then
+        actionButtonCount = actionButtonCount + 1
+    end
     if self.btnInventory then
         actionButtonCount = actionButtonCount + 1
     end
@@ -426,14 +458,22 @@ function ColonyProfileCard:prerender()
     end
     self:drawRectBorder(portraitX, portraitY, portraitSize, portraitSize, 0.25, 1, 1, 1)
 
-    if self.btnInventory then
-        self.btnInventory:setX(portraitX)
-        self.btnInventory:setY(portraitY + portraitSize + 8)
-        self.btnInventory:setWidth(portraitSize)
-        self.btnInventory:setHeight(actionButtonHeight)
+    if self.btnTalk then
+        self.btnTalk:setX(portraitX)
+        self.btnTalk:setY(portraitY + portraitSize + 8)
+        self.btnTalk:setWidth(portraitSize)
+        self.btnTalk:setHeight(actionButtonHeight)
     end
 
     local nextButtonY = portraitY + portraitSize + 8 + actionButtonHeight + 6
+    if self.btnInventory then
+        self.btnInventory:setX(portraitX)
+        self.btnInventory:setY(nextButtonY)
+        self.btnInventory:setWidth(portraitSize)
+        self.btnInventory:setHeight(actionButtonHeight)
+        nextButtonY = nextButtonY + actionButtonHeight + 6
+    end
+
     if self.btnCharacter then
         self.btnCharacter:setX(portraitX)
         self.btnCharacter:setY(nextButtonY)

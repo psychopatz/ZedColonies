@@ -28,6 +28,26 @@ function Config.GetPlayerObject()
     return nil
 end
 
+function Config.GetOnlineOwnerPlayer(ownerUsername)
+    local owner = Config.GetOwnerUsername(ownerUsername)
+    local onlinePlayers = getOnlinePlayers and getOnlinePlayers() or nil
+    if onlinePlayers then
+        for index = 0, onlinePlayers:size() - 1 do
+            local player = onlinePlayers:get(index)
+            if player and Config.GetOwnerUsername(player) == owner then
+                return player
+            end
+        end
+    end
+
+    local player = Config.GetPlayerObject()
+    if player and Config.GetOwnerUsername(player) == owner then
+        return player
+    end
+
+    return nil
+end
+
 function Config.IsOwnerOnline(ownerUsername)
     local owner = Config.GetOwnerUsername(ownerUsername)
     if owner == "local" then

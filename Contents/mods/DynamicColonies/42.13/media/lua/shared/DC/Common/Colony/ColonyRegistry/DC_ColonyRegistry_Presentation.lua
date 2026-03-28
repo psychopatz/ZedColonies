@@ -143,7 +143,13 @@ function Registry.GetWorkerSummary(worker)
         assignedProjectProgress = worker.assignedProjectProgress,
         assignedProjectRequired = worker.assignedProjectRequired,
         isFemale = worker.isFemale,
-        identitySeed = worker.identitySeed
+        identitySeed = worker.identitySeed,
+        sourceNPCID = worker.sourceNPCID,
+        sourceNPCUUID = worker.sourceNPCUUID,
+        recruitedTraderUUID = worker.recruitedTraderUUID,
+        companionNPCUUID = worker.companionNPCUUID,
+        tradeSoulUUID = worker.tradeSoulUUID,
+        companionReturnPending = worker.companionReturnPending == true
     }
 end
 

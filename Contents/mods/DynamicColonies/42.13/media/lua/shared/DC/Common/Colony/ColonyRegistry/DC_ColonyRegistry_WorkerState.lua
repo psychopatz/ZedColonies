@@ -269,6 +269,12 @@ function Registry.RecalculateWorker(worker)
     if Energy and Energy.ApplyPresentationFields then
         Energy.ApplyPresentationFields(worker)
     end
+    if Config.UpdateWorkerCompanionReturnState then
+        Config.UpdateWorkerCompanionReturnState(worker)
+    end
+    if Config.SyncWorkerCompanionLoadout then
+        Config.SyncWorkerCompanionLoadout(worker)
+    end
 end
 
 function Registry.WorkerHasRequiredTools(worker)

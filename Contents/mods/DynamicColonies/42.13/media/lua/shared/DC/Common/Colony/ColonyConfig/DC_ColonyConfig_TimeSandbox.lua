@@ -92,6 +92,18 @@ function Config.GetScavengeTravelHours()
     )
 end
 
+function Config.GetStarterColonistCount()
+    return math.max(
+        0,
+        math.floor(
+            Config.GetSandboxNumberAny(
+                { "ColonyStarterColonists" },
+                0
+            ) or 0
+        )
+    )
+end
+
 local function roundToNearestWhole(value)
     local numeric = tonumber(value) or 0
     if numeric <= 0 then

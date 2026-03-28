@@ -21,4 +21,7 @@ Sandbox_EN = {
 
     Sandbox_DynamicColonies_ColonyFishingWorkAmount = "Fishing Work Amount",
     Sandbox_DynamicColonies_ColonyFishingWorkAmount_tooltip = "Sets the total work required for a fishing worker to finish one catch roll. Higher values make each catch take longer unless the worker has better speed multipliers or active bait.",
+
+    Sandbox_DynamicColonies_ColonyStarterColonists = "Starting Colonists",
+    Sandbox_DynamicColonies_ColonyStarterColonists_tooltip = "How many personal colony workers you begin with. Set this to 0 to start with no colonists.",
 }

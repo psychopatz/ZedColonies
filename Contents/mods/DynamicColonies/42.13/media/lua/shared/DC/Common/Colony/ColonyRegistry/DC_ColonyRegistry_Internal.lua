@@ -335,11 +335,13 @@ function Internal.NormalizeEquipmentEntry(entry)
         haveBeenRepaired = tempItem:getHaveBeenRepaired()
     end
 
+    local qty = math.max(1, math.floor(tonumber(entry.qty) or 1))
+
     return {
         fullType = fullType,
         displayName = tostring(entry.displayName or Internal.GetDisplayNameForFullType(fullType)),
         tags = copyStringArray(defaultTags),
-        qty = 1,
+        qty = qty,
         condition = conditionMax > 0 and math.max(0, math.min(conditionMax, math.floor(condition or conditionMax))) or nil,
         conditionMax = conditionMax > 0 and conditionMax or nil,
         headCondition = headConditionMax > 0 and math.max(0, math.min(headConditionMax, math.floor(headCondition or headConditionMax))) or nil,
@@ -365,6 +367,7 @@ function Internal.BuildEquipmentEntryFromInventoryItem(invItem, overrideDisplayN
         tags = (Config.GetItemCombinedTags and Config.GetItemCombinedTags(invItem:getFullType()))
             or (Config.FindItemTags and Config.FindItemTags(invItem:getFullType()))
             or {},
+        qty = math.max(1, math.floor(tonumber(invItem.getCount and invItem:getCount() or 1) or 1)),
         condition = invItem.getCondition and invItem:getCondition() or nil,
         headCondition = invItem.getHeadCondition and invItem:getHeadCondition() or nil,
         quality = invItem.getQuality and invItem:getQuality() or nil,

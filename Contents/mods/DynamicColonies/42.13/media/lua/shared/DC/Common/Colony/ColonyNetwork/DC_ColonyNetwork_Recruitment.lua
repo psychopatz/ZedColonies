@@ -191,6 +191,8 @@ local function createWorkerFromRecruitArgs(owner, args, sourceSoul)
         state = Config.States.Idle,
         jobEnabled = false,
         sourceNPCID = resolvedSourceNPCID and tostring(resolvedSourceNPCID) or nil,
+        sourceNPCUUID = recruitUUID and tostring(recruitUUID) or nil,
+        recruitedTraderUUID = recruitUUID and tostring(recruitUUID) or nil,
         sourceNPCType = args.sourceNPCType or "ConversationUI"
     })
 

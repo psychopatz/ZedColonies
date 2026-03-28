@@ -62,6 +62,9 @@ function Registry.SetWorkerJobEnabled(worker, enabled)
             return
         end
 
+        if Config.IsCompanionControlJob and Config.IsCompanionControlJob(normalizedJob) and Config.ReleaseWorkerCompanionControl then
+            Config.ReleaseWorkerCompanionControl(worker)
+        end
         worker.jobEnabled = false
     end
 end
@@ -84,7 +87,14 @@ end
 
 function Registry.SetWorkerJobType(worker, jobType)
     if not worker then return end
+    local currentJobType = Config.NormalizeJobType(worker.jobType)
     local normalizedJob = Config.NormalizeJobType(jobType)
+    if Config.IsCompanionControlJob
+        and Config.IsCompanionControlJob(currentJobType)
+        and currentJobType ~= normalizedJob
+        and Config.ReleaseWorkerCompanionControl then
+        Config.ReleaseWorkerCompanionControl(worker)
+    end
     worker.jobType = normalizedJob
     worker.profession = worker.jobType
     worker.workProgress = 0

@@ -87,7 +87,8 @@ function Provider.requestSync(playerObj, state)
         state.awaitingWorkerSync = true
     end
     sendClientCommand(playerObj, Config.COMMAND_MODULE or "DColony", "RequestPlayerWorkers", {
-        knownVersion = state and state.cachedVersion or nil
+        knownVersion = state and state.cachedVersion or nil,
+        starterCount = Config.GetStarterColonistCount and Config.GetStarterColonistCount() or nil
     })
 end
 
