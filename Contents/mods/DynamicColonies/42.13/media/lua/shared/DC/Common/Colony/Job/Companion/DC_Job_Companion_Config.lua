@@ -116,6 +116,34 @@ local function getWeaponAmmoType(fullType)
     return nil
 end
 
+local function isBagEntry(entry)
+    if not isUsableEquipmentEntry(entry) then
+        return false
+    end
+
+    if entryHasTag(entry, "Colony.Carry.Backpack") then
+        return true
+    end
+
+    local fullType = tostring(entry and entry.fullType or "")
+    local scriptItem = getScriptItem(fullType)
+    local equipSlot = scriptItem and scriptItem.canBeEquipped and scriptItem:canBeEquipped() or nil
+    local capacity = tonumber(scriptItem and scriptItem.getCapacity and scriptItem:getCapacity() or 0) or 0
+    local reduction = tonumber(scriptItem and scriptItem.getWeightReduction and scriptItem:getWeightReduction() or 0) or 0
+    local lowered = lower(fullType)
+
+    return equipSlot == "Back"
+        or (capacity > 0 and reduction > 0 and (
+            lowered:find("bag_", 1, true)
+            or lowered:find("backpack", 1, true)
+            or lowered:find("satchel", 1, true)
+            or lowered:find("duffel", 1, true)
+            or lowered:find("slingbag", 1, true)
+            or lowered:find("schoolbag", 1, true)
+            or lowered:find("hikingbag", 1, true)
+        ))
+end
+
 local function buildLoadoutSignature(loadout)
     loadout = type(loadout) == "table" and loadout or {}
     return table.concat({
@@ -123,6 +151,7 @@ local function buildLoadoutSignature(loadout)
         tostring(loadout.rangedAmmoType or ""),
         tostring(math.max(0, tonumber(loadout.ammoCount) or 0)),
         tostring(loadout.meleeWeapon or ""),
+        tostring(loadout.bag or ""),
     }, "|")
 end
 
@@ -275,7 +304,7 @@ local function updateSoulFromWorker(worker, uuid, factionID)
 end
 
 local function isProtectState(state)
-    return state == "ProtectRanged" or state == "ProtectMelee"
+    return state == "ProtectRanged" or state == "ProtectMelee" or state == "ProtectAuto"
 end
 
 local function getCompanionTravelHours(worker, npcData)
@@ -508,6 +537,7 @@ end
 function Config.BuildWorkerCompanionLoadout(worker)
     local meleeWeapon = nil
     local rangedWeapon = nil
+    local bag = nil
     local firstLooseAmmoType = nil
     local ammoCountsByType = {}
 
@@ -518,6 +548,9 @@ function Config.BuildWorkerCompanionLoadout(worker)
             end
             if not rangedWeapon and isRangedWeaponEntry(entry) then
                 rangedWeapon = tostring(entry.fullType)
+            end
+            if not bag and isBagEntry(entry) then
+                bag = tostring(entry.fullType)
             end
             if isLooseAmmoEntry(entry) then
                 local fullType = tostring(entry.fullType or "")
@@ -536,6 +569,7 @@ function Config.BuildWorkerCompanionLoadout(worker)
         rangedAmmoType = rangedAmmoType,
         ammoCount = rangedAmmoType and math.max(0, tonumber(ammoCountsByType[rangedAmmoType]) or 0) or 0,
         meleeWeapon = meleeWeapon,
+        bag = bag,
     }
 end
 

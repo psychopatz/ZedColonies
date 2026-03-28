@@ -238,13 +238,13 @@ function DC_SupplyWindow:assignToolEntries(entries)
     end
 
     if #selectedEntries <= 0 then
-        self:updateStatus("No valid labour tools selected.")
+        self:updateStatus("No valid equipment selected.")
         return
     end
 
     local fittingEntries, blockedCount = selectEntriesThatFit(self, selectedEntries)
     if #fittingEntries <= 0 then
-        self:updateStatus("No selected labour tools fit in the remaining capacity.")
+        self:updateStatus("No selected equipment fits in the remaining capacity.")
         return
     end
 
@@ -267,13 +267,13 @@ function DC_SupplyWindow:assignToolEntries(entries)
 
     if #sentEntries == 1 then
         local statusText =
-            "Assigning " .. tostring(sentEntries[1].displayName or sentEntries[1].fullType or "selected tool") .. " to " .. getDepositTargetLabel(self) .. "..."
+            "Assigning " .. tostring(sentEntries[1].displayName or sentEntries[1].fullType or "selected equipment") .. " to " .. getDepositTargetLabel(self) .. "..."
         if blockedCount > 0 then
             statusText = statusText .. " " .. tostring(blockedCount) .. " did not fit."
         end
         self:updateStatus(statusText)
     else
-        local statusText = "Assigning " .. tostring(#sentEntries) .. " tools to " .. getDepositTargetLabel(self) .. "..."
+        local statusText = "Assigning " .. tostring(#sentEntries) .. " equipment items to " .. getDepositTargetLabel(self) .. "..."
         if blockedCount > 0 then
             statusText = statusText .. " " .. tostring(blockedCount) .. " did not fit."
         end
@@ -312,7 +312,7 @@ function DC_SupplyWindow:onDepositSelected()
 
     if activeTab == Internal.Tabs.Equipment then
         if not selectedEntry.canAssignTool then
-            self:updateStatus("Select a valid labour tool first.")
+            self:updateStatus("Select a valid piece of equipment first.")
             return
         end
         self:assignToolEntries(concreteEntries)
@@ -364,7 +364,7 @@ function DC_SupplyWindow:onDepositVisible()
 
     if #visibleEntries <= 0 then
         if activeTab == Internal.Tabs.Equipment then
-            self:updateStatus("No visible labour tools matched the current filter.")
+            self:updateStatus("No visible equipment matched the current filter.")
         elseif activeTab == Internal.Tabs.Output then
             self:updateStatus("No visible warehouse storage items matched the current filter.")
         elseif activeTab == Internal.Tabs.Provisions then

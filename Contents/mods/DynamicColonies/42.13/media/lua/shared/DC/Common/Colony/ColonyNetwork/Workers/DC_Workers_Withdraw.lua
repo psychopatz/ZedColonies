@@ -156,11 +156,8 @@ local function withdrawWarehouseToolEntries(player, ownerUsername, inventory, in
     local moved = 0
     for _, entry in ipairs(Warehouse.TakeEquipmentEntries(ownerUsername, indexes) or {}) do
         if entry and entry.fullType then
-            local qty = math.max(1, tonumber(entry.qty) or 1)
-            for _ = 1, qty do
-                if materializeWithdrawnTool(player, inventory, entry) then
-                    moved = moved + 1
-                end
+            if materializeWithdrawnTool(player, inventory, entry) then
+                moved = moved + math.max(1, tonumber(entry.qty) or 1)
             end
         end
     end

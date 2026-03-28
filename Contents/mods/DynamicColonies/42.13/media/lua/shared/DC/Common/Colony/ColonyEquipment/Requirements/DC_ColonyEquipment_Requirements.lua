@@ -30,6 +30,16 @@ local function cloneStringArray(values)
     return appendUniqueStrings({}, values)
 end
 
+local UNIVERSAL_JOB_TYPES = {
+    "Unemployed",
+    "Builder",
+    "Doctor",
+    "FollowPlayer",
+    "Farm",
+    "Fish",
+    "Scavenge",
+}
+
 local function getEquipmentRequirementCache()
     local cache = Config.__equipmentRequirementCache or {}
     cache.definitionByKey = cache.definitionByKey or {}
@@ -164,32 +174,47 @@ Config.EquipmentRequirementDefinitions = Config.EquipmentRequirementDefinitions 
         searchText = "wearable backpack duffel satchel hiking bag schoolbag",
         supportedFullTypes = {},
         iconFullType = "Base.Bag_Schoolbag",
-        jobTypes = { "Builder", "Doctor", "Farm", "Fish", "Scavenge" },
+        jobTypes = UNIVERSAL_JOB_TYPES,
         autoEquip = false,
         sortOrder = 135,
     },
-    ["Colony.Combat.Weapon"] = {
-        label = "Weapon",
-        hintText = "Any melee weapon or firearm",
-        reasonText = "Recommended combat weapon for recruited V2 companions using follow and future escort roles.",
-        searchText = "weapon melee firearm pistol revolver rifle shotgun bat axe crowbar machete",
+    ["Colony.Combat.Weapon.Melee"] = {
+        label = "Melee Weapon",
+        hintText = "Any usable melee weapon",
+        reasonText = "Close-quarters weapon slot for workers that are capable of fighting in melee.",
+        searchText = "melee weapon bat axe crowbar machete pipe spear hammer knife",
         supportedFullTypes = {
             "Base.BaseballBat",
             "Base.Crowbar",
             "Base.Axe",
-            "Base.Pistol",
-            "Base.Shotgun",
         },
-        requirementTags = { "Weapon.Melee", "Weapon.Ranged.Firearm" },
+        requirementTags = { "Weapon.Melee" },
         iconFullType = "Base.BaseballBat",
-        jobTypes = { "FollowPlayer" },
+        jobTypes = UNIVERSAL_JOB_TYPES,
         autoEquip = true,
         sortOrder = 136,
+    },
+    ["Colony.Combat.Weapon.Ranged"] = {
+        label = "Ranged Weapon",
+        hintText = "Any firearm with matching loose ammo",
+        reasonText = "Firearm slot for workers that are capable of using ranged weapons.",
+        searchText = "ranged weapon firearm pistol revolver rifle shotgun smg gun",
+        supportedFullTypes = {
+            "Base.Pistol",
+            "Base.Revolver_Short",
+            "Base.DoubleBarrelShotgun",
+            "Base.Shotgun",
+        },
+        requirementTags = { "Weapon.Ranged.Firearm" },
+        iconFullType = "Base.Pistol",
+        jobTypes = UNIVERSAL_JOB_TYPES,
+        autoEquip = true,
+        sortOrder = 137,
     },
     ["Colony.Combat.Ammo"] = {
         label = "Ammo",
         hintText = "Loose bullets or shells",
-        reasonText = "Loose rounds feed the recruited V2 companion's live ranged loadout.",
+        reasonText = "Loose rounds support ranged-capable workers that have firearm access.",
         searchText = "ammo bullets shells rounds 9mm 45 38 357 shotgun shells 556 308 3030",
         supportedFullTypes = {
             "Base.Bullets9mm",
@@ -199,10 +224,10 @@ Config.EquipmentRequirementDefinitions = Config.EquipmentRequirementDefinitions 
         },
         requirementTags = { "Weapon.Ranged.Ammo" },
         iconFullType = "Base.Bullets9mm",
-        jobTypes = { "FollowPlayer" },
+        jobTypes = UNIVERSAL_JOB_TYPES,
         autoEquip = true,
         autoEquipTransfer = "full_stack",
-        sortOrder = 137,
+        sortOrder = 138,
     },
     ["Colony.Tool.Scavenge"] = {
         label = "Scavenging Tool",
@@ -424,6 +449,57 @@ local function collectKnownEquipmentFullTypes()
     return fullTypes
 end
 
+local function getWorkerSkillLevel(worker, skillID)
+    local skills = DC_Colony and DC_Colony.Skills or nil
+    local entry = skills and skills.GetSkillEntry and skills.GetSkillEntry(worker, skillID) or nil
+    return math.max(0, math.floor(tonumber(entry and entry.level) or 0))
+end
+
+local function normalizeRequirementDefinition(definitionOrKey)
+    if type(definitionOrKey) == "table" then
+        return definitionOrKey
+    end
+
+    if Config.GetEquipmentRequirementDefinition then
+        return Config.GetEquipmentRequirementDefinition(definitionOrKey)
+    end
+
+    return nil
+end
+
+function Config.GetWorkerCombatCapability(worker)
+    local meleeLevel = getWorkerSkillLevel(worker, "Melee")
+    local shootingLevel = getWorkerSkillLevel(worker, "Shooting")
+
+    return {
+        meleeLevel = meleeLevel,
+        shootingLevel = shootingLevel,
+        canUseMelee = meleeLevel > 0,
+        canUseRanged = shootingLevel > 0,
+        canFight = meleeLevel > 0 or shootingLevel > 0,
+    }
+end
+
+function Config.IsEquipmentRequirementAvailableForWorker(definitionOrKey, worker)
+    local definition = normalizeRequirementDefinition(definitionOrKey)
+    if not definition or not worker then
+        return definition ~= nil
+    end
+
+    local requirementKey = tostring(definition.requirementKey or "")
+    if requirementKey == "Colony.Combat.Weapon.Melee" then
+        local capability = Config.GetWorkerCombatCapability and Config.GetWorkerCombatCapability(worker) or {}
+        return capability.canUseMelee == true
+    end
+
+    if requirementKey == "Colony.Combat.Weapon.Ranged" or requirementKey == "Colony.Combat.Ammo" then
+        local capability = Config.GetWorkerCombatCapability and Config.GetWorkerCombatCapability(worker) or {}
+        return capability.canUseRanged == true
+    end
+
+    return true
+end
+
 function Config.ItemMatchesEquipmentRequirement(fullType, requirementKey)
     local itemType = tostring(fullType or "")
     local key = tostring(requirementKey or "")
@@ -556,6 +632,35 @@ function Config.GetAutoEquipRequirementDefinitions(jobType)
     return definitions
 end
 
+function Config.GetEquipmentRequirementDefinitionsForWorker(worker)
+    local definitions = Config.GetEquipmentRequirementDefinitions(worker and worker.jobType) or {}
+    if not worker then
+        return definitions
+    end
+
+    local filtered = {}
+    for _, definition in ipairs(definitions) do
+        if Config.IsEquipmentRequirementAvailableForWorker(definition, worker) then
+            filtered[#filtered + 1] = definition
+        end
+    end
+
+    return filtered
+end
+
+function Config.GetAutoEquipRequirementDefinitionsForWorker(worker)
+    local definitions = Config.GetEquipmentRequirementDefinitionsForWorker(worker)
+    local filtered = {}
+
+    for _, definition in ipairs(definitions or {}) do
+        if definition.autoEquip == true then
+            filtered[#filtered + 1] = definition
+        end
+    end
+
+    return filtered
+end
+
 function Config.GetMatchingEquipmentRequirementDefinitions(fullType, jobType)
     local itemType = tostring(fullType or "")
     if itemType == "" then
@@ -583,8 +688,31 @@ function Config.GetMatchingEquipmentRequirementDefinitions(fullType, jobType)
     return matches
 end
 
+function Config.GetMatchingEquipmentRequirementDefinitionsForWorker(fullType, worker)
+    local itemType = tostring(fullType or "")
+    if itemType == "" then
+        return {}
+    end
+
+    local matches = {}
+    for _, definition in ipairs(Config.GetEquipmentRequirementDefinitionsForWorker(worker)) do
+        for _, requirementTag in ipairs(definition.requirementTags or {}) do
+            if Config.ItemMatchesEquipmentRequirement(itemType, requirementTag) then
+                matches[#matches + 1] = definition
+                break
+            end
+        end
+    end
+
+    return matches
+end
+
 function Config.IsRequiredEquipmentFullType(fullType, jobType)
     return #(Config.GetMatchingEquipmentRequirementDefinitions(fullType, jobType) or {}) > 0
+end
+
+function Config.IsRequiredEquipmentFullTypeForWorker(fullType, worker)
+    return #(Config.GetMatchingEquipmentRequirementDefinitionsForWorker(fullType, worker) or {}) > 0
 end
 
 return Config

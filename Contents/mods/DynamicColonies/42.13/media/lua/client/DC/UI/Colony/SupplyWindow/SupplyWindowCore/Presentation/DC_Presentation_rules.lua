@@ -18,6 +18,10 @@ local function isRelevantEquipmentEntry(entry, window)
         return #(Internal.getPlayerEntryEquipmentMatches(entry, worker) or {}) > 0
     end
 
+    if config.GetMatchingEquipmentRequirementDefinitionsForWorker and worker then
+        return #(config.GetMatchingEquipmentRequirementDefinitionsForWorker(entry.fullType, worker) or {}) > 0
+    end
+
     if config.GetMatchingEquipmentRequirementDefinitions and worker and worker.jobType then
         return #(config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, worker.jobType) or {}) > 0
     end

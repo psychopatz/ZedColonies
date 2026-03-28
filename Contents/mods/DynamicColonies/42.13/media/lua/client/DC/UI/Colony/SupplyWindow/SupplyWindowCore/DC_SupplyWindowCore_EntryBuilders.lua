@@ -51,6 +51,17 @@ local function isInventoryItemRotten(invItem)
     return ok and result == true
 end
 
+local function isInventoryItemLocked(invItem)
+    if not invItem or not invItem.getID then
+        return false
+    end
+
+    local player = Internal.getLocalPlayer and Internal.getLocalPlayer() or nil
+    local modData = player and player.getModData and player:getModData() or nil
+    local lockedItems = modData and modData.DT_LockedItems or nil
+    return lockedItems and lockedItems[invItem:getID()] == true or false
+end
+
 local function getNormalizedEquipmentEntry(entry)
     local registryInternal = getRegistryInternal()
     if not registryInternal or not registryInternal.NormalizeEquipmentEntry then
@@ -141,7 +152,7 @@ function Internal.ensurePlayerEntryEquipmentData(entry)
     end
 
     entry.hasEquipmentRequirementMatch = #matchingEquipmentRequirements > 0
-    entry.canAssignTool = entry.hasEquipmentRequirementMatch and entry.isUsableEquipment == true
+    entry.canAssignTool = entry.hasEquipmentRequirementMatch and entry.isUsableEquipment == true and entry.isLocked ~= true
     entry.equipmentRequirementKeys = matchingEquipmentRequirements
     entry.tags = tags
     entry.searchText = table.concat(searchTerms, " ")
@@ -159,16 +170,23 @@ function Internal.getPlayerEntryEquipmentMatches(entry, worker)
     local config = Internal.Config or {}
     local normalizeJobType = config.NormalizeJobType
     local normalizedJob = normalizeJobType and normalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
-    local cacheKey = normalizedJob ~= "" and normalizedJob or "__all"
+    local capability = config.GetWorkerCombatCapability and config.GetWorkerCombatCapability(worker) or nil
+    local capabilityKey = table.concat({
+        capability and capability.canUseMelee == true and "melee1" or "melee0",
+        capability and capability.canUseRanged == true and "ranged1" or "ranged0",
+    }, "|")
+    local cacheKey = (normalizedJob ~= "" and normalizedJob or "__all") .. "|" .. capabilityKey
 
     entry.jobEquipmentMatches = entry.jobEquipmentMatches or {}
     if entry.jobEquipmentMatches[cacheKey] ~= nil then
         return entry.jobEquipmentMatches[cacheKey]
     end
 
-    local matches = config.GetMatchingEquipmentRequirementDefinitions
-        and config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, normalizedJob ~= "__all" and normalizedJob or nil)
-        or {}
+    local matches = config.GetMatchingEquipmentRequirementDefinitionsForWorker
+        and config.GetMatchingEquipmentRequirementDefinitionsForWorker(entry.fullType, worker)
+        or (config.GetMatchingEquipmentRequirementDefinitions
+            and config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, normalizedJob ~= "__all" and normalizedJob or nil)
+            or {})
     entry.jobEquipmentMatches[cacheKey] = matches
     return matches
 end
@@ -242,6 +260,7 @@ function Internal.buildInventoryEntry(invItem)
         canAssignTool = false,
         hasEquipmentRequirementMatch = false,
         isUsableEquipment = isUsableEquipmentEntry(equipmentEntry),
+        isLocked = isInventoryItemLocked(invItem),
         isRottenProvision = isRottenProvision == true,
         provisionBlockedReason = isRottenProvision and rottenProvisionReason or nil,
         equipmentRequirementKeys = nil,

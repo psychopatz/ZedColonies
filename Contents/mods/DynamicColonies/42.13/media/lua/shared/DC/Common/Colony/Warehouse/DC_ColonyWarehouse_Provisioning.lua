@@ -107,9 +107,11 @@ local function restockRequiredTools(worker)
     end
 
     local added = 0
-    local requirementDefinitions = Config.GetAutoEquipRequirementDefinitions
-        and Config.GetAutoEquipRequirementDefinitions(worker.jobType)
-        or {}
+    local requirementDefinitions = Config.GetAutoEquipRequirementDefinitionsForWorker
+        and Config.GetAutoEquipRequirementDefinitionsForWorker(worker)
+        or (Config.GetAutoEquipRequirementDefinitions
+            and Config.GetAutoEquipRequirementDefinitions(worker.jobType)
+            or {})
 
     for _, definition in ipairs(requirementDefinitions) do
         local requirementTags = definition.requirementTags or { definition.requirementKey }

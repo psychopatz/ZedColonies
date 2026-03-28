@@ -9,12 +9,10 @@ function DC_SupplyWindow:onRefresh()
             knownVersion = DC_MainWindow and DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[self.workerID] or nil,
             includeWorkerLedgers = true
         })
-        if self.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) then
-            self:sendColonyCommand("RequestWarehouse", {
-                knownVersion = self.warehouseVersion,
-                includeLedgers = true
-            })
-        end
+        self:sendColonyCommand("RequestWarehouse", {
+            knownVersion = self.warehouseVersion,
+            includeLedgers = true
+        })
     end
 end
 
@@ -28,10 +26,8 @@ function DC_SupplyWindow:requestWorkerDetails()
         knownVersion = DC_MainWindow and DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[self.workerID] or nil,
         includeWorkerLedgers = true
     })
-    if self.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) then
-        self:sendColonyCommand("RequestWarehouse", {
-            knownVersion = self.warehouseVersion,
-            includeLedgers = true
-        })
-    end
+    self:sendColonyCommand("RequestWarehouse", {
+        knownVersion = self.warehouseVersion,
+        includeLedgers = true
+    })
 end

@@ -11,6 +11,59 @@ local Shared = (Network.Workers or {}).Shared or {}
 
 Network.Handlers = Network.Handlers or {}
 
+local function promoteAssignedToolEntry(worker, entry, requirementKey)
+    if not worker or not entry or tostring(requirementKey or "") == "" or not Config.ItemMatchesEquipmentRequirement then
+        return
+    end
+
+    local ledger = worker.toolLedger or {}
+    local addedIndex = nil
+    for index = #ledger, 1, -1 do
+        if ledger[index] == entry then
+            addedIndex = index
+            break
+        end
+    end
+    if not addedIndex then
+        return
+    end
+
+    local insertIndex = nil
+    for index, existing in ipairs(ledger) do
+        if index ~= addedIndex and existing and existing.fullType and Config.ItemMatchesEquipmentRequirement(existing.fullType, requirementKey) then
+            insertIndex = index
+            break
+        end
+    end
+
+    if not insertIndex or insertIndex >= addedIndex then
+        return
+    end
+
+    table.remove(ledger, addedIndex)
+    table.insert(ledger, insertIndex, entry)
+end
+
+local function canAssignEquipmentToWorker(worker, fullType, requirementKey)
+    if not worker or tostring(fullType or "") == "" then
+        return false
+    end
+
+    local isRequiredEquipment = Config.IsRequiredEquipmentFullTypeForWorker
+        and Config.IsRequiredEquipmentFullTypeForWorker(fullType, worker)
+        or (Config.IsRequiredEquipmentFullType and Config.IsRequiredEquipmentFullType(fullType, worker.jobType))
+    if not isRequiredEquipment then
+        return false
+    end
+
+    local key = tostring(requirementKey or "")
+    if key ~= "" and Config.ItemMatchesEquipmentRequirement then
+        return Config.ItemMatchesEquipmentRequirement(fullType, key)
+    end
+
+    return true
+end
+
 Network.Handlers.AssignWorkerSite = function(player, args)
     local owner = Config.GetOwnerUsername(player)
     local worker = Registry.GetWorkerForOwner(owner, args.workerID)
@@ -37,8 +90,7 @@ Network.Handlers.AssignWorkerToolset = function(player, args)
 
     local fullType = invItem:getFullType()
     local tags = Config.GetItemCombinedTags and Config.GetItemCombinedTags(fullType) or Config.FindItemTags(fullType)
-    local isRequiredEquipment = Config.IsRequiredEquipmentFullType and Config.IsRequiredEquipmentFullType(fullType, worker.jobType)
-    if not isRequiredEquipment then return end
+    if not canAssignEquipmentToWorker(worker, fullType, args.requirementKey) then return end
 
     local toolEntry = Registry.Internal.BuildEquipmentEntryFromInventoryItem and Registry.Internal.BuildEquipmentEntryFromInventoryItem(invItem, invItem:getDisplayName()) or {
         fullType = fullType,
@@ -57,6 +109,7 @@ Network.Handlers.AssignWorkerToolset = function(player, args)
         Shared.saveAndRefreshBasic(player, worker)
         return
     end
+    promoteAssignedToolEntry(worker, worker.toolLedger and worker.toolLedger[#worker.toolLedger] or toolEntry, args.requirementKey)
     Internal.removeInventoryItem(invItem)
 
     Shared.saveAndRefreshProcessed(player, worker)
@@ -72,8 +125,7 @@ Network.Handlers.AssignWarehouseToolset = function(player, args)
 
     local fullType = invItem:getFullType()
     local tags = Config.GetItemCombinedTags and Config.GetItemCombinedTags(fullType) or Config.FindItemTags(fullType)
-    local isRequiredEquipment = Config.IsRequiredEquipmentFullType and Config.IsRequiredEquipmentFullType(fullType, worker.jobType)
-    if not isRequiredEquipment then return end
+    if not canAssignEquipmentToWorker(worker, fullType, args.requirementKey) then return end
 
     local toolEntry = Registry.Internal.BuildEquipmentEntryFromInventoryItem and Registry.Internal.BuildEquipmentEntryFromInventoryItem(invItem, invItem:getDisplayName()) or {
         fullType = fullType,
@@ -94,6 +146,45 @@ Network.Handlers.AssignWarehouseToolset = function(player, args)
     end
 
     Internal.removeInventoryItem(invItem)
+    Shared.saveAndRefreshProcessed(player, worker, true)
+end
+
+Network.Handlers.AssignWarehouseToolToWorker = function(player, args)
+    if not args or not args.workerID or not args.ledgerIndex then return end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    if not worker then return end
+
+    local takenEntries = Warehouse.TakeEquipmentEntries(owner, Shared.normalizeLedgerIndexes(args))
+    local toolEntry = takenEntries and takenEntries[1] or nil
+    if not toolEntry or not toolEntry.fullType then
+        Shared.saveAndRefreshBasic(player, worker, true)
+        return
+    end
+
+    if not canAssignEquipmentToWorker(worker, toolEntry.fullType, args.requirementKey) then
+        Warehouse.DepositEquipmentEntry(owner, toolEntry, true)
+        Shared.saveAndRefreshBasic(player, worker, true)
+        return
+    end
+
+    if Registry.Internal.IsEquipmentEntryUsable and not Registry.Internal.IsEquipmentEntryUsable(toolEntry) then
+        Warehouse.DepositEquipmentEntry(owner, toolEntry, true)
+        Internal.syncNotice(player, "That tool is broken or empty and cannot be assigned.", "error", true)
+        Shared.saveAndRefreshBasic(player, worker, true)
+        return
+    end
+
+    local stored = Registry.AddToolEntry(worker, toolEntry)
+    if not stored then
+        Warehouse.DepositEquipmentEntry(owner, toolEntry, true)
+        Internal.syncNotice(player, "NPC inventory is full. No space for that equipment.", "error", true)
+        Shared.saveAndRefreshBasic(player, worker, true)
+        return
+    end
+
+    promoteAssignedToolEntry(worker, worker.toolLedger and worker.toolLedger[#worker.toolLedger] or toolEntry, args.requirementKey)
     Shared.saveAndRefreshProcessed(player, worker, true)
 end
 

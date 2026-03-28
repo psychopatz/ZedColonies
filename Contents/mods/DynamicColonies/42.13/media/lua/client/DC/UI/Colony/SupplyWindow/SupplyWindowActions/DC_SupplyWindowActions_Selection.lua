@@ -21,4 +21,8 @@ function DC_SupplyWindow.onWorkerListMouseDown(target, item)
     target.selectedWorkerEntry = entry
     target.activeSelectionSide = "worker"
     target:updateItemDetail(entry, "worker")
+
+    if target.openEquipmentPickerForEntry and target:openEquipmentPickerForEntry(entry) then
+        return
+    end
 end

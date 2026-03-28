@@ -104,7 +104,10 @@ end
 
 local function getEquipmentMatchSummary(entry, worker)
     local config = Internal.Config or {}
-    if not entry or not worker or not worker.jobType or not config.GetMatchingEquipmentRequirementDefinitions then
+    if not entry
+        or not worker
+        or not worker.jobType
+        or not (config.GetMatchingEquipmentRequirementDefinitionsForWorker or config.GetMatchingEquipmentRequirementDefinitions) then
         return nil
     end
 
@@ -114,8 +117,10 @@ local function getEquipmentMatchSummary(entry, worker)
 
     local matches = Internal.getPlayerEntryEquipmentMatches
         and Internal.getPlayerEntryEquipmentMatches(entry, worker)
-        or config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, worker.jobType)
-        or {}
+        or (config.GetMatchingEquipmentRequirementDefinitionsForWorker
+            and config.GetMatchingEquipmentRequirementDefinitionsForWorker(entry.fullType, worker)
+            or config.GetMatchingEquipmentRequirementDefinitions(entry.fullType, worker.jobType)
+            or {})
     if #matches <= 0 then
         return nil
     end

@@ -5,6 +5,9 @@ local Internal = DC_SupplyWindow.Internal
 
 local function getRequirementDefinitions(worker)
     local config = Internal.Config or {}
+    if config.GetEquipmentRequirementDefinitionsForWorker then
+        return config.GetEquipmentRequirementDefinitionsForWorker(worker) or {}
+    end
     if config.GetEquipmentRequirementDefinitions then
         return config.GetEquipmentRequirementDefinitions(worker and worker.jobType) or {}
     end

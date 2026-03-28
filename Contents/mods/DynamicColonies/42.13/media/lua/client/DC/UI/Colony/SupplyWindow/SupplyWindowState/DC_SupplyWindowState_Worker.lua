@@ -6,6 +6,10 @@ local Internal = DC_SupplyWindow.Internal
 function DC_SupplyWindow:refreshWorkerEntries()
     self.workerEntries = {}
 
+    if self.pruneOptimisticEquipmentDuplicates then
+        self:pruneOptimisticEquipmentDuplicates()
+    end
+
     local worker = self.workerData
     local isWarehouseView = Internal.isWarehouseView and Internal.isWarehouseView(self)
     local activeTab = self.activeTab or Internal.Tabs.Provisions
