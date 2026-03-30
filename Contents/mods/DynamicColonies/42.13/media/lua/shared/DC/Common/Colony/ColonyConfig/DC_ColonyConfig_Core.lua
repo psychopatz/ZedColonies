@@ -27,8 +27,15 @@ Config.RECRUIT_START_CALORIES_MIN = 500
 Config.RECRUIT_START_CALORIES_MAX = 800
 Config.RECRUIT_START_HYDRATION_MIN = 500
 Config.RECRUIT_START_HYDRATION_MAX = 800
-Config.RECRUIT_REQUIRED_REPUTATION = 100
+Config.RECRUIT_REQUIRED_REPUTATION = 80
+Config.RECRUIT_GUARANTEED_REPUTATION = 100
+Config.RECRUIT_MIN_SUCCESS_CHANCE = 5
 Config.RECRUIT_DAILY_CHANCE = 50
+Config.RECRUIT_NAG_WARNING_REPEATS = 1
+Config.RECRUIT_NAG_REPUTATION_PENALTY = -15
+Config.NON_RECRUITABLE_ARCHETYPES = {
+    Gambler = true
+}
 Config.DEFAULT_LABOUR_DAILY_CALORIES_USE = 500
 Config.DEFAULT_LABOUR_DAILY_HYDRATION_USE = 500
 Config.DEFAULT_WORKER_MAX_HP = 100
@@ -99,5 +106,51 @@ Config.SiteTypes = {
     FishingSite = "FishingSite",
     ScavengeSite = "ScavengeSite"
 }
+
+function Config.GetRecruitChanceForReputation(reputation)
+    local rep = tonumber(reputation) or 0
+    local minRep = tonumber(Config.RECRUIT_REQUIRED_REPUTATION) or 80
+    local maxRep = tonumber(Config.RECRUIT_GUARANTEED_REPUTATION) or 100
+    local minChance = tonumber(Config.RECRUIT_MIN_SUCCESS_CHANCE) or 5
+
+    if rep < minRep then
+        return 0
+    end
+
+    if maxRep <= minRep then
+        return 100
+    end
+
+    if rep >= maxRep then
+        return 100
+    end
+
+    local progress = (rep - minRep) / (maxRep - minRep)
+    local chance = minChance + ((100 - minChance) * progress)
+    return math.max(minChance, math.min(100, math.floor(chance + 0.5)))
+end
+
+function Config.NormalizeArchetypeKey(archetypeID)
+    local value = tostring(archetypeID or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if value == "" then
+        return ""
+    end
+    return string.lower(value)
+end
+
+function Config.IsRecruitableArchetype(archetypeID)
+    local normalized = Config.NormalizeArchetypeKey(archetypeID)
+    if normalized == "" then
+        return true
+    end
+
+    for blockedArchetype, blocked in pairs(Config.NON_RECRUITABLE_ARCHETYPES or {}) do
+        if blocked and normalized == Config.NormalizeArchetypeKey(blockedArchetype) then
+            return false
+        end
+    end
+
+    return true
+end
 
 return Config

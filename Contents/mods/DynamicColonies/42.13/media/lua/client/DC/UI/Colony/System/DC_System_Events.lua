@@ -1,6 +1,20 @@
 local System = DC_System
 local Internal = System.Internal
 
+local function getConversationUI()
+    if DT_ConversationUI and DT_ConversationUI.instance then
+        return DT_ConversationUI.instance
+    end
+    if DC_ConversationUI and DC_ConversationUI.instance then
+        return DC_ConversationUI.instance
+    end
+    return nil
+end
+
+local function isIndependentFactionID(factionID)
+    return string.lower(tostring(factionID or "")) == "independent"
+end
+
 local function onServerCommand(module, command, args)
     local isFactionCommand = command == "SyncOwnedFactionStatus" or command == "OwnedFactionActionResult"
     if module ~= Internal.GetCommandModule()
@@ -12,7 +26,7 @@ local function onServerCommand(module, command, args)
         if command == "SyncOwnedFactionStatus" then
             System.ownedFactionStatusCache = args and args.status or nil
 
-            local ui = DC_ConversationUI and DC_ConversationUI.instance or nil
+            local ui = getConversationUI()
             if ui then
                 ui:updateOptions(ui.baseOptions or {})
             end
@@ -28,7 +42,7 @@ local function onServerCommand(module, command, args)
                 end
             end
 
-            local ui = DC_ConversationUI and DC_ConversationUI.instance or nil
+            local ui = getConversationUI()
             if ui and args and args.message and args.message ~= "" then
                 ui:speak(args.message)
                 ui:updateOptions(ui.baseOptions or {})
@@ -45,7 +59,7 @@ local function onServerCommand(module, command, args)
         System.recruitResultCache[sourceNPCID] = args
     end
 
-    local ui = DC_ConversationUI and DC_ConversationUI.instance or nil
+    local ui = getConversationUI()
     if not ui then
         return
     end
@@ -55,8 +69,28 @@ local function onServerCommand(module, command, args)
         return
     end
 
+    if args.reasonCode == "nag_penalty"
+        and args.penalty
+        and DT_Reputation
+        and ui.target then
+        local penalty = tonumber(args.penalty) or 0
+        local traderUUID = tostring(args.traderUUID or ui.target.uuid or ui.target.traderID or ui.target.id or "")
+        if isIndependentFactionID(ui.target.factionID) and traderUUID ~= "" and DT_Reputation.ModifyPersonalRep then
+            DT_Reputation.ModifyPersonalRep(traderUUID, ui.target.factionID, penalty, "colony_recruit_nag")
+        elseif ui.target.factionID and DT_Reputation.ModifyFactionBias then
+            DT_Reputation.ModifyFactionBias(ui.target.factionID, penalty, "colony_recruit_nag")
+        end
+    end
+
+    if ui.target and args.reputation ~= nil then
+        ui.target.reputation = tonumber(args.reputation) or ui.target.reputation
+    end
+
     if args.message and args.message ~= "" then
         ui:speak(args.message)
+    end
+    if ui.refreshFactionInfo then
+        ui:refreshFactionInfo()
     end
     if args.success then
         local recruitedTraderUUID = args.recruitedTraderUUID and tostring(args.recruitedTraderUUID) or nil

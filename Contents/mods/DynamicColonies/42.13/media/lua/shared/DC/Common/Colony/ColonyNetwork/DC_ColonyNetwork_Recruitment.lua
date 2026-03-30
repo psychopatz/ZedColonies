@@ -203,6 +203,20 @@ end
 
 Internal.createWorkerFromRecruitArgs = createWorkerFromRecruitArgs
 
+local function isRecruitableRequest(args, sourceSoul)
+    local Config = getConfig()
+    if not Config or not Config.IsRecruitableArchetype then
+        return true
+    end
+
+    local archetypeID = args and (args.archetypeID or args.profession) or nil
+    if not archetypeID and sourceSoul then
+        archetypeID = sourceSoul.archetypeID or sourceSoul.profession
+    end
+
+    return Config.IsRecruitableArchetype(archetypeID)
+end
+
 Network.Handlers.AttemptRecruitWorker = function(player, args)
     if not player then return end
     args = args or {}
@@ -238,6 +252,17 @@ Network.Handlers.AttemptRecruitWorker = function(player, args)
     end
 
     local recruitSourceUUID = resolveRecruitSourceUUID(args)
+    local recruitSourceSoul = getRecruitSourceSoul(recruitSourceUUID)
+    if not isRecruitableRequest(args, recruitSourceSoul) then
+        Internal.syncRecruitAttemptResult(player, {
+            success = false,
+            sourceNPCID = sourceNPCID,
+            reasonCode = "non_recruitable",
+            message = "That kind of trader won't join a colony labour roster."
+        })
+        return
+    end
+
     local reputation = Internal.getEffectiveRecruitReputation(player, recruitSourceUUID or sourceNPCID, args.factionID)
     if reputation < Config.RECRUIT_REQUIRED_REPUTATION then
         Internal.syncRecruitAttemptResult(player, {
@@ -254,19 +279,52 @@ Network.Handlers.AttemptRecruitWorker = function(player, args)
     local currentDay = getCurrentDay()
     local attemptState = Registry.GetRecruitAttempt(owner, sourceNPCID)
     if attemptState and tonumber(attemptState.lastAttemptDay) == currentDay then
+        local nagCount = (tonumber(attemptState.nagCount) or 0) + 1
+        attemptState.nagCount = nagCount
+        Registry.SetRecruitAttempt(owner, sourceNPCID, attemptState)
+        if Registry and Registry.Save then
+            Registry.Save()
+        end
+
+        local nagWarningRepeats = tonumber(Config.RECRUIT_NAG_WARNING_REPEATS) or 1
+        if nagCount > nagWarningRepeats then
+            local penalty = tonumber(Config.RECRUIT_NAG_REPUTATION_PENALTY) or 0
+            if penalty ~= 0 and Internal.modifyRecruitReputation then
+                Internal.modifyRecruitReputation(player, recruitSourceUUID or sourceNPCID, args.factionID, penalty)
+            end
+
+            local updatedReputation = Internal.getEffectiveRecruitReputation(player, recruitSourceUUID or sourceNPCID, args.factionID)
+            Internal.syncRecruitAttemptResult(player, {
+                success = false,
+                sourceNPCID = sourceNPCID,
+                traderUUID = recruitSourceUUID or sourceNPCID,
+                reasonCode = "nag_penalty",
+                reputation = updatedReputation,
+                currentDay = currentDay,
+                nextAttemptDay = currentDay + 1,
+                nagCount = nagCount,
+                penalty = penalty,
+                message = "I already answered you. Keep pushing and you'll lose my trust. Ask again tomorrow."
+            })
+            return
+        end
+
         Internal.syncRecruitAttemptResult(player, {
             success = false,
             sourceNPCID = sourceNPCID,
+            traderUUID = recruitSourceUUID or sourceNPCID,
             reasonCode = "cooldown",
             reputation = reputation,
             currentDay = currentDay,
             nextAttemptDay = currentDay + 1,
+            nagCount = nagCount,
             message = "I've already given you my answer for today. Ask me again tomorrow."
         })
         return
     end
 
-    local chance = math.max(0, math.min(100, tonumber(Config.RECRUIT_DAILY_CHANCE) or 0))
+    local chance = Config.GetRecruitChanceForReputation and Config.GetRecruitChanceForReputation(reputation)
+        or math.max(0, math.min(100, tonumber(Config.RECRUIT_DAILY_CHANCE) or 0))
     local roll = ZombRand(100)
     local succeeded = roll < chance
 
@@ -274,7 +332,8 @@ Network.Handlers.AttemptRecruitWorker = function(player, args)
         lastAttemptDay = currentDay,
         lastRoll = roll,
         lastChance = chance,
-        lastSuccess = succeeded
+        lastSuccess = succeeded,
+        nagCount = 0
     })
 
     if not succeeded then
@@ -282,13 +341,14 @@ Network.Handlers.AttemptRecruitWorker = function(player, args)
         Internal.syncRecruitAttemptResult(player, {
             success = false,
             sourceNPCID = sourceNPCID,
+            traderUUID = recruitSourceUUID or sourceNPCID,
             reasonCode = "rolled_failed",
             reputation = reputation,
             chance = chance,
             roll = roll,
             currentDay = currentDay,
             nextAttemptDay = currentDay + 1,
-            message = "Not today. Give me until tomorrow and ask again."
+            message = "You've earned the right to ask, but not today. Give me until tomorrow and ask again."
         })
         return
     end
@@ -311,6 +371,7 @@ Network.Handlers.AttemptRecruitWorker = function(player, args)
     Internal.syncRecruitAttemptResult(player, {
         success = true,
         sourceNPCID = sourceNPCID,
+        traderUUID = recruitSourceUUID or sourceNPCID,
         recruitedTraderUUID = recruitSourceUUID or sourceNPCID,
         workerID = worker.workerID,
         reasonCode = "recruited",
@@ -318,7 +379,7 @@ Network.Handlers.AttemptRecruitWorker = function(player, args)
         chance = chance,
         roll = roll,
         currentDay = currentDay,
-        message = "Alright. I'll join your labour roster."
+        message = "Alright. You've earned it. I'll join your labour roster."
     })
     Internal.syncWorkerDetail(player, worker.workerID)
     Internal.syncWorkerList(player)

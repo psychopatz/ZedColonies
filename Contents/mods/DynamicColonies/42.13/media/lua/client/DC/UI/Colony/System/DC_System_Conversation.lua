@@ -1,6 +1,20 @@
 local System = DC_System
 local Internal = System.Internal
 
+local function getReputationAPI()
+    if DT_Reputation and DT_Reputation.GetEffectiveRep then
+        return DT_Reputation
+    end
+    if DC_Reputation and DC_Reputation.GetEffectiveRep then
+        return DC_Reputation
+    end
+    return nil
+end
+
+local function isIndependentFactionID(factionID)
+    return string.lower(tostring(factionID or "")) == "independent"
+end
+
 function System.GetConversationSourceNPCID(ui)
     if not ui or not ui.interactionObj then
         return nil
@@ -43,10 +57,18 @@ function System.GetConversationEffectiveReputation(ui)
     local npc = ui and ui.interactionObj or nil
     local npcData = npc and DTNPC and DTNPC.GetData and DTNPC.GetData(npc) or nil
     local factionID = (npcData and npcData.factionID) or (ui and ui.target and ui.target.factionID) or nil
-    if not traderID or not DC_Reputation or not DC_Reputation.GetEffectiveRep then
-        return 0
+    local reputationAPI = getReputationAPI()
+    if traderID and reputationAPI then
+        if isIndependentFactionID(factionID) and reputationAPI.GetPersonalRep then
+            return reputationAPI.GetPersonalRep(traderID)
+        end
+        if reputationAPI.GetEffectiveRep then
+            return reputationAPI.GetEffectiveRep(traderID, factionID)
+        end
     end
-    return DC_Reputation.GetEffectiveRep(traderID, factionID)
+
+    local target = ui and ui.target or nil
+    return tonumber(target and target.reputation) or 0
 end
 
 function System.GetCurrentDay()

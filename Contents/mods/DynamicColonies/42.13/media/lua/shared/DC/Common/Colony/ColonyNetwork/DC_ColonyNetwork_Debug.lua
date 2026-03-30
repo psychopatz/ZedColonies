@@ -61,6 +61,18 @@ Network.Handlers.DebugRecruitWorker = function(player, args)
     local worker = sourceNPCID and Registry.FindWorkerBySourceID(owner, sourceNPCID) or nil
     local recruitedTraderUUID = args.traderUUID or sourceNPCID or nil
 
+    if Config and Config.IsRecruitableArchetype and not Config.IsRecruitableArchetype(args.archetypeID or args.profession) then
+        if Internal.syncRecruitAttemptResult then
+            Internal.syncRecruitAttemptResult(player, {
+                success = false,
+                sourceNPCID = sourceNPCID,
+                reasonCode = "non_recruitable",
+                message = "That kind of trader won't join a colony labour roster."
+            })
+        end
+        return
+    end
+
     if not worker then
         if Internal.detachRecruitedSourceNPC then
             local resolvedUUID = Internal.detachRecruitedSourceNPC(args)
