@@ -78,20 +78,24 @@ function DC_MainWindow:createChildren()
     MainWindowLayout.applyToggleButtonStyle(self.btnToggleJob, false)
     self:addChild(self.btnToggleJob)
 
-    self.btnWarehouse = ISButton:new(240, buttonY, 120, 28, "Warehouse", self, self.onOpenWarehouse)
+    self.btnWarehouse = ISButton:new(240, buttonY, 110, 28, "Warehouse", self, self.onOpenWarehouse)
     self.btnWarehouse:initialise()
     self.btnWarehouse:setEnable(false)
     self:addChild(self.btnWarehouse)
 
-    self.btnBuildings = ISButton:new(370, buttonY, 120, 28, "Colony Map", self, self.onOpenBuildings)
+    self.btnResources = ISButton:new(360, buttonY, 110, 28, "Resources", self, self.onOpenResources)
+    self.btnResources:initialise()
+    self:addChild(self.btnResources)
+
+    self.btnBuildings = ISButton:new(480, buttonY, 110, 28, "Colony Map", self, self.onOpenBuildings)
     self.btnBuildings:initialise()
     self:addChild(self.btnBuildings)
 
-    self.btnHelp = ISButton:new(500, buttonY, 80, 28, "Help", self, self.onOpenHelp)
+    self.btnHelp = ISButton:new(600, buttonY, 80, 28, "Help", self, self.onOpenHelp)
     self.btnHelp:initialise()
     self:addChild(self.btnHelp)
 
-    self.btnFaction = ISButton:new(590, buttonY, 160, 28, "Faction", self, self.onOpenFaction)
+    self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Faction", self, self.onOpenFaction)
     self.btnFaction:initialise()
     self:addChild(self.btnFaction)
 

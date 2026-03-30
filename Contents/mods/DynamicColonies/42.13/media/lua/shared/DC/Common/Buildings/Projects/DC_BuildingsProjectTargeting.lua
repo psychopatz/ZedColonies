@@ -427,7 +427,20 @@ local function getInstallCapacityGain(buildingType, definition)
     if tostring(buildingType or "") == "Infirmary" then
         return math.max(0, math.floor(tonumber(effects.infirmaryCapacityBonus) or 0))
     end
-    return math.max(0, math.floor(tonumber(effects.warehouseCapacityBonus) or 0))
+    if tostring(buildingType or "") == "WaterCollector" then
+        return math.max(0, tonumber(effects.waterCollectionRateBonus) or 0)
+    end
+    return math.max(0, math.floor(tonumber(effects.warehouseCapacityBonus or effects.waterStorageBonus) or 0))
+end
+
+local function getInstallEffectLabel(buildingType)
+    if tostring(buildingType or "") == "Infirmary" then
+        return "Medical Slots Per Install"
+    end
+    if tostring(buildingType or "") == "WaterCollector" then
+        return "Collection Rate Per Install"
+    end
+    return "Capacity Per Install"
 end
 
 local function findWarehouseInRing(ownerUsername, ring, excludedBuildingID)
@@ -437,6 +450,28 @@ local function findWarehouseInRing(ownerUsername, ring, excludedBuildingID)
             and Buildings.GetPlotRing(instance.plotX, instance.plotY) == ring
             and tostring(instance.buildingID or "") ~= tostring(excludedBuildingID or "") then
             return instance
+        end
+    end
+    return nil
+end
+
+local function findCompletedBuildingByType(ownerUsername, buildingType, excludedBuildingID)
+    for _, instance in ipairs(Buildings.GetBuildingsForOwner(ownerUsername)) do
+        if tostring(instance.buildingType or "") == tostring(buildingType or "")
+            and math.floor(tonumber(instance.level) or 0) > 0
+            and tostring(instance.buildingID or "") ~= tostring(excludedBuildingID or "") then
+            return instance
+        end
+    end
+    return nil
+end
+
+local function findActiveBuildProjectByType(ownerUsername, buildingType)
+    for _, project in pairs(Buildings.GetProjectsForOwner(ownerUsername)) do
+        if tostring(project.status or "") == "Active"
+            and tostring(project.buildingType or "") == tostring(buildingType or "")
+            and normalizeMode(project.mode) == "build" then
+            return project
         end
     end
     return nil
@@ -662,6 +697,17 @@ function Buildings.ResolveProjectTarget(ownerUsername, buildingType, mode, plotX
         if plot.kind ~= Buildings.MapConstants.PlotKinds.Standard then
             return nil, "Only Headquarters can be built on this plot."
         end
+        if definition.enabled ~= true then
+            return nil, "That building is only a placeholder right now."
+        end
+        if definition.uniquePerColony == true then
+            if findCompletedBuildingByType(owner, normalizedBuildingType, nil) then
+                return nil, tostring(definition.displayName or normalizedBuildingType) .. " is unique per colony."
+            end
+            if findActiveBuildProjectByType(owner, normalizedBuildingType) then
+                return nil, tostring(definition.displayName or normalizedBuildingType) .. " already has an active colony project."
+            end
+        end
         if normalizedBuildingType == "Warehouse" then
             local ring = Buildings.GetPlotRing(x, y)
             if findWarehouseInRing(owner, ring, nil) then
@@ -670,8 +716,6 @@ function Buildings.ResolveProjectTarget(ownerUsername, buildingType, mode, plotX
             if findWarehouseBuildProjectInRing(owner, ring) then
                 return nil, "That ring already has a Warehouse project underway."
             end
-        elseif normalizedBuildingType ~= "Barracks" and normalizedBuildingType ~= "Infirmary" then
-            return nil, "That building is only a placeholder right now."
         end
     end
 
@@ -922,6 +966,31 @@ function Buildings.BuildPlotBuildOptions(ownerUsername, plotX, plotY, sourcePlay
                 effectLines[#effectLines + 1] = "Base Capacity Bonus: +" .. tostring(preview.effects.warehouseBaseBonus)
             end
             effectLines[#effectLines + 1] = "Only one Warehouse can exist in each ring band."
+        elseif definition.buildingType == "WaterCollector" then
+            description = "A unique colony rain catcher that stores water and passively fills whenever it rains."
+            if preview.effects and preview.effects.waterStorageBonus then
+                effectLines[#effectLines + 1] = "Water Storage: +" .. tostring(preview.effects.waterStorageBonus)
+            end
+            if preview.effects and preview.effects.waterCollectionRate then
+                effectLines[#effectLines + 1] = "Rain Collection: +" .. tostring(preview.effects.waterCollectionRate) .. " / hour"
+            end
+            effectLines[#effectLines + 1] = "Only one Water Collector can exist per colony."
+        elseif definition.buildingType == "WaterTank" then
+            description = "A modular reservoir that expands total colony water storage."
+            if preview.effects and preview.effects.waterStorageBonus then
+                effectLines[#effectLines + 1] = "Water Storage: +" .. tostring(preview.effects.waterStorageBonus)
+            end
+        elseif definition.buildingType == "Greenhouse" then
+            description = "Protected crop beds for the Farmer job. Plant seeds, set the thermostat, and spend water to raise harvests indoors."
+            if preview.effects and preview.effects.gardenSlots then
+                effectLines[#effectLines + 1] = "Garden Slots: " .. tostring(preview.effects.gardenSlots)
+            end
+            if preview.effects and preview.effects.greenhouseWaterPerDayPerSlot then
+                effectLines[#effectLines + 1] = "Water Use: " .. tostring(preview.effects.greenhouseWaterPerDayPerSlot) .. " / day per planted slot"
+            end
+        elseif definition.buildingType == "ElectricityGenerator" then
+            description = "Reserved for the future electricity grid. The resource card exists now, but power modules are still placeholder."
+            effectLines[#effectLines + 1] = "Coming soon."
         elseif definition.buildingType == "Infirmary" then
             description = "Treats injured workers while they sleep. Beds expand capacity, and Doctors can use medical provisions to speed recovery."
             if preview.effects and preview.effects.infirmaryBaseCapacity then
@@ -964,9 +1033,9 @@ function Buildings.BuildBuildingInstallOptions(ownerUsername, plotX, plotY, buil
         local maxCount = Config.GetInstallMaxCount and Config.GetInstallMaxCount(instance.buildingType, definition.installKey, instance.level)
             or math.max(0, math.floor(tonumber(definition.maxCount) or 0))
         local capacityGain = getInstallCapacityGain(instance.buildingType, definition)
-        local effectLabel = tostring(instance.buildingType or "") == "Infirmary" and "Medical Slots Per Install" or "Capacity Per Install"
+        local effectLabel = getInstallEffectLabel(instance.buildingType)
         local effectLines = {
-            effectLabel .. ": +" .. tostring(capacityGain),
+            effectLabel .. ": +" .. tostring(capacityGain) .. (tostring(instance.buildingType or "") == "WaterCollector" and " / hour" or ""),
             "Installed: " .. tostring(currentCount) .. " / " .. tostring(maxCount)
         }
 

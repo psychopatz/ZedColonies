@@ -127,6 +127,25 @@ function Internal.syncWarehouse(player, knownVersion, includeLedgers)
     })
 end
 
+function Internal.syncResources(player, knownVersion)
+    local owner = Config.GetOwnerUsername(player)
+    local resourcesApi = DC_Colony and DC_Colony.Resources or nil
+    local snapshot = resourcesApi and resourcesApi.GetClientSnapshot and resourcesApi.GetClientSnapshot(owner) or nil
+    local version = buildVersionToken(snapshot or { ownerUsername = owner, missing = true })
+    if knownVersion and tostring(knownVersion) == version then
+        Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncResources", {
+            version = version,
+            unchanged = true
+        })
+        return
+    end
+
+    Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncResources", {
+        version = version,
+        snapshot = snapshot
+    })
+end
+
 function Internal.syncRecruitAttemptResult(player, result)
     Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncRecruitAttemptResult", result or {})
 end

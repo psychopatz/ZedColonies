@@ -153,6 +153,8 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
             local installOptions = Buildings.BuildBuildingInstallOptions and Buildings.BuildBuildingInstallOptions(owner, x, y, building.buildingID, sourcePlayer, availableCounts) or {}
             local canDestroy, destroyReason = Buildings.CanDestroyBuilding(owner, x, y, building.buildingID)
             local currentLevelDefinition = Config.GetLevelDefinition and Config.GetLevelDefinition(building.buildingType, building.level) or nil
+            local resourcesApi = DC_Colony and DC_Colony.Resources or nil
+            local buildingMetrics = resourcesApi and resourcesApi.GetBuildingMetrics and resourcesApi.GetBuildingMetrics(owner, building) or {}
             if tostring(building.buildingType or "") == "Barricade"
                 and Config.Frontier
                 and Config.Frontier.GetBarricadeLevelDefinition then
@@ -180,6 +182,9 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
                 canDestroy = canDestroy == true,
                 destroyReason = destroyReason
             }
+            for key, value in pairs(buildingMetrics or {}) do
+                plotEntry.building[key] = value
+            end
         end
 
         plots[#plots + 1] = plotEntry

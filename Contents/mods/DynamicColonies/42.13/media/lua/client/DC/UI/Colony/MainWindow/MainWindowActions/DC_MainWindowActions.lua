@@ -1,6 +1,7 @@
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Job"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Refresh"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Supply"
+require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Resources"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Buildings"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Character"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Faction"

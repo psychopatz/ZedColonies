@@ -11,6 +11,7 @@ local Skills = DC_Colony.Skills
 local Health = DC_Colony.Health
 local Medical = DC_Colony.Medical
 local Nutrition = DC_Colony.Nutrition
+local Resources = DC_Colony.Resources
 
 local function buildXPAmount(totalQuantity)
     return math.max(10, 20 + math.min(20, math.floor(tonumber(totalQuantity) or 0) * 3))
@@ -286,6 +287,8 @@ function Sim.ProcessWorker(worker, currentHour)
         Sim.ProcessBuilderJob(worker, ctx)
     elseif isDoctorJob then
         Sim.ProcessDoctorJob(worker, ctx)
+    elseif normalizedJobType == Config.JobTypes.Farm then
+        Sim.ProcessFarmJob(worker, ctx)
     elseif normalizedJobType == Config.JobTypes.Fish then
         Sim.ProcessFishingJob(worker, ctx)
     else
@@ -304,6 +307,10 @@ end
 
 function Sim.ProcessAllWorkers(currentHour)
     currentHour = currentHour or (Config.GetCurrentWorldHours and Config.GetCurrentWorldHours()) or Config.GetCurrentHour()
+
+    if Resources and Resources.ProcessAllOwners then
+        Resources.ProcessAllOwners(currentHour)
+    end
 
     if Medical and Medical.SetPlansCache and Medical.BuildAllOwnerPlans then
         Medical.SetPlansCache(Medical.BuildAllOwnerPlans())

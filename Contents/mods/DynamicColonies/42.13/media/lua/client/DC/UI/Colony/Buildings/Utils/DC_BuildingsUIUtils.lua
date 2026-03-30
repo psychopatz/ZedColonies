@@ -190,7 +190,10 @@ function DC_BuildingsUIUtils.GetOptionStatusLabel(option)
     if string.find(reason, "ring already has a warehouse", 1, true) then
         return "One Per Ring"
     end
-    if string.find(reason, "active project", 1, true) then
+    if string.find(reason, "unique per colony", 1, true) then
+        return "One Per Colony"
+    end
+    if string.find(reason, "active project", 1, true) or string.find(reason, "colony project", 1, true) then
         return "Project Active"
     end
     if string.find(reason, "not empty", 1, true) then

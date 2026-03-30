@@ -45,16 +45,13 @@ Config.JobProfiles = {
     },
     Farm = {
         jobType = Config.JobTypes.Farm,
-        displayName = "Farming",
+        displayName = "Farmer",
         siteType = Config.SiteTypes.FarmPlotSite,
         requiredToolTags = {},
         cycleHours = 24,
         dailyCaloriesNeed = 2200,
         dailyHydrationNeed = 1800,
-        outputRules = {
-            { tags = { "Food.Perishable.Vegetable" }, picks = 2, minQty = 1, maxQty = 2 },
-            { tags = { "Food.Perishable.Fruit" }, picks = 1, minQty = 1, maxQty = 1 }
-        }
+        outputRules = {}
     },
     Fish = {
         jobType = Config.JobTypes.Fish,

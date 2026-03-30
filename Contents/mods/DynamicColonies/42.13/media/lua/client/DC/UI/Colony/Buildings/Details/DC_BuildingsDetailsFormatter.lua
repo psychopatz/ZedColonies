@@ -111,6 +111,41 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
             end
         end
 
+        if building.buildingType == "WaterCollector" then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Water Utility <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Storage Contribution: <RGB:1,1,1> +" .. tostring(building.waterStorageContribution or 0) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Rain Collection: <RGB:1,1,1> +" .. tostring(building.waterCollectionRateContribution or 0) .. " / hour <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Barrel Upgrades: <RGB:1,1,1> " .. tostring(building.barrelInstallCount or 0) .. " <LINE> "
+
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Installations <LINE> "
+            local installOptions = building.installOptions or {}
+            if #installOptions <= 0 then
+                text = text .. " <RGB:0.62,0.62,0.62> No barrel upgrades available. <LINE> "
+            else
+                for _, option in ipairs(installOptions) do
+                    local statusText = option.enabled == true and "Ready to install" or tostring(option.disabledReason or "Unavailable")
+                    text = text .. " <RGB:0.82,0.82,0.82> - " .. tostring(option.displayName or option.installKey or "Upgrade")
+                        .. ": "
+                        .. tostring(option.currentCount or 0)
+                        .. " / "
+                        .. tostring(option.maxCount or 0)
+                        .. " | +"
+                        .. tostring(option.capacityGain or 0)
+                        .. " / hour <LINE> "
+                    text = text .. " <RGB:0.72,0.72,0.72>   " .. statusText .. " <LINE> "
+                end
+            end
+        elseif building.buildingType == "WaterTank" then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Water Storage <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Storage Contribution: <RGB:1,1,1> +" .. tostring(building.waterStorageContribution or 0) .. " <LINE> "
+        elseif building.buildingType == "Greenhouse" then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Greenhouse Control <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Garden Slots: <RGB:1,1,1> " .. tostring(building.greenhouseActiveSlots or 0) .. " / " .. tostring(building.greenhouseSlotCount or 0) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Thermostat: <RGB:1,1,1> " .. tostring(building.greenhouseThermostatC or 20) .. " C <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Water Use: <RGB:1,1,1> " .. tostring(building.greenhouseDailyWaterUse or 0) .. " / day <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Use the Garden button to manage beds, seeds, and temperature in a dedicated modal. <LINE> "
+        end
+
         text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Occupants <LINE> "
         local occupants = building.occupants or {}
         if #occupants <= 0 then

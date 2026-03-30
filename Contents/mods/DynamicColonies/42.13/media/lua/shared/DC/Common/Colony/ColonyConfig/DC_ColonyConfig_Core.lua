@@ -12,6 +12,7 @@ Config.MOD_DATA_WORKER_PREFIX = "DColony_Worker_"
 Config.MOD_DATA_SITES_PREFIX = "DColony_Sites_"
 Config.MOD_DATA_WAREHOUSE_PREFIX = "DColony_Warehouse_"
 Config.MOD_DATA_WAREHOUSE_ITEMS_PREFIX = "DColony_WarehouseItems_"
+Config.MOD_DATA_RESOURCES_PREFIX = "DColony_Resources_"
 Config.COMMAND_MODULE = "DColony"
 Config.PROJECTION_PREFIX = "DTLAB_"
 Config.HOURS_PER_DAY = 24

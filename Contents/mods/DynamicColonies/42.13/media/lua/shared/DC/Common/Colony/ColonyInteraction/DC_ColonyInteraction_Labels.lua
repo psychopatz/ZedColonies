@@ -100,6 +100,10 @@ function Interaction.GetPlaceLabel(worker)
         return profileLabel
     end
 
+    if jobKey == tostring((Config.JobTypes or {}).Farm or "Farm") then
+        return tostring(worker and worker.greenhouseWorkLabel or "Greenhouse")
+    end
+
     local locationKey = jobKey ~= "" and ("JobPlaces." .. jobKey .. ".Default") or nil
     if locationKey then
         local place = DynamicTrading.ResolveInteractionString("Colony", "Locations", locationKey)

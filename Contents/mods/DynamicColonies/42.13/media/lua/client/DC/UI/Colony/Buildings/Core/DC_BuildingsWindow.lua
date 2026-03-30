@@ -9,6 +9,7 @@ require "DC/UI/Colony/Buildings/Modals/DC_BuildingActionModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingDestroyModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingPickerModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingProjectModal"
+require "DC/UI/Colony/Greenhouse/DC_GreenhouseModal"
 
 DC_BuildingsWindow = ISCollapsableWindow:derive("DC_BuildingsWindow")
 DC_BuildingsWindow.instance = DC_BuildingsWindow.instance or nil
@@ -258,6 +259,18 @@ function DC_BuildingsWindow:onDestroyPlot(plot)
     })
 end
 
+function DC_BuildingsWindow:onManageGreenhousePlot(plot)
+    local building = plot and plot.building or nil
+    if not building or tostring(building.buildingType or "") ~= "Greenhouse" then
+        return
+    end
+
+    DC_GreenhouseModal.Open({
+        title = tostring(building.displayName or "Greenhouse") .. " Garden",
+        buildingID = building.buildingID
+    })
+end
+
 function DC_BuildingsWindow:onDebugCompleteProject(plot)
     if not plot or not plot.project then
         return
@@ -346,6 +359,9 @@ function DC_BuildingsWindow:createChildren()
         end,
         function(plot)
             self:onSwapProjectBuilder(plot)
+        end,
+        function(plot)
+            self:onManageGreenhousePlot(plot)
         end,
         function(plot)
             self:onDestroyPlot(plot)

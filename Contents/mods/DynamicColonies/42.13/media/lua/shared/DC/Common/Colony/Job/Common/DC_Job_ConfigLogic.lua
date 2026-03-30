@@ -77,6 +77,22 @@ function Config.CanWorkerTakeJob(worker, jobType)
 end
 
 function Config.GetDefaultJobForArchetype(archetypeID)
+    local normalized = Config.NormalizeArchetypeID(archetypeID)
+    if normalized == "Builder" then
+        return Config.JobTypes.Builder
+    end
+    if normalized == "Doctor" then
+        return Config.JobTypes.Doctor
+    end
+    if normalized == "Farmer" then
+        return Config.JobTypes.Farm
+    end
+    if normalized == "Angler" then
+        return Config.JobTypes.Fish
+    end
+    if normalized == "Scavenger" then
+        return Config.JobTypes.Scavenge
+    end
     return Config.JobTypes.Unemployed
 end
 

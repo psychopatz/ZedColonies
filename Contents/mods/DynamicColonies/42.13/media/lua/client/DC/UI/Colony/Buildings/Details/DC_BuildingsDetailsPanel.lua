@@ -160,8 +160,10 @@ function DC_BuildingsDetailsPanel:setPlot(plot)
         self.btnInstall:setEnable(canInstall == true)
     end
     if self.btnSwap then
+        local isGreenhouse = plot and plot.building and tostring(plot.building.buildingType or "") == "Greenhouse"
         local canSwap = plot and plot.project and tostring(plot.project.status or "") == "Active"
-        self.btnSwap:setEnable(canSwap == true)
+        self.btnSwap:setTitle(canSwap and "Manage" or (isGreenhouse and "Garden" or "Manage"))
+        self.btnSwap:setEnable(canSwap == true or isGreenhouse == true)
     end
     if self.btnDestroy then
         local canDestroy = plot and plot.building and plot.building.canDestroy == true
@@ -186,8 +188,10 @@ function DC_BuildingsDetailsPanel:onInstallClicked()
 end
 
 function DC_BuildingsDetailsPanel:onSwapClicked()
-    if self.onSwapCallback and self.plot and self.plot.project then
+    if self.plot and self.plot.project and self.onSwapCallback then
         self.onSwapCallback(self.plot)
+    elseif self.plot and self.plot.building and tostring(self.plot.building.buildingType or "") == "Greenhouse" and self.onGreenhouseCallback then
+        self.onGreenhouseCallback(self.plot)
     end
 end
 
@@ -203,7 +207,7 @@ function DC_BuildingsDetailsPanel:onDebugCompleteClicked()
     end
 end
 
-function DC_BuildingsDetailsPanel:new(x, y, width, height, onUpgradeCallback, onInstallCallback, onSwapCallback, onDestroyCallback, onDebugCompleteCallback)
+function DC_BuildingsDetailsPanel:new(x, y, width, height, onUpgradeCallback, onInstallCallback, onSwapCallback, onGreenhouseCallback, onDestroyCallback, onDebugCompleteCallback)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
@@ -213,6 +217,7 @@ function DC_BuildingsDetailsPanel:new(x, y, width, height, onUpgradeCallback, on
     o.onUpgradeCallback = onUpgradeCallback
     o.onInstallCallback = onInstallCallback
     o.onSwapCallback = onSwapCallback
+    o.onGreenhouseCallback = onGreenhouseCallback
     o.onDestroyCallback = onDestroyCallback
     o.onDebugCompleteCallback = onDebugCompleteCallback
     return o
