@@ -1,0 +1,6 @@
+version=1
+id=3695670830
+title=Dynamic Trading - Colonies
+description=Colony Simulation Management Addon for Dynamic Trading
+tags=Build 42;Balance;Building;Farming;Framework;Hardmode;Interface;Multiplayer;Realistic;QoL;WIP
+visibility=public

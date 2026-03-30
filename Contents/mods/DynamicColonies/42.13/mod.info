@@ -1,6 +1,9 @@
 name=Dynamic Trading - Colonies
 id=DynamicColonies
 description=Colony building system addon for Dynamic Trading.
+author=Psychopatz
+poster=portrait.png
+icon=portrait.png
 require=\DynamicTradingCommon
 loadModAfter=\DynamicTradingCommon
 category=features
