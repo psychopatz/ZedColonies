@@ -8,7 +8,7 @@ require "DC/UI/Colony/Buildings/Details/DC_BuildingsDetailsPanel"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingActionModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingDestroyModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingPickerModal"
-require "DC/UI/Colony/Buildings/Modals/DC_BuildingProjectModal"
+require "DC/UI/Colony/Buildings/Modals/BuildingProjectModal/BuildingProjectModal"
 require "DC/UI/Colony/Greenhouse/DC_GreenhouseModal"
 
 DC_BuildingsWindow = ISCollapsableWindow:derive("DC_BuildingsWindow")
