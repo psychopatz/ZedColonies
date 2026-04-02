@@ -1,5 +1,5 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
-require "DC/Common/UI/Trading/Provider/DC_TradingProvider_Core"
+require "DT/Common/UI/Trading/Provider/DT_TradingProvider_Core"
 
 DynamicTrading = DynamicTrading or {}
 DC_MainWindow = DC_MainWindow or {}

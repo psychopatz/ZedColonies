@@ -14,7 +14,7 @@ require "DC/UI/Colony/SupplyWindow/DC_SupplyWindow"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry"
 require "DC/Common/Colony/ColonyNetwork/DC_Colony_Network"
-require "DC/Common/UI/Trading/Provider/DC_TradingProvider_Core"
+require "DT/Common/UI/Trading/Provider/DT_TradingProvider_Core"
 require "DC/UI/Faction/FactionInfoWindow/DC_FactionInfoWindow"
 require "DC/UI/Faction/DC_PlayerFactionNameModal"
 

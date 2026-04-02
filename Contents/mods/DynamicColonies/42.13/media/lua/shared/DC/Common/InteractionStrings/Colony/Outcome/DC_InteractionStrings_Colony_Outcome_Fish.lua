@@ -1,4 +1,4 @@
-require "DC/Common/InteractionStrings/DC_InteractionStrings"
+require "DT/Common/InteractionStrings/DT_InteractionStrings"
 
 DynamicTrading.RegisterInteractionStrings("Colony", "Outcome", {
     Fish = {

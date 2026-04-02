@@ -1,5 +1,5 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
-require "DC/Common/InteractionStrings/DC_InteractionStrings"
+require "DT/Common/InteractionStrings/DT_InteractionStrings"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Interaction = DC_Colony.Interaction or {}

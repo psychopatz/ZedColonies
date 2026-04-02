@@ -1,5 +1,5 @@
 require "DC/Common/Config"
-require "DC/Common/InteractionStrings/DC_InteractionStrings"
+require "DT/Common/InteractionStrings/DT_InteractionStrings"
 
 DynamicTrading = DynamicTrading or {}
 DC_Colony = DC_Colony or {}
