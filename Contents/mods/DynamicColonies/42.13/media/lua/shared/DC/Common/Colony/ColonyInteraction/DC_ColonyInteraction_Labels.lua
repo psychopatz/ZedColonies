@@ -26,7 +26,7 @@ Interaction.getRoomLabel = function(roomName)
 
     text = string.gsub(text, "_", " ")
     text = string.gsub(text, "(%a)([%w_']*)", function(first, rest)
-        return string.upper(first) .. string.lower(rest)
+        return string.upper(first) .. string.lower(rest or "")
     end)
     return text
 end

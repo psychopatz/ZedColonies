@@ -52,7 +52,7 @@ Interaction.prettifyContextLabel = function(rawText)
     text = string.gsub(text, "_", " ")
     text = string.gsub(text, "(%l)(%u)", "%1 %2")
     text = string.gsub(text, "(%a)([%w']*)", function(first, rest)
-        return string.upper(first) .. string.lower(rest)
+        return string.upper(first) .. string.lower(rest or "")
     end)
     return text
 end
