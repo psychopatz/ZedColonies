@@ -12,6 +12,7 @@ local Health = DC_Colony.Health
 local Medical = DC_Colony.Medical
 local Nutrition = DC_Colony.Nutrition
 local Resources = DC_Colony.Resources
+local Companion = DC_Colony.Companion
 
 local function buildXPAmount(totalQuantity)
     return math.max(10, 20 + math.min(20, math.floor(tonumber(totalQuantity) or 0) * 3))
@@ -283,6 +284,8 @@ function Sim.ProcessWorker(worker, currentHour)
 
     if normalizedJobType == Config.JobTypes.Scavenge then
         Sim.ProcessScavengeJob(worker, ctx)
+    elseif normalizedJobType == Config.JobTypes.TravelCompanion and Companion and Companion.UpdateTravelCompanionWorker then
+        Companion.UpdateTravelCompanionWorker(worker, ctx)
     elseif isBuilderJob then
         Sim.ProcessBuilderJob(worker, ctx)
     elseif isDoctorJob then

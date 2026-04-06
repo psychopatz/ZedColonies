@@ -75,6 +75,7 @@ Config.States = {
     Idle = "Idle",
     Working = "Working",
     Resting = "Resting",
+    Incapacitated = "Incapacitated",
     MissingTool = "MissingTool",
     MissingSite = "MissingSite",
     Starving = "Starving",
@@ -88,7 +89,10 @@ Config.PresenceStates = {
     Home = "Home",
     AwayToSite = "AwayToSite",
     Scavenging = "Scavenging",
-    AwayToHome = "AwayToHome"
+    AwayToHome = "AwayToHome",
+    CompanionToPlayer = "CompanionToPlayer",
+    CompanionActive = "CompanionActive",
+    CompanionReturning = "CompanionReturning"
 }
 
 Config.ReturnReasons = {

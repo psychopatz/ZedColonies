@@ -9,7 +9,8 @@ Config.JobTypes = {
     Doctor = "Doctor",
     Farm = "Farm",
     Fish = "Fish",
-    Scavenge = "Scavenge"
+    Scavenge = "Scavenge",
+    TravelCompanion = "TravelCompanion"
 }
 
 Config.JobProfiles = {
@@ -76,6 +77,16 @@ Config.JobProfiles = {
             { tags = { "Resource.Material.General" }, picks = 1, minQty = 1, maxQty = 2 },
             { tags = { "Tool.General" }, picks = 1, minQty = 1, maxQty = 1 }
         }
+    },
+    TravelCompanion = {
+        jobType = Config.JobTypes.TravelCompanion,
+        displayName = "Travel Companion",
+        siteType = nil,
+        requiredToolTags = {},
+        cycleHours = 24,
+        dailyCaloriesNeed = 2300,
+        dailyHydrationNeed = 1900,
+        outputRules = {}
     }
 }
 

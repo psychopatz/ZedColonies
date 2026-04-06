@@ -58,6 +58,33 @@ function Interaction.GetProgressDescriptor(worker, profile)
         end
     end
 
+    if jobKey == tostring((Config.JobTypes or {}).TravelCompanion or "TravelCompanion") then
+        local travelTemplate = nil
+        if presenceState == tostring(states.CompanionToPlayer or "CompanionToPlayer") then
+            travelTemplate = Interaction.getInteractionEntry("Progress", "Common.TravelToSite")
+        elseif presenceState == tostring(states.CompanionReturning or "CompanionReturning") then
+            travelTemplate = Interaction.getInteractionEntry("Progress", "Common.TravelToHome")
+        end
+
+        if type(travelTemplate) == "table" then
+            local totalHours = Interaction.getTravelTotalHours()
+            local remainingWorldHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
+            local progressHours = math.max(0, totalHours - remainingWorldHours)
+            tokens = Interaction.buildProgressTokens(worker, progressHours, totalHours, remainingWorldHours)
+            return {
+                label = DynamicTrading.FormatInteractionString(travelTemplate.activeText, tokens),
+                displayText = DynamicTrading.FormatInteractionString(travelTemplate.activeText, tokens),
+                fillRatio = math.max(0, math.min(1, progressHours / totalHours)),
+                captionText = DynamicTrading.FormatInteractionString(travelTemplate.captionText, tokens),
+                summaryText = Interaction.formatDecimal(progressHours, 1) .. " / " .. Interaction.formatDecimal(totalHours, 1) .. "h",
+                progressHours = progressHours,
+                cycleHours = totalHours,
+                remainingWorldHours = remainingWorldHours,
+                color = travelTemplate.color
+            }
+        end
+    end
+
     local workingState = tostring((Config.States or {}).Working or "Working")
     if tostring(worker.state or "") ~= workingState or worker.jobEnabled ~= true then
         return nil

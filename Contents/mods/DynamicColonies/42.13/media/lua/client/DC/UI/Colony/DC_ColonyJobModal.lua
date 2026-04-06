@@ -1,11 +1,15 @@
 require "ISUI/ISCollapsableWindow"
 require "ISUI/ISButton"
 require "ISUI/ISLabel"
-require "ISUI/ISTickBox"
+require "ISUI/ISScrollingListBox"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 
 DC_ColonyJobModal = ISCollapsableWindow:derive("DC_ColonyJobModal")
 DC_ColonyJobModal.instance = nil
+
+local JobOptionList = ISScrollingListBox:derive("DC_ColonyJobModal_List")
+local JOB_ROW_HEIGHT = 28
+local JOB_LIST_MAX_VISIBLE_ROWS = 10
 
 local function getJobDisplayColor(config, jobType)
     local normalized = config.NormalizeJobType and config.NormalizeJobType(jobType) or tostring(jobType or "")
@@ -35,9 +39,10 @@ end
 
 local function canSelectJob(config, worker, normalizedJob)
     if config.CanWorkerTakeJob then
-        return config.CanWorkerTakeJob(worker, normalizedJob)
+        local capable, reason = config.CanWorkerTakeJob(worker, normalizedJob)
+        return capable, reason
     end
-    return true
+    return true, nil
 end
 
 local function buildOrderedJobOptions(config, worker)
@@ -53,11 +58,16 @@ local function buildOrderedJobOptions(config, worker)
         end
 
         local profile = config.GetJobProfile and config.GetJobProfile(normalized) or {}
-        local enabled = canSelectJob(config, worker, normalized)
+        local enabled, reason = canSelectJob(config, worker, normalized)
+        local label = tostring(profile.displayName or normalized)
+        if enabled == false and normalized == tostring((jobTypes.TravelCompanion or "TravelCompanion")) and string.find(tostring(reason or ""), "V2", 1, true) then
+            label = label .. " (Needs V2)"
+        end
         ordered[#ordered + 1] = {
             jobType = normalized,
-            label = tostring(profile.displayName or normalized),
+            label = label,
             enabled = enabled,
+            disabledReason = reason,
             color = getJobDisplayColor(config, normalized),
             disabledColor = enabled and nil or { r = 0.92, g = 0.28, b = 0.28, a = 1 }
         }
@@ -72,11 +82,16 @@ local function buildOrderedJobOptions(config, worker)
     for jobType, profile in pairs(config.JobProfiles or {}) do
         local normalized = config.NormalizeJobType and config.NormalizeJobType(jobType) or tostring(jobType or "")
         if normalized ~= "" and not seen[normalized] then
-            local enabled = canSelectJob(config, worker, normalized)
+            local enabled, reason = canSelectJob(config, worker, normalized)
+            local label = tostring(profile and profile.displayName or normalized)
+            if enabled == false and normalized == tostring((jobTypes.TravelCompanion or "TravelCompanion")) and string.find(tostring(reason or ""), "V2", 1, true) then
+                label = label .. " (Needs V2)"
+            end
             extras[#extras + 1] = {
                 jobType = normalized,
-                label = tostring(profile and profile.displayName or normalized),
+                label = label,
                 enabled = enabled,
+                disabledReason = reason,
                 color = getJobDisplayColor(config, normalized),
                 disabledColor = enabled and nil or { r = 0.92, g = 0.28, b = 0.28, a = 1 }
             }
@@ -95,6 +110,66 @@ local function buildOrderedJobOptions(config, worker)
     return ordered
 end
 
+function JobOptionList:new(x, y, width, height)
+    local o = ISScrollingListBox:new(x, y, width, height)
+    setmetatable(o, self)
+    self.__index = self
+    o.itemheight = JOB_ROW_HEIGHT
+    o.font = UIFont.Small
+    o.doDrawItem = self.doDrawItem
+    return o
+end
+
+function JobOptionList:onMouseDown(x, y)
+    local result = ISScrollingListBox.onMouseDown(self, x, y)
+    local item = self.items and self.items[self.selected] or nil
+    local option = item and item.item or nil
+    if option and self.target and self.target.selectJobIndex then
+        if option.enabled == false then
+            self.selected = self.target.selectedOptionIndex or -1
+            return true
+        end
+        self.target:selectJobIndex(item.index)
+    end
+    return result
+end
+
+function JobOptionList:doDrawItem(y, item, alt)
+    local option = item and item.item or nil
+    if not option then
+        return y + self.itemheight
+    end
+
+    local width = self:getWidth()
+    local isSelected = self.selected == item.index
+    if isSelected then
+        self:drawRect(0, y, width, self.itemheight, 0.24, 0.18, 0.38, 0.62)
+    elseif alt then
+        self:drawRect(0, y, width, self.itemheight, 0.04, 1, 1, 1)
+    end
+
+    self:drawRectBorder(0, y, width, self.itemheight, 0.08, 1, 1, 1)
+
+    local boxX = 6
+    local boxY = y + 6
+    local boxSize = 14
+    local textX = boxX + boxSize + 8
+    local palette = option.enabled == false and option.disabledColor or option.color or { r = 0.9, g = 0.9, b = 0.9, a = 1 }
+
+    self:drawRectBorder(boxX, boxY, boxSize, boxSize, 0.7, 1, 1, 1)
+    if isSelected and option.enabled ~= false then
+        self:drawRect(boxX + 3, boxY + 3, boxSize - 6, boxSize - 6, 1, 0.18, 0.92, 0.28)
+    end
+
+    self:drawText(tostring(option.label or option.jobType or "Unknown"), textX, y + 5, palette.r or 1, palette.g or 1, palette.b or 1, palette.a or 1, UIFont.Small)
+
+    if option.enabled == false and tostring(option.disabledReason or "") ~= "" then
+        self:drawTextRight(tostring(option.disabledReason), width - 8, y + 5, 0.78, 0.46, 0.46, 0.9, UIFont.Small)
+    end
+
+    return y + self.itemheight
+end
+
 function DC_ColonyJobModal:initialise()
     ISCollapsableWindow.initialise(self)
     self:setResizable(false)
@@ -107,10 +182,12 @@ function DC_ColonyJobModal:createChildren()
     local th = self:titleBarHeight()
     local contentY = th + pad
     local optionCount = math.max(1, #(self.jobOptions or {}))
-    local tickBoxY = contentY + 48
-    local tickBoxSpacing = 20
-    local tickBoxListHeight = (optionCount * tickBoxSpacing) + 20
-    local buttonY = tickBoxY + tickBoxListHeight + 14
+    local listY = contentY + 48
+    local visibleRows = math.max(1, math.min(optionCount, self.maxVisibleRows or JOB_LIST_MAX_VISIBLE_ROWS))
+    local desiredListHeight = math.max(JOB_ROW_HEIGHT + 8, math.floor((visibleRows * JOB_ROW_HEIGHT) + 8))
+    local maxListHeight = math.max(JOB_ROW_HEIGHT + 8, self.height - listY - 54)
+    local listHeight = math.min(desiredListHeight, maxListHeight)
+    local buttonY = listY + listHeight + 14
 
     self.promptLabel = ISLabel:new(pad, contentY, 20, tostring(self.promptText or "Choose a job."), 1, 1, 1, 1, UIFont.Small, true)
     self.promptLabel:initialise()
@@ -133,36 +210,19 @@ function DC_ColonyJobModal:createChildren()
     self.currentLabel:instantiate()
     self:addChild(self.currentLabel)
 
-    self.jobTickBox = ISTickBox:new(pad, tickBoxY, 20, 20, "", self, self.onJobSelected)
-    self.jobTickBox:initialise()
-    self.jobTickBox:instantiate()
-    self.jobTickBox:setFont(UIFont.Small)
-    self.jobTickBox.getTextColor = function(box, index, color)
-        local option = self.jobOptions and self.jobOptions[index] or nil
-        local palette = option and ((option.enabled == false and option.disabledColor) or option.color) or nil
-        if palette then
-            color.r = palette.r or 1
-            color.g = palette.g or 1
-            color.b = palette.b or 1
-            color.a = palette.a or 1
-            return
-        end
-        ISTickBox.getTextColor(box, index, color)
-    end
-
+    self.jobList = JobOptionList:new(pad, listY, self.width - (pad * 2), listHeight)
+    self.jobList:initialise()
+    self.jobList:instantiate()
+    self.jobList.target = self
+    self.jobList:setFont(UIFont.Small, 4)
     for index, option in ipairs(self.jobOptions or {}) do
-        local optionLabel = tostring(option.label or option.jobType or "Unknown")
-        self.jobTickBox:addOption(optionLabel)
-        if option.enabled == false then
-            self.jobTickBox:disableOption(optionLabel, true)
-        end
-        self.jobTickBox:setSelected(index, option.jobType == self.selectedJobType)
+        self.jobList:addItem(option.label or option.jobType or "Unknown", option)
         if option.jobType == self.selectedJobType then
             self.selectedOptionIndex = index
+            self.jobList.selected = index
         end
     end
-
-    self:addChild(self.jobTickBox)
+    self:addChild(self.jobList)
 
     self.btnConfirm = ISButton:new(pad, buttonY, 90, 24, "Confirm", self, self.onConfirm)
     self.btnConfirm:initialise()
@@ -199,34 +259,22 @@ function DC_ColonyJobModal:createChildren()
 end
 
 function DC_ColonyJobModal:selectJobIndex(index)
-    if not self.jobTickBox or not self.jobOptions or not self.jobOptions[index] then
+    if not self.jobList or not self.jobOptions or not self.jobOptions[index] then
         return
     end
 
-    self.updatingSelection = true
-    for optionIndex = 1, #self.jobOptions do
-        self.jobTickBox:setSelected(optionIndex, optionIndex == index)
+    if self.jobOptions[index].enabled == false then
+        return
     end
-    self.updatingSelection = false
 
     self.selectedOptionIndex = index
     self.selectedJobType = self.jobOptions[index].jobType
+    self.jobList.selected = index
     self:updateConfirmState()
 end
 
 function DC_ColonyJobModal:onJobSelected(index, selected)
-    if self.updatingSelection then
-        return
-    end
-
-    if selected then
-        self:selectJobIndex(index)
-        return
-    end
-
-    if self.selectedOptionIndex == index then
-        self:selectJobIndex(index)
-    end
+    self:selectJobIndex(index)
 end
 
 function DC_ColonyJobModal:updateConfirmState()
@@ -290,8 +338,12 @@ function DC_ColonyJobModal.Open(args)
         currentJobLabel = jobOptions[1].label
     end
 
-    local width = 420
-    local height = 132 + (#jobOptions * 20)
+    local width = 520
+    local screenHeight = getCore():getScreenHeight()
+    local maxVisibleRows = math.max(1, math.floor((screenHeight - 220) / JOB_ROW_HEIGHT))
+    local visibleRows = math.max(1, math.min(#jobOptions, JOB_LIST_MAX_VISIBLE_ROWS, maxVisibleRows))
+    local listHeight = math.max(JOB_ROW_HEIGHT + 8, math.floor((visibleRows * JOB_ROW_HEIGHT) + 8))
+    local height = math.min(screenHeight - 80, 140 + listHeight + 56)
     local x = (getCore():getScreenWidth() - width) / 2
     local y = (getCore():getScreenHeight() - height) / 2
 
@@ -302,6 +354,7 @@ function DC_ColonyJobModal.Open(args)
     modal.jobOptions = jobOptions
     modal.selectedJobType = selectedJobType
     modal.autoRepeatJob = selectedJobType ~= tostring((config.JobTypes or {}).Unemployed or "Unemployed")
+    modal.maxVisibleRows = visibleRows
     modal.onConfirmCallback = args.onConfirm
     modal:initialise()
     modal:instantiate()

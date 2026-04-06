@@ -60,6 +60,17 @@ local function updateToggleJobStatus(window, enabled, normalizedJob, presenceSta
         return
     end
 
+    if normalizedJob == ((config.JobTypes or {}).TravelCompanion) then
+        local homeState = (config.PresenceStates or {}).Home
+        window:updateStatus(
+            enabled and "Calling your companion in from home..."
+                or ((presenceState and presenceState ~= homeState)
+                    and "Sending companion home..."
+                    or "Cancelling companion duty...")
+        )
+        return
+    end
+
     window:updateStatus(enabled and "Starting job..." or "Stopping job...")
 end
 
@@ -147,6 +158,18 @@ local function getStopJobConfirmationText(window, normalizedJob, presenceState)
         return "Cancel the scavenging job for " .. workerName .. "?\n\n"
             .. "This prevents them from heading out until you start the job again.\n\n"
             .. "Press Yes to cancel, or No to keep the job active."
+    end
+
+    if normalizedJob == ((config.JobTypes or {}).TravelCompanion) then
+        if tostring(presenceState or "") ~= homeState then
+            return "Send " .. workerName .. " home from companion duty?\n\n"
+                .. "They will walk off, despawn, and then finish the trip home on the colony travel timer.\n\n"
+                .. "Press Yes to send them home, or No to keep them with you."
+        end
+
+        return "Cancel companion duty for " .. workerName .. "?\n\n"
+            .. "This keeps them home until you start the job again.\n\n"
+            .. "Press Yes to cancel, or No to leave the job active."
     end
 
     return "Stop the current job for " .. workerName .. "?\n\n"

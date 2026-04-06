@@ -129,6 +129,18 @@ function Interaction.GetDisplayStateLabel(worker)
         end
     end
 
+    if jobKey == tostring((Config.JobTypes or {}).TravelCompanion or "TravelCompanion") then
+        if presenceState == tostring(states.CompanionToPlayer or "CompanionToPlayer") then
+            return tostring(Interaction.getInteractionEntry("Progress", "Common.TravelToSite.stateLabel") or "Walking")
+        end
+        if presenceState == tostring(states.CompanionReturning or "CompanionReturning") then
+            return tostring(Interaction.getInteractionEntry("Progress", "Common.TravelToHome.stateLabel") or "Walking")
+        end
+        if presenceState == tostring(states.CompanionActive or "CompanionActive") then
+            return "Companion"
+        end
+    end
+
     if jobKey == tostring((Config.JobTypes or {}).Builder or "Builder") then
         local assignedProjectID = tostring(worker and worker.assignedProjectID or "")
         local assignedProjectMaterialState = tostring(worker and worker.assignedProjectMaterialState or "")

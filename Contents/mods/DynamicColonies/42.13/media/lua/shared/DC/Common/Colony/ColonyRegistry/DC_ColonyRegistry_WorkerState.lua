@@ -125,11 +125,18 @@ function Registry.RecalculateWorker(worker)
     if (tonumber(worker.dailyHydrationNeed) or 0) > 0 and (tonumber(worker.dailyHydrationNeed) or 0) < 25 then
         worker.dailyHydrationNeed = (tonumber(worker.dailyHydrationNeed) or 0) * (Config.HYDRATION_POINTS_PER_THIRST or 1000)
     end
-    worker.maxHp = math.max(1, tonumber(worker.maxHp) or tonumber(worker.healthMax) or Config.DEFAULT_WORKER_MAX_HP or 100)
-    worker.hp = math.max(0, math.min(worker.maxHp, tonumber(worker.hp) or tonumber(worker.health) or worker.maxHp))
     if Skills and Skills.EnsureWorkerSkills then
         Skills.EnsureWorkerSkills(worker)
     end
+    worker.maxHp = math.max(
+        1,
+        tonumber(Config.GetHealthMax and Config.GetHealthMax(worker))
+            or tonumber(worker.maxHp)
+            or tonumber(worker.healthMax)
+            or Config.DEFAULT_WORKER_MAX_HP
+            or 100
+    )
+    worker.hp = math.max(0, math.min(worker.maxHp, tonumber(worker.hp) or tonumber(worker.health) or worker.maxHp))
     if Energy and Energy.EnsureWorkerEnergy then
         Energy.EnsureWorkerEnergy(worker)
     end

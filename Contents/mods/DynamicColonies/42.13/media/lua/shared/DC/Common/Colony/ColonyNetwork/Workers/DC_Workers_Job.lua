@@ -4,6 +4,7 @@ DC_Colony.Network = DC_Colony.Network or {}
 local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Network = DC_Colony.Network
+local Companion = DC_Colony.Companion
 local Shared = (Network.Workers or {}).Shared or {}
 local Internal = Network.Internal or {}
 
@@ -29,7 +30,24 @@ Network.Handlers.SetWorkerJobEnabled = function(player, args)
         return
     end
 
-    Registry.SetWorkerJobEnabled(worker, args.enabled == true)
+    local normalizedJob = Config.NormalizeJobType and Config.NormalizeJobType(worker.jobType) or tostring(worker.jobType or "")
+    if args.enabled ~= true and normalizedJob == ((Config.JobTypes or {}).TravelCompanion) then
+        local homeState = tostring((Config.PresenceStates or {}).Home or "Home")
+        if tostring(worker.presenceState or "") ~= homeState then
+            Companion.BeginWorkerCompanionReturn(player, worker, Config.ReturnReasons.Manual)
+        else
+            Registry.SetWorkerJobEnabled(worker, false)
+        end
+    else
+        Registry.SetWorkerJobEnabled(worker, args.enabled == true)
+        if args.enabled == true and normalizedJob == ((Config.JobTypes or {}).TravelCompanion) then
+            local started, reason = Companion.StartWorkerCompanion(player, worker)
+            if not started then
+                Registry.SetWorkerJobEnabled(worker, false)
+                Internal.syncNotice(player, reason or "Unable to start Travel Companion.", "error")
+            end
+        end
+    end
     Shared.saveAndRefreshProcessed(player, worker)
 end
 
@@ -58,7 +76,22 @@ Network.Handlers.SetWorkerJobType = function(player, args)
         return
     end
 
+    local currentJobType = Config.NormalizeJobType and Config.NormalizeJobType(worker.jobType) or tostring(worker.jobType or "")
+    local homeState = tostring((Config.PresenceStates or {}).Home or "Home")
+    if currentJobType == ((Config.JobTypes or {}).TravelCompanion) and tostring(worker.presenceState or "") ~= homeState then
+        Internal.syncNotice(player, "Send that companion home before changing jobs.", "error")
+        Shared.saveAndRefreshBasic(player, worker)
+        return
+    end
+
     Registry.SetWorkerJobType(worker, args.jobType)
+    if Config.NormalizeJobType(args.jobType) == ((Config.JobTypes or {}).TravelCompanion) then
+        local started, startReason = Companion.StartWorkerCompanion(player, worker)
+        if not started then
+            Registry.SetWorkerJobEnabled(worker, false)
+            Internal.syncNotice(player, startReason or "Unable to start Travel Companion.", "error")
+        end
+    end
     Shared.saveAndRefreshProcessed(player, worker)
 end
 

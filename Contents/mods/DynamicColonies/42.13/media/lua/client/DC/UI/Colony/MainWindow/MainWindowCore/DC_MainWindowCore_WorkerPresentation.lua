@@ -82,9 +82,9 @@ end
 
 function Internal.canWorkerTakeJob(worker, jobType)
     local config = Internal.Config or {}
-    local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(jobType) or tostring(jobType or "")
-    if normalizedJob == tostring((config.JobTypes or {}).Builder or "Builder") then
-        return Internal.getWorkerSkillLevel(worker, "Construction") > 0
+    if config.CanWorkerTakeJob then
+        local capable = config.CanWorkerTakeJob(worker, jobType)
+        return capable == true
     end
     return true
 end
@@ -103,6 +103,9 @@ function Internal.getNpcConditionLabel(worker)
     if state == "Dead" then
         return "Dead"
     end
+    if state == "Incapacitated" then
+        return "Incapacitated"
+    end
     return "Stable"
 end
 
@@ -110,6 +113,17 @@ function Internal.getWorkerPresenceLabel(worker)
     local config = Internal.Config or {}
     local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
     if normalizedJob ~= ((config.JobTypes or {}).Scavenge) then
+        if normalizedJob == ((config.JobTypes or {}).TravelCompanion) then
+            local presenceState = tostring(worker and worker.presenceState or "")
+            local states = config.PresenceStates or {}
+            if presenceState == states.CompanionActive then
+                return "Companion"
+            end
+            if presenceState == states.CompanionToPlayer or presenceState == states.CompanionReturning then
+                return "Walking"
+            end
+            return "Home"
+        end
         return tostring(worker and worker.state or "Idle")
     end
 

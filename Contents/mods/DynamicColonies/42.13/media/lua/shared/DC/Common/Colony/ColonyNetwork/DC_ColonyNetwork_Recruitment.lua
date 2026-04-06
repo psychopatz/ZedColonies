@@ -165,6 +165,40 @@ local function detachRecruitedSourceNPC(args)
 end
 Internal.detachRecruitedSourceNPC = detachRecruitedSourceNPC
 
+local function resolveRecruitSourceHealth(args, sourceSoul)
+    local config = getConfig()
+    local defaultMax = math.max(1, tonumber(config and config.DEFAULT_WORKER_MAX_HP) or 100)
+    local combatHealth = sourceSoul and sourceSoul.combatHealth or nil
+
+    local maxHp = tonumber(args and args.maxHp)
+        or tonumber(args and args.healthMax)
+        or tonumber(combatHealth and combatHealth.max)
+        or tonumber(sourceSoul and sourceSoul.combatHealthMax)
+        or nil
+    local hp = tonumber(args and args.hp)
+        or tonumber(args and args.health)
+        or tonumber(combatHealth and combatHealth.current)
+        or tonumber(sourceSoul and sourceSoul.combatHealthCurrent)
+        or nil
+
+    if hp == nil then
+        local fallbackHealth = tonumber(sourceSoul and sourceSoul.health)
+        if fallbackHealth and fallbackHealth > 1 then
+            hp = fallbackHealth
+        end
+    end
+
+    if maxHp ~= nil then
+        maxHp = math.max(1, math.floor(maxHp + 0.5))
+    end
+    if hp ~= nil then
+        local clampMax = maxHp or defaultMax
+        hp = math.max(0, math.min(clampMax, math.floor(hp + 0.5)))
+    end
+
+    return hp, maxHp
+end
+
 local function createWorkerFromRecruitArgs(owner, args, sourceSoul)
     local recruitUUID = resolveRecruitSourceUUID(args)
     sourceSoul = sourceSoul or getRecruitSourceSoul(recruitUUID)
@@ -173,6 +207,7 @@ local function createWorkerFromRecruitArgs(owner, args, sourceSoul)
     local Registry = getRegistry()
     local archetypeID = Config.NormalizeArchetypeID(args.archetypeID or args.profession or (sourceSoul and sourceSoul.archetypeID))
     local resolvedSourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or recruitUUID
+    local hp, maxHp = resolveRecruitSourceHealth(args, sourceSoul)
     local isFemale = args.isFemale
     if isFemale == nil and sourceSoul and sourceSoul.isFemale ~= nil then
         isFemale = sourceSoul.isFemale
@@ -190,6 +225,8 @@ local function createWorkerFromRecruitArgs(owner, args, sourceSoul)
         presenceState = Config.PresenceStates.Home,
         state = Config.States.Idle,
         jobEnabled = false,
+        hp = hp,
+        maxHp = maxHp,
         sourceNPCID = resolvedSourceNPCID and tostring(resolvedSourceNPCID) or nil,
         sourceNPCType = args.sourceNPCType or "ConversationUI"
     })

@@ -31,4 +31,7 @@ require "DC/Common/Colony/Job/Farming/DC_Job_Farming_Process"
 require "DC/Common/Colony/Job/Fishing/DC_Job_Fishing_ConfigTools"
 require "DC/Common/Colony/Job/Fishing/DC_Job_Fishing_Process"
 
+-- Travel Companion
+require "DC/Common/Colony/Companion/DC_ColonyCompanion"
+
 return DC_Colony.Job

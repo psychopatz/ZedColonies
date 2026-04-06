@@ -238,6 +238,19 @@ function DC_MainWindow:updateWorkerDetail(worker)
             if MainWindowLayout.applyToggleButtonStyle then
                 MainWindowLayout.applyToggleButtonStyle(self.btnToggleJob, worker.jobEnabled == true)
             end
+        elseif normalizedJobType == (config.JobTypes and config.JobTypes.TravelCompanion) then
+            local presenceState = tostring(worker.presenceState or "")
+            local homeState = tostring((config.PresenceStates or {}).Home or "Home")
+            if worker.jobEnabled and presenceState ~= homeState then
+                self.btnToggleJob:setTitle("Send Home")
+            elseif worker.jobEnabled then
+                self.btnToggleJob:setTitle("Cancel Duty")
+            else
+                self.btnToggleJob:setTitle("Start Duty")
+            end
+            if MainWindowLayout.applyToggleButtonStyle then
+                MainWindowLayout.applyToggleButtonStyle(self.btnToggleJob, worker.jobEnabled == true)
+            end
         elseif normalizedJobType == unemployedJob then
             self.btnToggleJob:setTitle("Assign Job")
             if MainWindowLayout.applyToggleButtonStyle then

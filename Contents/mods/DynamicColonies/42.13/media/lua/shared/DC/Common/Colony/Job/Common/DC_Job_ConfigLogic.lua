@@ -59,6 +59,19 @@ function Config.GetWorkerJobCapability(worker, jobType)
         if not capability.capable then
             capability.reason = "That worker has no Construction skill and cannot be assigned to Builder."
         end
+    elseif normalizedJobType == ((Config.JobTypes or {}).TravelCompanion) then
+        local companion = DC_Colony and DC_Colony.Companion or nil
+        capability.skillID = "Combat"
+        capability.skillLevel = math.max(
+            getWorkerSkillLevel(worker, "Melee"),
+            getWorkerSkillLevel(worker, "Shooting")
+        )
+        if companion and companion.CanWorkerBeCompanion then
+            capability.capable, capability.reason = companion.CanWorkerBeCompanion(worker)
+        else
+            capability.capable = false
+            capability.reason = "Travel Companion is unavailable."
+        end
     elseif normalizedJobType == ((Config.JobTypes or {}).Fish) then
         capability.skillID = "Animals"
         capability.skillLevel = getWorkerSkillLevel(worker, capability.skillID)
@@ -127,6 +140,7 @@ function Config.GetNextJobType(jobType)
         Config.JobTypes.Builder,
         Config.JobTypes.Doctor,
         Config.JobTypes.Scavenge,
+        Config.JobTypes.TravelCompanion,
         Config.JobTypes.Farm,
         Config.JobTypes.Fish
     }
