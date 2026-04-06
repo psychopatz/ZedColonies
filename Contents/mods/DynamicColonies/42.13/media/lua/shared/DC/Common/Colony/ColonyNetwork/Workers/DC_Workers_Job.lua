@@ -49,6 +49,14 @@ Network.Handlers.SetWorkerJobEnabled = function(player, args)
         return
     end
 
+    if args.enabled == true and tostring(worker.state or "") == tostring((Config.States or {}).Incapacitated or "Incapacitated") then
+        debugWorkerJob("Blocked start because worker is incapacitated workerID=" .. tostring(args.workerID))
+        Registry.SetWorkerJobEnabled(worker, false)
+        Internal.syncNotice(player, "That worker is incapacitated and must recover before returning to duty.", "error")
+        Shared.saveAndRefreshBasic(player, worker)
+        return
+    end
+
     if args.enabled ~= true and normalizedJob == ((Config.JobTypes or {}).TravelCompanion) then
         local homeState = tostring((Config.PresenceStates or {}).Home or "Home")
         if tostring(worker.presenceState or "") ~= homeState then

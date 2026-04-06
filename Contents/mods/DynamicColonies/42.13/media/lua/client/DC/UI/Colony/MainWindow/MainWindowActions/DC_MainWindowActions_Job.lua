@@ -386,6 +386,11 @@ function DC_MainWindow:onToggleJob()
     end
     local enabled = not currentEnabled
 
+    if enabled and state == tostring((config.States or {}).Incapacitated or "Incapacitated") then
+        self:updateStatus("This worker is incapacitated and must recover before returning to duty.")
+        return
+    end
+
     debugJobAction(
         "onToggleJob workerID=" .. tostring(self.selectedWorkerSummary.workerID)
             .. " currentEnabled=" .. tostring(currentEnabled)

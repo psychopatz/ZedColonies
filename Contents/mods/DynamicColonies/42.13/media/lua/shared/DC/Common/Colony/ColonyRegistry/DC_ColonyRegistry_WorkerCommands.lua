@@ -45,10 +45,15 @@ function Registry.SetWorkerJobEnabled(worker, enabled)
     if worker then
         local shouldEnable = enabled == true
         local normalizedJob = Config.NormalizeJobType(worker.jobType)
+        local incapacitatedState = tostring((Config.States or {}).Incapacitated or "Incapacitated")
         if shouldEnable then
             if normalizedJob == Config.JobTypes.Unemployed then
                 worker.jobEnabled = false
                 worker.state = Config.States.Idle
+                return
+            end
+            if tostring(worker.state or "") == incapacitatedState then
+                worker.jobEnabled = false
                 return
             end
             worker.jobEnabled = true

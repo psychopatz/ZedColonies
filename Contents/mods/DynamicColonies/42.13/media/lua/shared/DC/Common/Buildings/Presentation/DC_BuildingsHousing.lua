@@ -74,10 +74,15 @@ local function getInfirmaryInstances(ownerUsername)
 end
 
 local function isSleepEligibleWorker(worker)
+    local health = DC_Colony and DC_Colony.Health or nil
+    local forcedRest = DC_Colony and DC_Colony.Energy and DC_Colony.Energy.IsForcedRest and DC_Colony.Energy.IsForcedRest(worker) or false
+    if health and health.IsSleepEligible then
+        return health.IsSleepEligible(worker, forcedRest)
+    end
+
     return isLivingWorker(worker)
         and tostring(worker and worker.presenceState or "") == tostring((DC_Colony and DC_Colony.Config and DC_Colony.Config.PresenceStates and DC_Colony.Config.PresenceStates.Home) or "Home")
-        and (DC_Colony and DC_Colony.Energy and DC_Colony.Energy.IsForcedRest and DC_Colony.Energy.IsForcedRest(worker) or false)
-        and math.max(0, tonumber(worker and worker.hp) or 0) > 0
+        and forcedRest == true
 end
 
 local function compareMedicalPriority(a, b)

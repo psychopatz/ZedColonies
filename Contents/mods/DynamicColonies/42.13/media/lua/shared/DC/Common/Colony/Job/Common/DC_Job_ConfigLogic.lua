@@ -85,6 +85,13 @@ function Config.GetWorkerJobCapability(worker, jobType)
 end
 
 function Config.CanWorkerTakeJob(worker, jobType)
+    local normalizedJobType = Config.NormalizeJobType(jobType)
+    local incapacitatedState = tostring((Config.States or {}).Incapacitated or "Incapacitated")
+    local unemployedJob = tostring((Config.JobTypes or {}).Unemployed or "Unemployed")
+    if worker and tostring(worker.state or "") == incapacitatedState and tostring(normalizedJobType or "") ~= unemployedJob then
+        return false, "That worker is incapacitated and must recover before returning to duty."
+    end
+
     local capability = Config.GetWorkerJobCapability(worker, jobType)
     return capability.capable == true, capability.reason
 end
