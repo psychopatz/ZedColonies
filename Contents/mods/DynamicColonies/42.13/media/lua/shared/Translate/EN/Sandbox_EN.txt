@@ -21,4 +21,16 @@ Sandbox_EN = {
 
     Sandbox_DynamicColonies_ColonyFishingWorkAmount = "Fishing Work Amount",
     Sandbox_DynamicColonies_ColonyFishingWorkAmount_tooltip = "Sets the total work required for a fishing worker to finish one catch roll. Higher values make each catch take longer unless the worker has better speed multipliers or active bait.",
+
+    Sandbox_DynamicColonies_ColonyHealthRegenPerHour = "Labour: Home Health Regen Per Hour",
+    Sandbox_DynamicColonies_ColonyHealthRegenPerHour_tooltip = "Sets how much HP a resting worker naturally recovers per in-game hour before infirmary and doctor bonuses are applied.",
+
+    Sandbox_DynamicColonies_ColonyInfirmaryHealthRegenMultiplier = "Labour: Infirmary Health Regen Multiplier",
+    Sandbox_DynamicColonies_ColonyInfirmaryHealthRegenMultiplier_tooltip = "Scales resting HP recovery for workers assigned to an infirmary bed.",
+
+    Sandbox_DynamicColonies_ColonyDoctorHealthRegenMultiplier = "Labour: Doctor Care Regen Multiplier",
+    Sandbox_DynamicColonies_ColonyDoctorHealthRegenMultiplier_tooltip = "Scales resting HP recovery when doctor treatment hours are available for the worker.",
+
+    Sandbox_DynamicColonies_ColonyBandageTreatmentHours = "Labour: Bandage Treatment Hours",
+    Sandbox_DynamicColonies_ColonyBandageTreatmentHours_tooltip = "Sets how many in-game hours a clean rag, sterilized rag, or bandage keeps adding healing after it is applied during rest.",
 }

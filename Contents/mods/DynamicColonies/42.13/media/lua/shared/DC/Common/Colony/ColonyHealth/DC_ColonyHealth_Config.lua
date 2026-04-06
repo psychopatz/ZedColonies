@@ -65,12 +65,75 @@ function Config.GetHealthLossPerHour(worker)
 end
 
 function Config.GetHealthRegenPerHour(worker)
-    return math.max(0, tonumber(Config.WORKER_HP_REGEN_PER_HOUR) or 1)
+    local defaultRate = tonumber(Config.WORKER_HP_REGEN_PER_HOUR) or 3
+    if Config.GetSandboxNumberAny then
+        return math.max(
+            0,
+            tonumber(
+                Config.GetSandboxNumberAny(
+                    { "ColonyHealthRegenPerHour", "LabourHealthRegenPerHour" },
+                    defaultRate
+                )
+            ) or defaultRate
+        )
+    end
+    return math.max(0, defaultRate)
+end
+
+function Config.GetInfirmaryHealthRegenMultiplier(worker)
+    local defaultMultiplier = tonumber(Config.WORKER_HP_INFIRMARY_REGEN_MULTIPLIER) or 1.5
+    if Config.GetSandboxNumberAny then
+        return math.max(
+            1,
+            tonumber(
+                Config.GetSandboxNumberAny(
+                    { "ColonyInfirmaryHealthRegenMultiplier", "LabourInfirmaryHealthRegenMultiplier" },
+                    defaultMultiplier
+                )
+            ) or defaultMultiplier
+        )
+    end
+    return math.max(1, defaultMultiplier)
+end
+
+function Config.GetDoctorHealthRegenMultiplier(worker)
+    local defaultMultiplier = tonumber(Config.WORKER_HP_DOCTOR_REGEN_MULTIPLIER) or 4.0
+    if Config.GetSandboxNumberAny then
+        return math.max(
+            1,
+            tonumber(
+                Config.GetSandboxNumberAny(
+                    { "ColonyDoctorHealthRegenMultiplier", "LabourDoctorHealthRegenMultiplier" },
+                    defaultMultiplier
+                )
+            ) or defaultMultiplier
+        )
+    end
+    return math.max(1, defaultMultiplier)
+end
+
+function Config.GetBandageTreatmentHours(worker)
+    local defaultHours = tonumber(Config.WORKER_BANDAGE_TREATMENT_HOURS) or 24
+    if Config.GetSandboxNumberAny then
+        return math.max(
+            1,
+            tonumber(
+                Config.GetSandboxNumberAny(
+                    { "ColonyBandageTreatmentHours", "LabourBandageTreatmentHours" },
+                    defaultHours
+                )
+            ) or defaultHours
+        )
+    end
+    return math.max(1, defaultHours)
 end
 
 -- Fallback constants if not loaded from Core yet
 Config.DEFAULT_WORKER_MAX_HP = Config.DEFAULT_WORKER_MAX_HP or 100
 Config.WORKER_HP_LOSS_PER_HOUR = Config.WORKER_HP_LOSS_PER_HOUR or 1
-Config.WORKER_HP_REGEN_PER_HOUR = Config.WORKER_HP_REGEN_PER_HOUR or 1
+Config.WORKER_HP_REGEN_PER_HOUR = Config.WORKER_HP_REGEN_PER_HOUR or 3
+Config.WORKER_HP_INFIRMARY_REGEN_MULTIPLIER = Config.WORKER_HP_INFIRMARY_REGEN_MULTIPLIER or 1.5
+Config.WORKER_HP_DOCTOR_REGEN_MULTIPLIER = Config.WORKER_HP_DOCTOR_REGEN_MULTIPLIER or 4.0
+Config.WORKER_BANDAGE_TREATMENT_HOURS = Config.WORKER_BANDAGE_TREATMENT_HOURS or 24
 
 return DC_Colony.Health

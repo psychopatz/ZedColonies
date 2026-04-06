@@ -104,7 +104,7 @@ function ColonyProfileCard:setWorker(worker)
 
     self.caloriesData = ReservePanel.buildNutritionBarData("Calories", currentCaloriesBuffer, carryoverCalories, provisionCalories, dailyCaloriesNeed)
     self.hydrationData = ReservePanel.buildNutritionBarData("Hydration", currentHydrationBuffer, carryoverHydration, provisionHydration, dailyHydrationNeed)
-    self.healthData = ReservePanel.buildHealthBarData(worker.hp, worker.maxHp)
+    self.healthData = ReservePanel.buildHealthBarData(worker.hp, worker.maxHp, worker)
     self.energyData = DC_Colony and DC_Colony.Energy and ReservePanel.isFunction(DC_Colony.Energy.GetBarData)
         and DC_Colony.Energy.GetBarData(worker) or nil
     self.activityData = ReservePanel.buildWorkerProgressData(worker, profile)

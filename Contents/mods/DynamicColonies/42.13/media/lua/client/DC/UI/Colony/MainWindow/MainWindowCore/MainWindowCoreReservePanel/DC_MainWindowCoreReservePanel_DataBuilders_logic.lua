@@ -63,20 +63,32 @@ function ReservePanel.buildNutritionBarData(unitLabel, currentBufferAmount, carr
     return data
 end
 
-function ReservePanel.buildHealthBarData(currentHp, maxHp)
+function ReservePanel.buildHealthBarData(currentHp, maxHp, worker)
     if ReservePanel.isFunction(Internal.getHealthBarData) then
-        return Internal.getHealthBarData(currentHp, maxHp)
+        return Internal.getHealthBarData(currentHp, maxHp, worker)
     end
 
     local safeMax = math.max(1, tonumber(maxHp) or 100)
     local safeCurrent = math.max(0, math.min(safeMax, tonumber(currentHp) or safeMax))
+    local treatmentActive = worker and worker.selfTreatmentActive == true and (tonumber(worker.selfTreatmentHealRemaining) or 0) > 0
+    local treatmentLabel = treatmentActive and tostring(worker.selfTreatmentLabel or "bandage") or nil
+    local treatmentHealRemaining = treatmentActive and math.max(0, tonumber(worker.selfTreatmentHealRemaining) or 0) or 0
     return {
         stored = safeCurrent,
         usage = safeMax,
         fillRatio = safeCurrent / safeMax,
         overflow = 0,
         daysLeft = nil,
-        captionText = safeCurrent <= 0 and "dead" or "current hp",
-        summaryText = ReservePanel.formatReserveValue(safeCurrent) .. " / " .. ReservePanel.formatReserveValue(safeMax)
+        captionText = treatmentActive
+            and (tostring(treatmentLabel) .. " healing +" .. ReservePanel.formatReserveValue(treatmentHealRemaining) .. " hp left")
+            or (safeCurrent <= 0 and "dead" or "current hp"),
+        summaryText = ReservePanel.formatReserveValue(safeCurrent) .. " / " .. ReservePanel.formatReserveValue(safeMax),
+        treatmentActive = treatmentActive,
+        treatmentTierID = worker and worker.selfTreatmentTierID or nil,
+        treatmentLabel = treatmentLabel,
+        treatmentItemFullType = worker and worker.selfTreatmentItemFullType or nil,
+        treatmentHealRemaining = treatmentHealRemaining,
+        treatmentRegenPerHour = treatmentActive and math.max(0, tonumber(worker.selfTreatmentRegenPerHour) or 0) or 0,
+        treatmentOverlayText = treatmentActive and ("+" .. ReservePanel.formatReserveValue(treatmentHealRemaining) .. " hp") or nil,
     }
 end

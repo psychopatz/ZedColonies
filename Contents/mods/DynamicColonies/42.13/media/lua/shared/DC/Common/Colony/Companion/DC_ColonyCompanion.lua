@@ -933,6 +933,7 @@ function Companion.ConsumeBandageSupply(workerID)
     addDirtyMedicalOutput(worker, supply.dirtyFullType)
     return {
         tierID = supply.tierID,
+        fullType = entry and entry.fullType or nil,
         dirtyFullType = supply.dirtyFullType,
     }
 end

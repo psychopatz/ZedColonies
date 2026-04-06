@@ -6,6 +6,82 @@ Internal.ReservePanel = Internal.ReservePanel or {}
 local ReservePanel = Internal.ReservePanel
 
 local ColonyProfileCard = ReservePanel.ColonyProfileCard
+local TEXTURE_CACHE = ReservePanel.TextureCache or {}
+ReservePanel.TextureCache = TEXTURE_CACHE
+
+local function isValidTexture(tex)
+    return tex and tex.getName and tex:getName() ~= "Question_Highlight"
+end
+
+local function tryTexture(textureName)
+    if not textureName or textureName == "" then
+        return nil
+    end
+
+    local tex = getTexture(textureName)
+    if isValidTexture(tex) then
+        return tex
+    end
+
+    return nil
+end
+
+local function resolveInventoryItemTexture(item)
+    if not item then
+        return nil
+    end
+
+    if item.getTex then
+        local tex = item:getTex()
+        if isValidTexture(tex) then
+            return tex
+        end
+    end
+
+    if item.getTexture then
+        local tex = item:getTexture()
+        if isValidTexture(tex) then
+            return tex
+        end
+    end
+
+    return nil
+end
+
+local function getTextureForFullType(fullType)
+    if not fullType then
+        return nil
+    end
+
+    if TEXTURE_CACHE[fullType] ~= nil then
+        return TEXTURE_CACHE[fullType] or nil
+    end
+
+    local texture = nil
+    if DC_SupplyWindow and DC_SupplyWindow.Internal and DC_SupplyWindow.Internal.getTextureForFullType then
+        texture = DC_SupplyWindow.Internal.getTextureForFullType(fullType)
+    end
+
+    local script = getScriptManager and getScriptManager():getItem(fullType) or nil
+    if not isValidTexture(texture) and script and script.getIcon then
+        local iconName = script:getIcon()
+        if iconName and iconName ~= "" then
+            texture = tryTexture("Item_" .. tostring(iconName))
+                or tryTexture(tostring(iconName))
+                or tryTexture("media/textures/Item_" .. tostring(iconName) .. ".png")
+        end
+    end
+
+    if not isValidTexture(texture) and InventoryItemFactory and InventoryItemFactory.CreateItem then
+        local ok, item = pcall(InventoryItemFactory.CreateItem, fullType)
+        if ok and item then
+            texture = resolveInventoryItemTexture(item)
+        end
+    end
+
+    TEXTURE_CACHE[fullType] = isValidTexture(texture) and texture or false
+    return TEXTURE_CACHE[fullType] or nil
+end
 
 function ReservePanel.animateRatio(currentValue, targetValue)
     local current = tonumber(currentValue) or 0
@@ -19,6 +95,7 @@ end
 
 function ColonyProfileCard:drawReserveBar(x, y, width, height, label, color, data, displayRatio)
     local safeData = data or { stored = 0, usage = 0, carryover = 0, provisionReserve = 0, daysLeft = nil }
+    local tm = getTextManager()
     self:drawRect(x, y, width, height, 0.35, 0.08, 0.08, 0.08)
     self:drawRectBorder(x, y, width, height, 0.2, 1, 1, 1)
 
@@ -27,8 +104,35 @@ function ColonyProfileCard:drawReserveBar(x, y, width, height, label, color, dat
         self:drawRect(x + 2, y + 2, fillWidth, height - 4, 0.9, color.r, color.g, color.b)
     end
 
-    local labelWidth = getTextManager():MeasureStringX(UIFont.Small, label)
+    local labelWidth = tm:MeasureStringX(UIFont.Small, label)
     self:drawText(label, x + math.max(8, (width - labelWidth) / 2), y + 2, 0.95, 0.95, 0.95, 1, UIFont.Small)
+
+    if safeData.treatmentActive and safeData.treatmentItemFullType then
+        local iconTex = getTextureForFullType(safeData.treatmentItemFullType)
+        local overlayText = tostring(safeData.treatmentOverlayText or "")
+        local overlayWidth = overlayText ~= "" and tm:MeasureStringX(UIFont.Small, overlayText) or 0
+        local iconSize = math.max(12, height - 6)
+        local iconGap = 4
+        local iconX = x + width - iconSize - 8
+        local iconY = y + math.floor((height - iconSize) / 2)
+
+        if overlayText ~= "" then
+            self:drawText(
+                overlayText,
+                iconX - overlayWidth - iconGap,
+                y + 2,
+                0.58,
+                0.96,
+                0.58,
+                1,
+                UIFont.Small
+            )
+        end
+
+        if iconTex then
+            self:drawTextureScaled(iconTex, iconX, iconY, iconSize, iconSize, 1, 1, 1, 1)
+        end
+    end
 
     local daysText = safeData.captionText or ReservePanel.formatDaysAndEta(safeData.daysLeft, safeData.daysLeft and (safeData.daysLeft * 24) or nil)
     local totalsText = safeData.summaryText

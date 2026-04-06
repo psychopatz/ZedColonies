@@ -80,17 +80,31 @@ function Internal.getNutritionBarData(unitLabel, currentBufferAmount, carryoverA
     return data
 end
 
-function Internal.getHealthBarData(currentHp, maxHp)
+function Internal.getHealthBarData(currentHp, maxHp, worker)
     local safeMax = math.max(1, tonumber(maxHp) or 100)
     local safeCurrent = math.max(0, math.min(safeMax, tonumber(currentHp) or safeMax))
+    local treatmentActive = worker and worker.selfTreatmentActive == true and (tonumber(worker.selfTreatmentHealRemaining) or 0) > 0
+    local treatmentLabel = treatmentActive and tostring(worker.selfTreatmentLabel or "bandage") or nil
+    local treatmentHealRemaining = treatmentActive and math.max(0, tonumber(worker.selfTreatmentHealRemaining) or 0) or 0
+    local captionText = safeCurrent <= 0 and "dead" or "current hp"
+    if treatmentActive then
+        captionText = tostring(treatmentLabel) .. " healing +" .. formatReserveValue(treatmentHealRemaining) .. " hp left"
+    end
     return {
         stored = safeCurrent,
         usage = safeMax,
         fillRatio = safeCurrent / safeMax,
         overflow = 0,
         daysLeft = nil,
-        captionText = safeCurrent <= 0 and "dead" or "current hp",
-        summaryText = formatReserveValue(safeCurrent) .. " / " .. formatReserveValue(safeMax)
+        captionText = captionText,
+        summaryText = formatReserveValue(safeCurrent) .. " / " .. formatReserveValue(safeMax),
+        treatmentActive = treatmentActive,
+        treatmentTierID = worker and worker.selfTreatmentTierID or nil,
+        treatmentLabel = treatmentLabel,
+        treatmentItemFullType = worker and worker.selfTreatmentItemFullType or nil,
+        treatmentHealRemaining = treatmentHealRemaining,
+        treatmentRegenPerHour = treatmentActive and math.max(0, tonumber(worker.selfTreatmentRegenPerHour) or 0) or 0,
+        treatmentOverlayText = treatmentActive and ("+" .. formatReserveValue(treatmentHealRemaining) .. " hp") or nil,
     }
 end
 

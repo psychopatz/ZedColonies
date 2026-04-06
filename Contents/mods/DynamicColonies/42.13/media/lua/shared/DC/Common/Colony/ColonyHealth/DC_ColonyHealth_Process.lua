@@ -5,22 +5,24 @@ DC_Colony.Medical = DC_Colony.Medical or {}
 local Config = DC_Colony.Config
 local Health = DC_Colony.Health
 
-local SELF_TREATMENT_HOURS = 24
 local SELF_TREATMENT_TIERS = {
     clean_rag = {
         label = "clean rag",
         totalHeal = 20,
         applyHeal = 2,
+        iconFullType = "Base.RippedSheets",
     },
     sterilized_rag = {
         label = "sterilized rag",
         totalHeal = 28,
         applyHeal = 3,
+        iconFullType = "Base.AlcoholRippedSheets",
     },
     bandage = {
         label = "bandage",
         totalHeal = 36,
         applyHeal = 4,
+        iconFullType = "Base.Bandage",
     },
 }
 
@@ -63,11 +65,17 @@ local function getBaseSleepHealRate(worker)
 end
 
 local function getInfirmarySleepHealRate(worker)
-    return getBaseSleepHealRate(worker) * 1.5
+    local multiplier = tonumber(Config.GetInfirmaryHealthRegenMultiplier and Config.GetInfirmaryHealthRegenMultiplier(worker)) or 1.5
+    return getBaseSleepHealRate(worker) * math.max(1, multiplier)
 end
 
 local function getDoctorSleepHealRate(worker)
-    return getBaseSleepHealRate(worker) * 4.0
+    local multiplier = tonumber(Config.GetDoctorHealthRegenMultiplier and Config.GetDoctorHealthRegenMultiplier(worker)) or 4.0
+    return getBaseSleepHealRate(worker) * math.max(1, multiplier)
+end
+
+local function getSelfTreatmentHours()
+    return math.max(1, tonumber(Config.GetBandageTreatmentHours and Config.GetBandageTreatmentHours()) or 24)
 end
 
 local function hasMedicalRecoveryNeed(worker)
@@ -100,19 +108,56 @@ local function getSelfTreatmentTierDef(tierID)
     return "clean_rag", SELF_TREATMENT_TIERS.clean_rag
 end
 
+local function clearSelfTreatmentPresentation(worker)
+    if not worker then
+        return
+    end
+
+    worker.selfTreatmentActive = false
+    worker.selfTreatmentTierID = nil
+    worker.selfTreatmentLabel = nil
+    worker.selfTreatmentItemFullType = nil
+    worker.selfTreatmentHealRemaining = 0
+    worker.selfTreatmentRegenPerHour = 0
+end
+
+local function syncSelfTreatmentPresentation(worker, state)
+    if not worker then
+        return
+    end
+
+    if type(state) ~= "table" then
+        clearSelfTreatmentPresentation(worker)
+        return
+    end
+
+    worker.selfTreatmentActive = true
+    worker.selfTreatmentTierID = state.tierID
+    worker.selfTreatmentLabel = state.label
+    worker.selfTreatmentItemFullType = state.itemFullType
+    worker.selfTreatmentHealRemaining = math.max(0, tonumber(state.healRemaining) or 0)
+    worker.selfTreatmentRegenPerHour = math.max(0, tonumber(state.regenPerHour) or 0)
+end
+
 local function getSelfTreatmentState(worker)
     local state = type(worker and worker.selfTreatmentState) == "table" and worker.selfTreatmentState or nil
     if state then
         local tierID, tierDef = getSelfTreatmentTierDef(state.tierID)
+        local treatmentHours = getSelfTreatmentHours()
         state.tierID = tierID
+        state.label = tostring(state.label or tierDef.label or "bandage")
+        state.itemFullType = tostring(state.itemFullType or tierDef.iconFullType or "Base.Bandage")
         state.healRemaining = math.max(0, tonumber(state.healRemaining) or 0)
         state.regenPerHour = math.max(
             0,
             tonumber(state.regenPerHour)
                 or ((math.max(0, tonumber(tierDef.totalHeal) or 0) - math.max(0, tonumber(tierDef.applyHeal) or 0))
-                    / math.max(1, SELF_TREATMENT_HOURS))
+                    / treatmentHours)
         )
         worker.selfTreatmentState = state
+        syncSelfTreatmentPresentation(worker, state)
+    else
+        clearSelfTreatmentPresentation(worker)
     end
     return state
 end
@@ -120,6 +165,7 @@ end
 local function clearSelfTreatmentState(worker)
     if worker then
         worker.selfTreatmentState = nil
+        clearSelfTreatmentPresentation(worker)
     end
 end
 
@@ -139,6 +185,7 @@ local function beginSelfTreatment(worker, missingHealth)
     end
 
     local tierID, tierDef = getSelfTreatmentTierDef(consumed.tierID)
+    local treatmentHours = getSelfTreatmentHours()
     local immediateHeal = math.min(
         missingHealth,
         math.max(0, tonumber(tierDef.applyHeal) or 0)
@@ -148,9 +195,12 @@ local function beginSelfTreatment(worker, missingHealth)
 
     worker.selfTreatmentState = {
         tierID = tierID,
+        label = tostring(tierDef.label or "bandage"),
+        itemFullType = tostring(tierDef.iconFullType or consumed.fullType or "Base.Bandage"),
         healRemaining = remainingHeal,
-        regenPerHour = remainingHeal / math.max(1, SELF_TREATMENT_HOURS),
+        regenPerHour = remainingHeal / treatmentHours,
     }
+    syncSelfTreatmentPresentation(worker, worker.selfTreatmentState)
 
     appendMedicalLog(
         worker,
@@ -210,6 +260,8 @@ local function applySelfTreatment(worker, supportedHours, currentHp, hpMax)
 
     if currentHp + 0.0001 >= hpMax or (tonumber(state.healRemaining) or 0) <= 0 then
         clearSelfTreatmentState(worker)
+    else
+        syncSelfTreatmentPresentation(worker, state)
     end
 
     return currentHp, totalAdded
