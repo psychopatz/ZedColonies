@@ -6,6 +6,26 @@ local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Skills = DC_Colony.Skills
 
+local function getCompanionMedicalSupplies(worker)
+    local supplies = {}
+    for _, entry in ipairs(worker and worker.nutritionLedger or {}) do
+        local useKind = tostring(entry and entry.medicalUse or "")
+        local units = math.max(0, math.floor((tonumber(entry and entry.treatmentUnitsRemaining) or 0) + 0.5))
+        if Config.IsMedicalProvisionEntry
+            and Config.IsMedicalProvisionEntry(entry)
+            and units > 0
+            and (useKind == "" or useKind == "bandage") then
+            supplies[#supplies + 1] = {
+                fullType = entry.fullType,
+                displayName = entry.displayName,
+                treatmentUnitsRemaining = units,
+                medicalUse = useKind ~= "" and useKind or "bandage",
+            }
+        end
+    end
+    return supplies
+end
+
 function Registry.GetWorkerSummary(worker)
     local companionData = type(worker.companion) == "table" and worker.companion or {}
     local commanderUsername = tostring(companionData.commanderUsername or "")
@@ -156,6 +176,7 @@ function Registry.GetWorkerSummary(worker)
         companionCommandInvalid = commandInvalid,
         companionCommandStatus = commandInvalid and "Commander invalid, returning soon"
             or (commanderUsername ~= "" and ("Commanded by " .. commanderUsername) or "No commander"),
+        companionMedicalSupplies = getCompanionMedicalSupplies(worker),
         isFemale = worker.isFemale,
         identitySeed = worker.identitySeed
     }
