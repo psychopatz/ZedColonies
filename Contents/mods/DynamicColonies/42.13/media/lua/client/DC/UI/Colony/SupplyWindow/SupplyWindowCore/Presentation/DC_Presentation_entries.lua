@@ -30,11 +30,16 @@ local function entryMatchesAnyRequirementTag(entry, requirementTags)
     return false
 end
 
-local function buildSupportEntriesFromFullTypes(fullTypes)
+local function buildSupportEntriesFromFullTypes(fullTypes, maxCount)
     local entries = {}
     local seen = {}
+    local limit = tonumber(maxCount) or 1000
 
     for _, fullType in ipairs(fullTypes or {}) do
+        if #entries >= limit then
+            break
+        end
+
         local key = tostring(fullType or "")
         if key ~= "" and not seen[key] then
             seen[key] = true
@@ -49,7 +54,7 @@ local function buildSupportEntriesFromFullTypes(fullTypes)
     return entries
 end
 
-function Internal.getPlaceholderSupportDisplay(window, entry)
+function Internal.getPlaceholderSupportDisplay(window, entry, maxCount)
     if not entry or entry.kind ~= "placeholder" then
         return {
             title = "",
@@ -84,7 +89,7 @@ function Internal.getPlaceholderSupportDisplay(window, entry)
 
     return {
         title = "Supported Examples",
-        entries = buildSupportEntriesFromFullTypes(entry.supportedFullTypes),
+        entries = buildSupportEntriesFromFullTypes(entry.supportedFullTypes, maxCount),
         hasMatches = false,
     }
 end

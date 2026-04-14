@@ -129,7 +129,8 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             end
             text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use < to collect the whole group, or click the left arrow to expand it for individual transfers. <LINE> "
         elseif entry.kind == "placeholder" then
-            local supportDisplay = Internal.getPlaceholderSupportDisplay(self, entry)
+            local maxCount = self.detailSupportPanel and self.detailSupportPanel.getCapacity and self.detailSupportPanel:getCapacity() or 20
+            local supportDisplay = Internal.getPlaceholderSupportDisplay(self, entry, maxCount)
             text = text .. " <RGB:0.82,0.82,0.82> Needed For: <RGB:1,1,1> " .. tostring(entry.reasonText or "This tool unlocks additional work options for the worker.") .. " <LINE> "
             text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Click this row to open the equipment picker. <LINE> "
             setDetailSupportPanel(self, supportDisplay.title, supportDisplay.entries)

@@ -41,6 +41,14 @@ function DetailSupportIconPanel:render()
     end
 end
 
+function DetailSupportIconPanel:getCapacity()
+    local size = Internal.DETAIL_SUPPORT_ICON_SIZE or 24
+    local gap = 6
+    local width = self.width
+    if width <= 0 then return 0 end
+    return math.floor((width + gap) / (size + gap))
+end
+
 function DetailSupportIconPanel:new(x, y, width, height)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
