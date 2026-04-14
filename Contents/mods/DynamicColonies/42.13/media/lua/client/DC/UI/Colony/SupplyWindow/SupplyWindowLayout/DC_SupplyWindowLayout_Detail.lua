@@ -133,6 +133,7 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             local supportDisplay = Internal.getPlaceholderSupportDisplay(self, entry, maxCount)
             text = text .. " <RGB:0.82,0.82,0.82> Needed For: <RGB:1,1,1> " .. tostring(entry.reasonText or "This tool unlocks additional work options for the worker.") .. " <LINE> "
             text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Click this row to open the equipment picker. <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Debug: <RGB:1,1,1> Click a support icon below, then choose [debug] Get Item. <LINE> "
             setDetailSupportPanel(self, supportDisplay.title, supportDisplay.entries)
         else
             setDetailSupportPanel(self, "", {})

@@ -25,6 +25,14 @@ local function canAssignJobType(worker, jobType)
     return true, nil
 end
 
+local function isTravelCompanionSupported()
+    if Config.IsTravelCompanionSupported then
+        return Config.IsTravelCompanionSupported() == true
+    end
+    local activated = getActivatedMods and getActivatedMods() or nil
+    return activated and activated.contains and activated:contains("DynamicTradingV2") or false
+end
+
 Network.Handlers.SetWorkerJobEnabled = function(player, args)
     if not args or not args.workerID then return end
 
@@ -53,6 +61,14 @@ Network.Handlers.SetWorkerJobEnabled = function(player, args)
         debugWorkerJob("Blocked start because worker is incapacitated workerID=" .. tostring(args.workerID))
         Registry.SetWorkerJobEnabled(worker, false)
         Internal.syncNotice(player, "That worker is incapacitated and must recover before returning to duty.", "error")
+        Shared.saveAndRefreshBasic(player, worker)
+        return
+    end
+
+    if normalizedJob == ((Config.JobTypes or {}).TravelCompanion) and not isTravelCompanionSupported() then
+        debugWorkerJob("Blocked Travel Companion because V2 is inactive workerID=" .. tostring(args.workerID))
+        Registry.SetWorkerJobEnabled(worker, false)
+        Internal.syncNotice(player, "Travel Companion requires Dynamic Trading V2.", "error")
         Shared.saveAndRefreshBasic(player, worker)
         return
     end
@@ -114,6 +130,14 @@ Network.Handlers.SetWorkerJobType = function(player, args)
     local worker = Registry.GetWorkerForOwner(owner, args.workerID)
     if not worker then return end
 
+    local requestedJobType = Config.NormalizeJobType and Config.NormalizeJobType(args.jobType) or tostring(args.jobType or "")
+    if requestedJobType == ((Config.JobTypes or {}).TravelCompanion) and not isTravelCompanionSupported() then
+        debugWorkerJob("Blocked Travel Companion assignment because V2 is inactive workerID=" .. tostring(args.workerID))
+        Internal.syncNotice(player, "Travel Companion requires Dynamic Trading V2.", "error")
+        Shared.saveAndRefreshBasic(player, worker)
+        return
+    end
+
     local canAssign, reason = canAssignJobType(worker, args.jobType)
     if not canAssign then
         Internal.syncNotice(player, reason or "That worker cannot take that job.", "error")
@@ -142,6 +166,11 @@ end
 
 Network.Handlers.ClaimCompanionCommand = function(player, args)
     if not args or not args.workerID then return end
+    if not isTravelCompanionSupported() then
+        Internal.syncNotice(player, "Travel Companion requires Dynamic Trading V2.", "error", true)
+        Internal.syncWorkerList(player)
+        return
+    end
     local ok, reason, worker = Companion.ClaimWorkerCompanionCommand(player, args.workerID)
     if not ok then
         Internal.syncNotice(player, reason or "Unable to claim companion command.", "error", true)
@@ -157,6 +186,11 @@ end
 
 Network.Handlers.TransferCompanionCommand = function(player, args)
     if not args or not args.workerID then return end
+    if not isTravelCompanionSupported() then
+        Internal.syncNotice(player, "Travel Companion requires Dynamic Trading V2.", "error", true)
+        Internal.syncWorkerList(player)
+        return
+    end
     local ok, reason, worker = Companion.TransferWorkerCompanionCommand(player, args.workerID, args.username)
     if not ok then
         Internal.syncNotice(player, reason or "Unable to transfer companion command.", "error", true)
@@ -172,6 +206,11 @@ end
 
 Network.Handlers.RequestCompanionCommandStatus = function(player, args)
     if not args or not args.workerID then return end
+    if not isTravelCompanionSupported() then
+        Internal.syncNotice(player, "Travel Companion requires Dynamic Trading V2.", "error", true)
+        Internal.syncWorkerList(player)
+        return
+    end
     local owner = Config.GetOwnerUsername(player)
     local worker = Registry.GetWorkerForOwner(owner, args.workerID)
     if worker and Companion.RefreshCompanionCommanderValidity then

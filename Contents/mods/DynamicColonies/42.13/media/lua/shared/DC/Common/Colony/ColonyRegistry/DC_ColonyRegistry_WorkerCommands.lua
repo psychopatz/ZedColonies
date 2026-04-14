@@ -5,6 +5,37 @@ DC_Colony.Registry.Internal = DC_Colony.Registry.Internal or {}
 local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 
+local function isTravelCompanionSupported()
+    if Config.IsTravelCompanionSupported then
+        return Config.IsTravelCompanionSupported() == true
+    end
+    local activated = getActivatedMods and getActivatedMods() or nil
+    return activated and activated.contains and activated:contains("DynamicTradingV2") or false
+end
+
+local function forceUnsupportedCompanionHome(worker)
+    if not worker then
+        return
+    end
+    local normalizedJob = Config.NormalizeJobType and Config.NormalizeJobType(worker.jobType) or tostring(worker.jobType or "")
+    if normalizedJob ~= tostring((Config.JobTypes or {}).TravelCompanion or "TravelCompanion") or isTravelCompanionSupported() then
+        return
+    end
+    worker.jobEnabled = false
+    worker.presenceState = (Config.PresenceStates or {}).Home or "Home"
+    worker.travelHoursRemaining = 0
+    worker.returnReason = nil
+    if type(worker.companion) == "table" then
+        worker.companion.v1Suspended = true
+        worker.companion.stage = nil
+        worker.companion.awaitingDespawn = false
+        worker.companion.currentOrder = nil
+        worker.companion.returnReason = nil
+        worker.companion.returnTravelHours = nil
+        worker.companion.commandInvalidSinceMs = nil
+    end
+end
+
 function Registry.SetWorkerState(worker, state)
     if worker then
         worker.state = state
@@ -89,6 +120,7 @@ end
 
 function Registry.SetWorkerJobType(worker, jobType)
     if not worker then return end
+    forceUnsupportedCompanionHome(worker)
     local normalizedJob = Config.NormalizeJobType(jobType)
     worker.jobType = normalizedJob
     worker.profession = worker.jobType

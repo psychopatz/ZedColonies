@@ -20,6 +20,36 @@ local function isRecruitable(archetypeID)
         or Config.IsRecruitableArchetype(archetypeID)
 end
 
+local function isDynamicTradingV2Active()
+    local activated = getActivatedMods and getActivatedMods() or nil
+    return activated and activated.contains and activated:contains("DynamicTradingV2") or false
+end
+
+local function getStarterJobType(archetypeID, options)
+    local explicitJob = options and options.jobType or nil
+    if explicitJob and Config.NormalizeJobType then
+        local normalizedExplicit = Config.NormalizeJobType(explicitJob)
+        if normalizedExplicit == tostring((Config.JobTypes or {}).TravelCompanion or "TravelCompanion")
+            and not (Config.IsTravelCompanionSupported and Config.IsTravelCompanionSupported()) then
+            return Config.JobTypes and Config.JobTypes.Unemployed or "Unemployed"
+        end
+        return normalizedExplicit
+    end
+
+    local defaultJob = Config.GetDefaultJobForArchetype and Config.GetDefaultJobForArchetype(archetypeID) or nil
+    local normalized = Config.NormalizeJobType and Config.NormalizeJobType(defaultJob) or tostring(defaultJob or "")
+    if normalized == tostring((Config.JobTypes or {}).TravelCompanion or "TravelCompanion")
+        and not (Config.IsTravelCompanionSupported and Config.IsTravelCompanionSupported()) then
+        return Config.JobTypes and Config.JobTypes.Unemployed or "Unemployed"
+    end
+
+    if normalized ~= "" then
+        return normalized
+    end
+
+    return Config.JobTypes and Config.JobTypes.Unemployed or "Unemployed"
+end
+
 function StarterWorkers.PickStarterArchetype()
     local pool = StarterWorkers.GetArchetypePool and StarterWorkers.GetArchetypePool() or {}
     local candidates = {}
@@ -55,7 +85,7 @@ function StarterWorkers.CreateStarterWorker(ownerUsername, slot, options)
     local archetypeID = options.archetypeID or StarterWorkers.PickStarterArchetype()
     local npcData = nil
 
-    if DTNPCGenerator and DTNPCGenerator.Generate then
+    if isDynamicTradingV2Active() and DTNPCGenerator and DTNPCGenerator.Generate then
         npcData = DTNPCGenerator.Generate({ occupation = archetypeID })
     end
 
@@ -68,12 +98,13 @@ function StarterWorkers.CreateStarterWorker(ownerUsername, slot, options)
     }
 
     local sourceID = buildSourceID(owner, slot)
+    local jobType = getStarterJobType(archetypeID, options)
     local args = {
         sourceNPCID = sourceID,
         sourceNPCType = "StarterColony",
         archetypeID = archetypeID,
         profession = archetypeID,
-        jobType = Config.JobTypes and Config.JobTypes.Unemployed or nil,
+        jobType = jobType,
         name = npcData.name,
         isFemale = npcData.isFemale,
         identitySeed = npcData.identitySeed,

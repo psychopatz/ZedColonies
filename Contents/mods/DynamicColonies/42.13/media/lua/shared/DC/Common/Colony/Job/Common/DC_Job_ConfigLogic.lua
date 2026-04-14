@@ -66,6 +66,11 @@ function Config.GetWorkerJobCapability(worker, jobType)
             getWorkerSkillLevel(worker, "Melee"),
             getWorkerSkillLevel(worker, "Shooting")
         )
+        if Config.IsTravelCompanionSupported and not Config.IsTravelCompanionSupported() then
+            capability.capable = false
+            capability.reason = "Travel Companion requires Dynamic Trading V2."
+            return capability
+        end
         if companion and companion.CanWorkerBeCompanion then
             capability.capable, capability.reason = companion.CanWorkerBeCompanion(worker)
         else
@@ -94,6 +99,16 @@ function Config.CanWorkerTakeJob(worker, jobType)
 
     local capability = Config.GetWorkerJobCapability(worker, jobType)
     return capability.capable == true, capability.reason
+end
+
+function Config.IsTravelCompanionSupported()
+    local companion = DC_Colony and DC_Colony.Companion or nil
+    if companion and companion.IsV2Active then
+        return companion.IsV2Active() == true
+    end
+
+    local activated = getActivatedMods and getActivatedMods() or nil
+    return activated and activated.contains and activated:contains("DynamicTradingV2") or false
 end
 
 function Config.GetDefaultJobForArchetype(archetypeID)
@@ -147,10 +162,12 @@ function Config.GetNextJobType(jobType)
         Config.JobTypes.Builder,
         Config.JobTypes.Doctor,
         Config.JobTypes.Scavenge,
-        Config.JobTypes.TravelCompanion,
         Config.JobTypes.Farm,
         Config.JobTypes.Fish
     }
+    if Config.IsTravelCompanionSupported and Config.IsTravelCompanionSupported() then
+        table.insert(order, 5, Config.JobTypes.TravelCompanion)
+    end
     local normalized = Config.NormalizeJobType(jobType)
     for index, value in ipairs(order) do
         if value == normalized then

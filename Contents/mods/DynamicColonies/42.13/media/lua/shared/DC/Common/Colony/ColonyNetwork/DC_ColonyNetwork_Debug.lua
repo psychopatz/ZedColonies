@@ -1,8 +1,8 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry"
-require "DC/Common/Colony/DC_Colony_Sim"
+require "DC/Common/Colony/ColonySim/DC_Colony_Sim"
 require "DC/Common/Colony/DC_Colony_Presentation"
-require "DC/Common/Faction/TradingSys/DynamicTrading_Factions"
+require "DT/Common/Faction/TradingSys/DynamicTrading_Factions"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Network = DC_Colony.Network or {}
@@ -46,6 +46,100 @@ local function canUseDebugRecruit(player)
     end
 
     return false
+end
+
+local function isScriptItem(fullType)
+    if not fullType or fullType == "" or not getScriptManager then
+        return false
+    end
+    local scriptItem = getScriptManager():getItem(fullType)
+    return scriptItem ~= nil
+end
+
+local function isDebugEquipmentFullType(Config, fullType, requirementKey)
+    if not Config or not fullType or fullType == "" then
+        return false
+    end
+
+    if requirementKey and requirementKey ~= ""
+        and Config.ItemMatchesEquipmentRequirement
+        and Config.ItemMatchesEquipmentRequirement(fullType, requirementKey) then
+        return true
+    end
+
+    if Config.IsColonyToolFullType and Config.IsColonyToolFullType(fullType) then
+        return true
+    end
+
+    return false
+end
+
+Network.Handlers.DebugGiveEquipmentItem = function(player, args)
+    if not player then
+        return
+    end
+
+    if not canUseDebugRecruit(player) then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "Debug item spawning is unavailable for this player.", "error", true)
+        end
+        return
+    end
+
+    args = args or {}
+    local Config = getConfig()
+    local fullType = tostring(args.fullType or "")
+    local requirementKey = tostring(args.requirementKey or "")
+    local count = math.max(1, math.min(50, math.floor(tonumber(args.count) or 1)))
+
+    if fullType == "" then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "No debug equipment item was selected.", "error", true)
+        end
+        return
+    end
+
+    if not isScriptItem(fullType) then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "Debug equipment item does not exist: " .. fullType, "error", true)
+        end
+        return
+    end
+
+    if not isDebugEquipmentFullType(Config, fullType, requirementKey) then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "That item is not registered as colony equipment: " .. fullType, "error", true)
+        end
+        return
+    end
+
+    local inventory = player:getInventory()
+    if not inventory then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "No player inventory found.", "error", true)
+        end
+        return
+    end
+
+    if Internal.addInventoryItem then
+        Internal.addInventoryItem(inventory, fullType, count)
+    else
+        inventory:AddItems(fullType, count)
+    end
+
+    if Internal.syncNotice then
+        local displayName = fullType
+        local scriptItem = getScriptManager and getScriptManager():getItem(fullType) or nil
+        if scriptItem and scriptItem.getDisplayName then
+            displayName = scriptItem:getDisplayName()
+        end
+        Internal.syncNotice(
+            player,
+            "Debug added " .. tostring(count) .. " " .. tostring(displayName) .. ".",
+            "info",
+            false
+        )
+    end
 end
 
 Network.Handlers.DebugRecruitWorker = function(player, args)

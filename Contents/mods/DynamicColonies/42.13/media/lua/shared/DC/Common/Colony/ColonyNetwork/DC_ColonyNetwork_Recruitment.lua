@@ -1,11 +1,11 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry"
 require "DC/Common/Colony/DC_Colony_Sites"
-require "DC/Common/Colony/DC_Colony_Sim"
+require "DC/Common/Colony/ColonySim/DC_Colony_Sim"
 require "DC/Common/Colony/DC_Colony_Presentation"
-require "DC/Common/Faction/TradingSys/DynamicTrading_Factions"
-require "DC/Common/Faction/TradingSys/RosterLogic/DC_RosterLogic"
-require "DC/Common/Faction/TradingSys/DynamicTrading_Stock"
+require "DT/Common/Faction/TradingSys/DynamicTrading_Factions"
+require "DT/Common/Faction/TradingSys/RosterLogic/DT_RosterLogic"
+require "DT/Common/Faction/TradingSys/DynamicTrading_Stock"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Network = DC_Colony.Network or {}

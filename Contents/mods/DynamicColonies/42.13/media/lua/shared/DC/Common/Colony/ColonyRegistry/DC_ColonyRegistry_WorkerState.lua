@@ -64,6 +64,45 @@ local function getInventoryLedgerWeight(entries)
     return totalWeight
 end
 
+local function isTravelCompanionSupported()
+    if Config.IsTravelCompanionSupported then
+        return Config.IsTravelCompanionSupported() == true
+    end
+    local activated = getActivatedMods and getActivatedMods() or nil
+    return activated and activated.contains and activated:contains("DynamicTradingV2") or false
+end
+
+local function suspendUnsupportedCompanion(worker)
+    local jobTypes = Config.JobTypes or {}
+    local presenceStates = Config.PresenceStates or {}
+    local normalizedJob = Config.NormalizeJobType and Config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
+    if normalizedJob ~= tostring(jobTypes.TravelCompanion or "TravelCompanion") or isTravelCompanionSupported() then
+        if worker and type(worker.companion) == "table" then
+            worker.companion.v1Suspended = nil
+        end
+        return
+    end
+
+    worker.jobEnabled = false
+    worker.autoRepeatJob = false
+    worker.autoRepeatScavenge = false
+    worker.state = tostring(worker.state or "") == tostring((Config.States or {}).Dead or "Dead")
+        and worker.state
+        or ((Config.States or {}).Idle or "Idle")
+    worker.presenceState = presenceStates.Home or "Home"
+    worker.travelHoursRemaining = 0
+    worker.returnReason = nil
+
+    worker.companion = type(worker.companion) == "table" and worker.companion or {}
+    worker.companion.v1Suspended = true
+    worker.companion.stage = nil
+    worker.companion.awaitingDespawn = false
+    worker.companion.currentOrder = nil
+    worker.companion.returnReason = nil
+    worker.companion.returnTravelHours = nil
+    worker.companion.commandInvalidSinceMs = nil
+end
+
 local function migrateLegacyNutritionModel(worker)
     local currentVersion = tonumber(worker and worker.nutritionModelVersion) or 0
     local targetVersion = tonumber(Config.NUTRITION_MODEL_VERSION) or 3
@@ -118,6 +157,7 @@ function Registry.RecalculateWorker(worker)
     worker.presenceState = worker.presenceState or Config.PresenceStates.Home
     worker.travelHoursRemaining = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
     worker.returnReason = worker.returnReason or nil
+    suspendUnsupportedCompanion(worker)
     worker.deathCause = tostring(worker.deathCause or "")
     worker.baseCarryWeight = Config.GetWorkerBaseCarryWeight and Config.GetWorkerBaseCarryWeight(worker)
         or (Config.GetDefaultWorkerCarryWeight and Config.GetDefaultWorkerCarryWeight())

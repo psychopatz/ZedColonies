@@ -1,4 +1,4 @@
-require "DC/Common/Map/DC_MapDisplaySystem"
+require "DT/Common/Map/DT_MapDisplaySystem"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 
 DC_Colony = DC_Colony or {}

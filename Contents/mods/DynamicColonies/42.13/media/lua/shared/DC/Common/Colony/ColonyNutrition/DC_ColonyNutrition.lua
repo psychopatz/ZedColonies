@@ -1,5 +1,5 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
-require "DC/Common/Trading/EconomyCommon/DC_EconomyCommon"
+require "DT/Common/Trading/EconomyCommon/DT_EconomyCommon"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Nutrition = DC_Colony.Nutrition or {}

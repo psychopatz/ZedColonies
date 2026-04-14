@@ -1,12 +1,102 @@
 DC_SupplyWindow = DC_SupplyWindow or {}
 DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
+require "ISUI/ISContextMenu"
+
 local Internal = DC_SupplyWindow.Internal
 
 local DetailSupportIconPanel = ISPanel:derive("DC_SupplyWindowDetailSupportIconPanel")
 
+local function canUseDebug()
+    if DynamicTrading and DynamicTrading.Debug then
+        return true
+    end
+
+    if isDebugEnabled and isDebugEnabled() then
+        return true
+    end
+
+    local player = getSpecificPlayer and getSpecificPlayer(0) or getPlayer and getPlayer() or nil
+    if player and player.getAccessLevel then
+        local accessLevel = player:getAccessLevel()
+        return accessLevel and accessLevel ~= "" and accessLevel ~= "None"
+    end
+
+    return false
+end
+
+local function getEntryDisplayName(entry)
+    return tostring(entry and (entry.displayName or entry.fullType) or "item")
+end
+
 function DetailSupportIconPanel:prerender()
     ISPanel.prerender(self)
+end
+
+function DetailSupportIconPanel:getEntryAt(x, y)
+    local size = Internal.DETAIL_SUPPORT_ICON_SIZE or 24
+    local gap = 6
+    local iconY = 18
+    local iconX = 0
+    local maxX = self.width - size
+
+    if y < iconY - 1 or y > iconY + size + 1 then
+        return nil
+    end
+
+    for _, entry in ipairs(self.entries or {}) do
+        if iconX > maxX then
+            break
+        end
+
+        if x >= iconX - 1 and x <= iconX + size + 1 then
+            return entry
+        end
+
+        iconX = iconX + size + gap
+    end
+
+    return nil
+end
+
+function DetailSupportIconPanel:onMouseDown(x, y)
+    local entry = self:getEntryAt(x, y)
+    local fullType = tostring(entry and entry.fullType or "")
+    if fullType == "" then
+        return false
+    end
+
+    local menu = ISContextMenu.get(0, getMouseX(), getMouseY())
+    local title = menu:addOption(getEntryDisplayName(entry))
+    if title then
+        title.notAvailable = true
+    end
+
+    if canUseDebug() then
+        local panel = self
+        menu:addOption("[debug] Get Item", nil, function()
+            local window = panel.target
+            local placeholder = window and window.selectedWorkerEntry or nil
+            if window and window.sendColonyCommand then
+                window:sendColonyCommand("DebugGiveEquipmentItem", {
+                    fullType = fullType,
+                    count = 1,
+                    workerID = window.workerID,
+                    requirementKey = placeholder and placeholder.requirementKey or nil
+                })
+                if window.updateStatus then
+                    window:updateStatus("Debug requesting " .. getEntryDisplayName(entry) .. "...")
+                end
+            end
+        end)
+    else
+        local option = menu:addOption("[debug] Get Item")
+        if option then
+            option.notAvailable = true
+        end
+    end
+
+    return true
 end
 
 function DetailSupportIconPanel:render()
@@ -147,6 +237,7 @@ function DC_SupplyWindow:createChildren()
         supportPanelHeight - 8
     )
     self.detailSupportPanel:initialise()
+    self.detailSupportPanel.target = self
     self.detailSupportPanel:setVisible(false)
     self:addChild(self.detailSupportPanel)
 

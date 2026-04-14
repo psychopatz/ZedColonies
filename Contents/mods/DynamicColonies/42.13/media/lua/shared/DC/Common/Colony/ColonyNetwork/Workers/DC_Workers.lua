@@ -2,7 +2,7 @@ require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry"
 require "DC/Common/Colony/DC_Colony_Sites"
 require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition"
-require "DC/Common/Colony/DC_Colony_Sim"
+require "DC/Common/Colony/ColonySim/DC_Colony_Sim"
 require "DC/Common/Colony/DC_Colony_Presentation"
 require "DC/Common/Colony/Warehouse/DC_ColonyWarehouse"
 
