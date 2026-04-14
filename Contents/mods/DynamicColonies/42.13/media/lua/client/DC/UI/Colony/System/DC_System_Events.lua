@@ -122,3 +122,20 @@ if not System.EventsAdded then
     Events.OnServerCommand.Add(onServerCommand)
     System.EventsAdded = true
 end
+
+local function requestStarterWorkers()
+    if not (System and System.SendCommand) then
+        return
+    end
+    System.SendCommand("EnsureStarterWorkers", {})
+end
+
+if not System.StarterWorkerEventsAdded then
+    Events.OnGameStart.Add(requestStarterWorkers)
+    Events.OnCreatePlayer.Add(function(playerIndex)
+        if playerIndex == nil or playerIndex == 0 then
+            requestStarterWorkers()
+        end
+    end)
+    System.StarterWorkerEventsAdded = true
+end

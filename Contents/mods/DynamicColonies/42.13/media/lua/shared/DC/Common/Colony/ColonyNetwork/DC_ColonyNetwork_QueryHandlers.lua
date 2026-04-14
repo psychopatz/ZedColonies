@@ -6,6 +6,9 @@ local Network = DC_Colony.Network
 Network.Handlers = Network.Handlers or {}
 
 Network.Handlers.RequestPlayerWorkers = function(player, args)
+    if Network.Internal and Network.Internal.ensureStarterWorkers then
+        Network.Internal.ensureStarterWorkers(player)
+    end
     Network.Internal.syncWorkerList(player, args and args.knownVersion)
 end
 

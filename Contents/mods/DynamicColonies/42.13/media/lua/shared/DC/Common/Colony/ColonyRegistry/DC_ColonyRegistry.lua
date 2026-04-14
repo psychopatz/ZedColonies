@@ -17,6 +17,7 @@ require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_Presentation"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_Ledgers"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_WorkerCommands"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_Sites"
+require "DC/Common/Colony/WorkerTransfer/DC_WorkerTransfer"
 require "DC/Common/Colony/Warehouse/DC_ColonyWarehouse"
 
 DC_Colony.NeedProviders = {

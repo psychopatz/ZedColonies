@@ -219,6 +219,7 @@ local function createWorkerFromRecruitArgs(owner, args, sourceSoul)
         name = args.name or (sourceSoul and sourceSoul.name),
         isFemale = isFemale,
         identitySeed = args.identitySeed or (sourceSoul and sourceSoul.identitySeed),
+        visualID = args.visualID or (sourceSoul and sourceSoul.visualID),
         homeX = args.homeX or args.spawnX or args.x,
         homeY = args.homeY or args.spawnY or args.y,
         homeZ = args.homeZ or args.spawnZ or args.z or 0,

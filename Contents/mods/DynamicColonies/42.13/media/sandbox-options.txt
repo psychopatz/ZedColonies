@@ -1,5 +1,15 @@
 VERSION = 1,
 
+option DynamicColonies.StarterWorkerCount
+{
+    type = integer,
+    default = 0,
+    min = 0,
+    max = 10,
+    page = DynamicColoniesLabour,
+    translation = DynamicColonies_StarterWorkerCount,
+}
+
 option DynamicColonies.ColonyDailyCaloriesUse
 {
     type = integer,

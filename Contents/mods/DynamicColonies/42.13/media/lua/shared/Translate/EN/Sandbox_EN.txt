@@ -1,6 +1,9 @@
 Sandbox_EN = {
     Sandbox_DynamicColoniesLabour = "Dynamic Colonies Labour",
 
+    Sandbox_DynamicColonies_StarterWorkerCount = "Starter Workers",
+    Sandbox_DynamicColonies_StarterWorkerCount_tooltip = "How many generated starter workers each player receives once. Multiplayer players each get their own grant before joining another colony faction.",
+
     Sandbox_DynamicColonies_ColonyDailyCaloriesUse = "Labour: Hunger Use Per Day",
     Sandbox_DynamicColonies_ColonyDailyCaloriesUse_tooltip = "Sets the fixed daily hunger reserve consumed by colony workers. This value is also used as the hunger bar's full-day target.",
 
