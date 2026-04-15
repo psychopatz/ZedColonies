@@ -59,6 +59,30 @@ local function onServerCommand(module, command, args)
         System.recruitResultCache[sourceNPCID] = args
     end
 
+    if args.success then
+        local recruitedTraderUUID = args.recruitedTraderUUID and tostring(args.recruitedTraderUUID) or nil
+        if recruitedTraderUUID then
+            if DC_V2_RadarManager then
+                if DC_V2_RadarManager.ClientRoster and DC_V2_RadarManager.ClientRoster.Souls then
+                    DC_V2_RadarManager.ClientRoster.Souls[recruitedTraderUUID] = nil
+                end
+                DC_V2_RadarManager.FoundTraders[recruitedTraderUUID] = nil
+                if DC_V2_RadarManager.RequestRoster then
+                    DC_V2_RadarManager.RequestRoster()
+                end
+            end
+
+            if DynamicTrading_Client and DynamicTrading_Client.Cache and DynamicTrading_Client.Cache.Traders then
+                DynamicTrading_Client.Cache.Traders[recruitedTraderUUID] = nil
+            end
+
+            if DC_V2_RadarWindow and DC_V2_RadarWindow.instance and DC_V2_RadarWindow.instance.refresh then
+                DC_V2_RadarWindow.instance:refresh()
+            end
+        end
+        System.OpenWindow()
+    end
+
     local ui = getConversationUI()
     if not ui then
         return
@@ -91,29 +115,6 @@ local function onServerCommand(module, command, args)
     end
     if ui.refreshFactionInfo then
         ui:refreshFactionInfo()
-    end
-    if args.success then
-        local recruitedTraderUUID = args.recruitedTraderUUID and tostring(args.recruitedTraderUUID) or nil
-        if recruitedTraderUUID then
-            if DC_V2_RadarManager then
-                if DC_V2_RadarManager.ClientRoster and DC_V2_RadarManager.ClientRoster.Souls then
-                    DC_V2_RadarManager.ClientRoster.Souls[recruitedTraderUUID] = nil
-                end
-                DC_V2_RadarManager.FoundTraders[recruitedTraderUUID] = nil
-                if DC_V2_RadarManager.RequestRoster then
-                    DC_V2_RadarManager.RequestRoster()
-                end
-            end
-
-            if DynamicTrading_Client and DynamicTrading_Client.Cache and DynamicTrading_Client.Cache.Traders then
-                DynamicTrading_Client.Cache.Traders[recruitedTraderUUID] = nil
-            end
-
-            if DC_V2_RadarWindow and DC_V2_RadarWindow.instance and DC_V2_RadarWindow.instance.refresh then
-                DC_V2_RadarWindow.instance:refresh()
-            end
-        end
-        System.OpenWindow()
     end
     ui:updateOptions(ui.baseOptions or {})
 end

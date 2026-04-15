@@ -30,6 +30,17 @@ local function getPresentation()
 end
 
 local function canUseDebugRecruit(player)
+    local accessLevel = nil
+    if player and player.getAccessLevel then
+        accessLevel = player:getAccessLevel()
+    end
+    local hasElevatedAccess = accessLevel and accessLevel ~= "" and accessLevel ~= "None"
+    local isSinglePlayer = (not isClient or not isClient()) and not hasElevatedAccess
+
+    if isSinglePlayer then
+        return isDebugEnabled and isDebugEnabled() == true
+    end
+
     if DynamicTrading and DynamicTrading.Debug then
         return true
     end
@@ -38,11 +49,8 @@ local function canUseDebugRecruit(player)
         return true
     end
 
-    if player and player.getAccessLevel then
-        local accessLevel = player:getAccessLevel()
-        if accessLevel and accessLevel ~= "" and accessLevel ~= "None" then
-            return true
-        end
+    if hasElevatedAccess then
+        return true
     end
 
     return false
@@ -146,66 +154,21 @@ Network.Handlers.DebugRecruitWorker = function(player, args)
     if not player or not canUseDebugRecruit(player) then return end
     args = args or {}
 
-    local Config = getConfig()
-    local Registry = getRegistry()
-    local Sim = getSim()
-    local Presentation = getPresentation()
-    local owner = Config.GetOwnerUsername(player)
-    local sourceNPCID = args.sourceNPCID and tostring(args.sourceNPCID) or (args.traderUUID and tostring(args.traderUUID) or nil)
-    local worker = sourceNPCID and Registry.FindWorkerBySourceID(owner, sourceNPCID) or nil
-    local recruitedTraderUUID = args.traderUUID or sourceNPCID or nil
+    local recruitArgs = {}
+    for key, value in pairs(args) do
+        recruitArgs[key] = value
+    end
+    recruitArgs.debugRecruitBypass = true
 
-    if Config and Config.IsRecruitableArchetype and not Config.IsRecruitableArchetype(args.archetypeID or args.profession) then
-        if Internal.syncRecruitAttemptResult then
-            Internal.syncRecruitAttemptResult(player, {
-                success = false,
-                sourceNPCID = sourceNPCID,
-                reasonCode = "non_recruitable",
-                message = "That kind of trader won't join a colony labour roster."
-            })
-        end
-        return
-    end
-
-    if not worker then
-        if Internal.detachRecruitedSourceNPC then
-            local resolvedUUID = Internal.detachRecruitedSourceNPC(args)
-            if resolvedUUID then
-                recruitedTraderUUID = resolvedUUID
-            end
-        end
-        worker = Internal.createWorkerFromRecruitArgs(owner, args)
-        if DynamicTrading_Factions and DynamicTrading_Factions.OnColonyWorkerCreated then
-            DynamicTrading_Factions.OnColonyWorkerCreated(owner, worker)
-        end
-    end
-
-    if Registry and Registry.Save then
-        Registry.Save()
-    end
-    if Sim and Sim.ProcessWorker then
-        Sim.ProcessWorker(worker, (Config.GetCurrentWorldHours and Config.GetCurrentWorldHours()) or Config.GetCurrentHour())
-    end
-    if Presentation and Presentation.SyncWorker then
-        Presentation.SyncWorker(worker, { player })
-    end
-    if Internal.syncRecruitAttemptResult then
+    if Network.Handlers.AttemptRecruitWorker then
+        Network.Handlers.AttemptRecruitWorker(player, recruitArgs)
+    elseif Internal.syncRecruitAttemptResult then
         Internal.syncRecruitAttemptResult(player, {
-            success = true,
-            sourceNPCID = sourceNPCID,
-            recruitedTraderUUID = recruitedTraderUUID and tostring(recruitedTraderUUID) or nil,
-            workerID = worker.workerID,
-            reasonCode = "recruited",
-            message = "For testing, I'll join your labour roster."
+            success = false,
+            sourceNPCID = recruitArgs.sourceNPCID or recruitArgs.traderUUID,
+            reasonCode = "debug_unavailable",
+            message = "Debug recruit is unavailable."
         })
-    end
-    Internal.syncWorkerDetail(player, worker.workerID)
-    Internal.syncWorkerList(player)
-    if Internal.syncOwnedFactionStatus then
-        Internal.syncOwnedFactionStatus(player)
-    end
-    if Internal.syncRadarRoster then
-        Internal.syncRadarRoster(player)
     end
 end
 

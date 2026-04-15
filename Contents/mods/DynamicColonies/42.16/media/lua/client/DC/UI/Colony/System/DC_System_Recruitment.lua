@@ -21,8 +21,7 @@ function System.RecruitFromConversation(ui)
         return false, "The labour recruit command could not be sent."
     end
 
-    System.OpenWindow()
-    return true, "For testing, I'll join your labour roster as a " .. tostring(args.archetypeID or "General") .. "."
+    return true, ""
 end
 
 function System.AttemptRecruitFromConversation(ui)

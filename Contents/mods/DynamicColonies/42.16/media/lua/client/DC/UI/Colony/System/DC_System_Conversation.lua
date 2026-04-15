@@ -103,6 +103,8 @@ function System.BuildRecruitArgs(ui, archetypeID)
     local target = ui.target or {}
     local npcData = DTNPC and DTNPC.GetData and DTNPC.GetData(npc) or nil
     local player = Internal.GetLocalPlayer()
+    local ownedStatus = System.GetOwnedFactionStatus and System.GetOwnedFactionStatus() or nil
+    local factionHome = ownedStatus and ownedStatus.faction and ownedStatus.faction.homeCoords or nil
 
     local sourceNPCID = System.GetConversationSourceNPCID(ui)
     if not sourceNPCID then
@@ -126,10 +128,22 @@ function System.BuildRecruitArgs(ui, archetypeID)
         homeY = math.floor(player:getY())
         homeZ = math.floor(player:getZ())
         if x == nil or y == nil then
-        x = math.floor(player:getX())
-        y = math.floor(player:getY())
-        z = math.floor(player:getZ())
+            x = math.floor(player:getX())
+            y = math.floor(player:getY())
+            z = math.floor(player:getZ())
         end
+    end
+
+    local baseX = nil
+    local baseY = nil
+    local baseZ = nil
+    if factionHome and factionHome.x ~= nil and factionHome.y ~= nil then
+        baseX = math.floor(tonumber(factionHome.x) or 0)
+        baseY = math.floor(tonumber(factionHome.y) or 0)
+        baseZ = math.floor(tonumber(factionHome.z) or 0)
+        homeX = baseX
+        homeY = baseY
+        homeZ = baseZ
     end
 
     local normalizedArchetype = config.NormalizeArchetypeID(
@@ -159,6 +173,9 @@ function System.BuildRecruitArgs(ui, archetypeID)
         isFemale = isFemale,
         sourceNPCID = tostring(sourceNPCID),
         sourceNPCType = "ConversationUI",
+        baseX = baseX,
+        baseY = baseY,
+        baseZ = baseZ,
         homeX = homeX,
         homeY = homeY,
         homeZ = homeZ,

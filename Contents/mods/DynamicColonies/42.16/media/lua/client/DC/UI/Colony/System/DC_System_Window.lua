@@ -20,6 +20,16 @@ end
 
 function System.CanUseDebug(player)
     local playerObj = player or Internal.GetLocalPlayer()
+    local accessLevel = nil
+    if playerObj and playerObj.getAccessLevel then
+        accessLevel = playerObj:getAccessLevel()
+    end
+    local hasElevatedAccess = accessLevel and accessLevel ~= "" and accessLevel ~= "None"
+    local isSinglePlayer = (not isClient or not isClient()) and not hasElevatedAccess
+
+    if isSinglePlayer then
+        return isDebugEnabled and isDebugEnabled() == true
+    end
 
     if DynamicTrading and DynamicTrading.Debug then
         return true
@@ -29,11 +39,8 @@ function System.CanUseDebug(player)
         return true
     end
 
-    if playerObj and playerObj.getAccessLevel then
-        local accessLevel = playerObj:getAccessLevel()
-        if accessLevel and accessLevel ~= "" and accessLevel ~= "None" then
-            return true
-        end
+    if hasElevatedAccess then
+        return true
     end
 
     return false
