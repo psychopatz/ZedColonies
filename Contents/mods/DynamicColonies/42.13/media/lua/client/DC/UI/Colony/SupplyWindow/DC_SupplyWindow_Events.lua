@@ -1,4 +1,4 @@
-require "ISUI/ISModalDialog"
+require "DC/UI/Colony/Utils/DC_UIStringUtils"
 
 DC_SupplyWindow = DC_SupplyWindow or {}
 DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
@@ -6,32 +6,6 @@ DC_Colony = DC_Colony or {}
 DC_Colony.UI = DC_Colony.UI or {}
 
 local Internal = DC_SupplyWindow.Internal
-
-if not DC_Colony.UI.ShowNoticeModal then
-    function DC_Colony.UI.ShowNoticeModal(message)
-        local text = tostring(message or "")
-        if text == "" then
-            return
-        end
-
-        if DC_Colony.UI.activeNoticeText == text then
-            return
-        end
-
-        DC_Colony.UI.activeNoticeText = text
-
-        local function onClose()
-            DC_Colony.UI.activeNoticeText = nil
-        end
-
-        local modal = ISModalDialog:new(0, 0, 420, 180, text, true, nil, onClose, nil)
-        modal:initialise()
-        modal:addToUIManager()
-        modal:setX((getCore():getScreenWidth() - modal:getWidth()) / 2)
-        modal:setY((getCore():getScreenHeight() - modal:getHeight()) / 2)
-        modal:bringToTop()
-    end
-end
 
 local function onServerCommand(module, command, args)
     if module ~= Internal.getCommandModule() then

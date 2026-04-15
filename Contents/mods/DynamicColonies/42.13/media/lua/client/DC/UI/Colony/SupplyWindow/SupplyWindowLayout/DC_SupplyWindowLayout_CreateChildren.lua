@@ -35,10 +35,11 @@ end
 
 function DetailSupportIconPanel:getEntryAt(x, y)
     local size = Internal.DETAIL_SUPPORT_ICON_SIZE or 24
+    local pad = 8
     local gap = 6
-    local iconY = 18
-    local iconX = 0
-    local maxX = self.width - size
+    local iconY = 28
+    local iconX = pad
+    local maxX = self.width - pad - size
 
     if y < iconY - 1 or y > iconY + size + 1 then
         return nil
@@ -106,13 +107,14 @@ function DetailSupportIconPanel:render()
         return
     end
 
-    self:drawText(title, 0, 0, 0.82, 0.82, 0.82, 1, UIFont.Small)
+    local pad = 8
+    self:drawText(title, pad, 7, 0.82, 0.82, 0.82, 1, UIFont.Small)
 
     local size = Internal.DETAIL_SUPPORT_ICON_SIZE or 24
     local gap = 6
-    local x = 0
-    local y = 18
-    local maxX = self.width - size
+    local x = pad
+    local y = 28
+    local maxX = self.width - pad - size
 
     for _, entry in ipairs(entries) do
         local tex = entry and (entry.texture or (Internal.resolveEntryTexture and Internal.resolveEntryTexture(entry) or nil)) or nil
@@ -133,8 +135,9 @@ end
 
 function DetailSupportIconPanel:getCapacity()
     local size = Internal.DETAIL_SUPPORT_ICON_SIZE or 24
+    local pad = 8
     local gap = 6
-    local width = self.width
+    local width = self.width - (pad * 2)
     if width <= 0 then return 0 end
     return math.floor((width + gap) / (size + gap))
 end
@@ -143,8 +146,8 @@ function DetailSupportIconPanel:new(x, y, width, height)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
-    o.borderColor = { r = 0, g = 0, b = 0, a = 0 }
+    o.backgroundColor = { r = 0, g = 0, b = 0, a = 0.38 }
+    o.borderColor = { r = 1, g = 1, b = 1, a = 0.16 }
     o.entries = {}
     o.title = ""
     return o
@@ -153,7 +156,8 @@ end
 function DC_SupplyWindow:createChildren()
     ISCollapsableWindow.createChildren(self)
     local layout = Internal.getSupplyWindowLayoutMetrics(self)
-    local supportPanelHeight = Internal.DETAIL_SUPPORT_PANEL_HEIGHT or 56
+    local supportPanelHeight = Internal.DETAIL_SUPPORT_PANEL_HEIGHT or 64
+    local supportPanelGap = Internal.DETAIL_SUPPORT_PANEL_GAP or 6
 
     self.playerSearch = ISTextEntryBox:new("", layout.leftX, layout.searchY, layout.leftWidth, layout.searchH)
     self.playerSearch:initialise()
@@ -223,7 +227,7 @@ function DC_SupplyWindow:createChildren()
     self.workerList.drawBorder = true
     self:addChild(self.workerList)
 
-    self.detailText = ISRichTextPanel:new(layout.pad, layout.detailY, self.width - (layout.pad * 2), layout.detailH - supportPanelHeight)
+    self.detailText = ISRichTextPanel:new(layout.pad, layout.detailY, self.width - (layout.pad * 2), layout.detailH - supportPanelHeight - supportPanelGap)
     self.detailText:initialise()
     self.detailText.backgroundColor = { r = 0, g = 0, b = 0, a = 0.26 }
     self.detailText.borderColor = { r = 1, g = 1, b = 1, a = 0.12 }
@@ -231,10 +235,10 @@ function DC_SupplyWindow:createChildren()
     self:addChild(self.detailText)
 
     self.detailSupportPanel = DetailSupportIconPanel:new(
-        layout.pad + 4,
-        layout.detailY + layout.detailH - supportPanelHeight + 4,
-        self.width - (layout.pad * 2) - 8,
-        supportPanelHeight - 8
+        layout.pad,
+        layout.detailY + layout.detailH - supportPanelHeight,
+        self.width - (layout.pad * 2),
+        supportPanelHeight
     )
     self.detailSupportPanel:initialise()
     self.detailSupportPanel.target = self

@@ -79,23 +79,162 @@ local function storeWorkerToolEntry(worker, toolEntry, requirementKey)
     return Registry.AddToolEntry(worker, toolEntry)
 end
 
-local function rejectItem(rejected, itemID, reason)
+local function getRequirementLabel(requirementKey)
+    local definition = Config.GetEquipmentRequirementDefinition and Config.GetEquipmentRequirementDefinition(requirementKey) or nil
+    return tostring(definition and definition.label or requirementKey or "the selected requirement")
+end
+
+local function formatWeight(value)
+    return string.format("%.2f", math.max(0, tonumber(value) or 0))
+end
+
+local function getEquipmentEntryWeight(entry)
+    local fullType = entry and entry.fullType
+    if not fullType then
+        return 0
+    end
+    local qty = math.max(1, tonumber(entry and entry.qty) or 1)
+    return math.max(0, tonumber(Config.GetItemWeight and Config.GetItemWeight(fullType)) or 0) * qty
+end
+
+local function getRequirementEntry(worker, requirementKey)
+    local targetKey = tostring(requirementKey or "")
+    if targetKey == "" then
+        return nil
+    end
+
+    for _, entry in ipairs(worker and worker.toolLedger or {}) do
+        if tostring(entry and entry.assignedRequirementKey or "") == targetKey then
+            return entry
+        end
+    end
+
+    for _, entry in ipairs(worker and worker.toolLedger or {}) do
+        if Config.ItemMatchesWorkerEquipmentRequirement
+            and Config.ItemMatchesWorkerEquipmentRequirement(entry and entry.fullType, targetKey, worker) then
+            return entry
+        end
+    end
+
+    return nil
+end
+
+local function buildWorkerCapacityDetail(worker, toolEntry, requirementKey)
+    local itemWeight = getEquipmentEntryWeight(toolEntry)
+    local state = Registry.GetInventoryWeightState and Registry.GetInventoryWeightState(worker) or nil
+    local remaining = math.max(0, tonumber(state and state.remainingWeight) or 0)
+    local replacingEntry = getRequirementEntry(worker, requirementKey)
+    local replacingWeight = getEquipmentEntryWeight(replacingEntry)
+    local adjustedRemaining = replacingEntry and (remaining + replacingWeight) or remaining
+    if itemWeight <= 0 then
+        return nil
+    end
+    return "NPC inventory does not have enough carry capacity (item weight "
+        .. formatWeight(itemWeight) .. ", remaining " .. formatWeight(adjustedRemaining) .. ")"
+end
+
+local function buildWarehouseCapacityDetail(owner, toolEntry)
+    local warehouse = Warehouse.GetOrCreate and Warehouse.GetOrCreate(owner) or nil
+    local remaining = warehouse and Warehouse.GetRemainingCapacity and Warehouse.GetRemainingCapacity(warehouse) or 0
+    local itemWeight = Warehouse.Internal and Warehouse.Internal.GetEntryWeight
+        and Warehouse.Internal.GetEntryWeight(toolEntry and toolEntry.fullType, math.max(1, tonumber(toolEntry and toolEntry.qty) or 1))
+        or getEquipmentEntryWeight(toolEntry)
+    if itemWeight <= 0 then
+        return nil
+    end
+    return "warehouse storage does not have enough capacity (item weight "
+        .. formatWeight(itemWeight) .. ", remaining " .. formatWeight(remaining) .. ")"
+end
+
+local function rejectItem(rejected, itemID, reason, fullType, detailText)
     rejected[#rejected + 1] = {
         itemID = itemID,
         reason = tostring(reason or "rejected"),
+        fullType = fullType and tostring(fullType) or nil,
+        detailText = detailText and tostring(detailText) or nil,
     }
 end
 
-local function buildEquipmentTransferMessage(targetLabel, movedCount, rejectedCount)
+local function countRejectedReasons(rejected)
+    local counts = {}
+    local examples = {}
+    local total = 0
+    for _, entry in ipairs(rejected or {}) do
+        local reason = tostring(entry and entry.reason or "rejected")
+        counts[reason] = (counts[reason] or 0) + 1
+        examples[reason] = examples[reason] or entry
+        total = total + 1
+    end
+    return counts, total, examples
+end
+
+local function buildFailureReason(targetLabel, reason, requirementKey, example)
+    local detailText = tostring(example and example.detailText or "")
+    if detailText ~= "" then
+        return detailText
+    end
+
+    local label = getRequirementLabel(requirementKey)
+    if reason == "capacity" then
+        if tostring(targetLabel or "") == "warehouse" then
+            return "warehouse storage is full or the item exceeds remaining warehouse capacity"
+        end
+        return "NPC inventory is full or the item exceeds remaining carry capacity"
+    end
+    if reason == "broken" then
+        return "the selected equipment is broken or unusable"
+    end
+    if reason == "not_required_equipment" then
+        return "the selected item does not match the " .. label .. " requirement for this worker"
+    end
+    if reason == "missing" then
+        return "the item is no longer in your inventory"
+    end
+    return "the item was rejected"
+end
+
+local function buildEquipmentTransferMessage(targetLabel, movedCount, rejected, requirementKey)
+    local reasonCounts, rejectedCount, reasonExamples = countRejectedReasons(rejected)
+    local targetText = tostring(targetLabel or "")
+    local isWarehouse = targetText == "warehouse"
+    local movedVerb = isWarehouse and "Stored" or "Assigned"
+    local targetPhrase = isWarehouse and " in warehouse" or (" to " .. targetText)
+    local nonePrefix = isWarehouse and "No equipment stored" or "No equipment assigned"
+    local rejectedReasonText = nil
+    if rejectedCount > 0 then
+        local primaryReason = nil
+        for reason, count in pairs(reasonCounts) do
+            if count == rejectedCount then
+                primaryReason = reason
+                break
+            end
+        end
+
+        if primaryReason then
+            rejectedReasonText = buildFailureReason(targetLabel, primaryReason, requirementKey, reasonExamples[primaryReason])
+        else
+            local parts = {}
+            for reason, count in pairs(reasonCounts) do
+                parts[#parts + 1] = tostring(count) .. " " .. buildFailureReason(targetLabel, reason, requirementKey, reasonExamples[reason])
+            end
+            table.sort(parts)
+            rejectedReasonText = table.concat(parts, "; ")
+        end
+    end
+
     if movedCount > 0 and rejectedCount > 0 then
-        return "Assigned " .. tostring(movedCount) .. " equipment item" .. (movedCount == 1 and "" or "s")
-            .. " to " .. tostring(targetLabel) .. "; " .. tostring(rejectedCount) .. " failed."
+        return movedVerb .. " " .. tostring(movedCount) .. " equipment item" .. (movedCount == 1 and "" or "s")
+            .. targetPhrase .. "; " .. tostring(rejectedCount) .. " failed: " .. rejectedReasonText .. "."
     end
     if movedCount > 0 then
-        return "Assigned " .. tostring(movedCount) .. " equipment item" .. (movedCount == 1 and "" or "s")
-            .. " to " .. tostring(targetLabel) .. "."
+        return movedVerb .. " " .. tostring(movedCount) .. " equipment item" .. (movedCount == 1 and "" or "s")
+            .. targetPhrase .. "."
     end
-    return tostring(rejectedCount) .. " equipment item" .. (rejectedCount == 1 and "" or "s") .. " could not be assigned."
+    if rejectedCount <= 0 then
+        return "No equipment was selected."
+    end
+
+    return nonePrefix .. ": " .. rejectedReasonText .. "."
 end
 
 local function resolveWarehouseEquipmentIndexes(owner, args)
@@ -151,16 +290,16 @@ Network.Handlers.AssignWorkerToolset = function(player, args)
             if canAssignRequirement(worker, fullType, requirementKey) then
                 local toolEntry = buildInventoryToolEntry(invItem)
                 if Registry.Internal.IsEquipmentEntryUsable and not Registry.Internal.IsEquipmentEntryUsable(toolEntry) then
-                    rejectItem(rejected, itemID, "broken")
+                    rejectItem(rejected, itemID, "broken", fullType)
                 elseif storeWorkerToolEntry(worker, toolEntry, requirementKey) then
                     Internal.removeInventoryItem(invItem)
                     acceptedItemIDs[#acceptedItemIDs + 1] = itemID
                     movedCount = movedCount + 1
                 else
-                    rejectItem(rejected, itemID, "capacity")
+                    rejectItem(rejected, itemID, "capacity", fullType, buildWorkerCapacityDetail(worker, toolEntry, requirementKey))
                 end
             else
-                rejectItem(rejected, itemID, "not_required_equipment")
+                rejectItem(rejected, itemID, "not_required_equipment", fullType)
             end
         else
             rejectItem(rejected, itemID, "missing")
@@ -171,14 +310,14 @@ Network.Handlers.AssignWorkerToolset = function(player, args)
         acceptedItemIDs = acceptedItemIDs,
         rejected = rejected,
         movedCount = movedCount,
-        message = buildEquipmentTransferMessage("NPC inventory", movedCount, #rejected),
+        message = buildEquipmentTransferMessage("NPC inventory", movedCount, rejected, requirementKey),
     })
 
     if movedCount > 0 then
         Shared.saveAndRefreshSupplyTransfer(player, worker)
     else
         if #rejected > 0 then
-            Internal.syncNotice(player, "No selected equipment could be assigned.", "error", true)
+            Internal.syncNotice(player, buildEquipmentTransferMessage("NPC inventory", movedCount, rejected, requirementKey), "error", true)
         end
         Shared.saveAndRefreshBasic(player, worker)
     end
@@ -209,16 +348,16 @@ Network.Handlers.AssignWarehouseToolset = function(player, args)
             if isRequiredEquipment then
                 local toolEntry = buildInventoryToolEntry(invItem)
                 if Registry.Internal.IsEquipmentEntryUsable and not Registry.Internal.IsEquipmentEntryUsable(toolEntry) then
-                    rejectItem(rejected, itemID, "broken")
+                    rejectItem(rejected, itemID, "broken", fullType)
                 elseif Warehouse.DepositEquipmentEntry(owner, toolEntry) then
                     Internal.removeInventoryItem(invItem)
                     acceptedItemIDs[#acceptedItemIDs + 1] = itemID
                     movedCount = movedCount + 1
                 else
-                    rejectItem(rejected, itemID, "capacity")
+                    rejectItem(rejected, itemID, "capacity", fullType, buildWarehouseCapacityDetail(owner, toolEntry))
                 end
             else
-                rejectItem(rejected, itemID, "not_required_equipment")
+                rejectItem(rejected, itemID, "not_required_equipment", fullType)
             end
         else
             rejectItem(rejected, itemID, "missing")
@@ -229,14 +368,14 @@ Network.Handlers.AssignWarehouseToolset = function(player, args)
         acceptedItemIDs = acceptedItemIDs,
         rejected = rejected,
         movedCount = movedCount,
-        message = buildEquipmentTransferMessage("warehouse", movedCount, #rejected),
+        message = buildEquipmentTransferMessage("warehouse", movedCount, rejected, nil),
     })
 
     if movedCount > 0 then
         Shared.saveAndRefreshSupplyTransfer(player, worker, true)
     else
         if #rejected > 0 then
-            Internal.syncNotice(player, "No selected equipment could be stored.", "error", true)
+            Internal.syncNotice(player, buildEquipmentTransferMessage("warehouse", movedCount, rejected, nil), "error", true)
         end
         Shared.saveAndRefreshBasic(player, worker, true)
     end
