@@ -206,6 +206,9 @@ function DC_MainWindow:updateWorkerDetail(worker)
     local unemployedJob = tostring((config.JobTypes or {}).Unemployed or "Unemployed")
     local text = ""
     text = text .. " <RGB:1,1,1> <SIZE:Medium> Worker Status <LINE> "
+    if stateLabel == deadState and tostring(worker.deathCause or "") ~= "" then
+        text = text .. " <RGB:0.88,0.52,0.52> Cause Of Death: <RGB:1,1,1> " .. tostring(worker.deathCause) .. " <LINE> "
+    end
     if normalizedJobType == (config.JobTypes and config.JobTypes.TravelCompanion) and Internal.getCompanionCommandStatus then
         text = text .. " <RGB:0.72,0.72,0.72> Companion Command: <RGB:1,1,1> "
             .. tostring(Internal.getCompanionCommandStatus(worker) or "No commander")
@@ -223,10 +226,6 @@ function DC_MainWindow:updateWorkerDetail(worker)
         text = text .. " <RGB:0.72,0.72,0.72> Active Skill: <RGB:1,1,1> None <LINE> "
     end
     text = text .. " <RGB:0.72,0.72,0.72> Skill Speed Bonus: <RGB:1,1,1> x" .. formatDecimal(bonusMultiplier, 2) .. " <LINE> "
-
-    if stateLabel == deadState and tostring(worker.deathCause or "") ~= "" then
-        text = text .. " <RGB:0.88,0.52,0.52> Cause Of Death: <RGB:1,1,1> " .. tostring(worker.deathCause) .. " <LINE> "
-    end
 
     local activityText = buildActivityLogText(worker)
     local detailChanged = updateRichTextPanel(self, self.detailText, "lastRenderedDetailText", text, shouldResetScroll)

@@ -492,13 +492,6 @@ function DC_MainWindow:onToggleJob()
         return
     end
 
-    local activeWorker = getSelectedWorkerForAction(self)
-    if isUnemployedJob(activeWorker) then
-        self:updateStatus("This worker is unemployed. Choose a role first.")
-        self:onCycleJob()
-        return
-    end
-
     local config = getConfig()
     local state = tostring((self.selectedWorker and self.selectedWorker.state) or self.selectedWorkerSummary.state or "")
     if state == tostring((config.States or {}).Dead or "Dead") then
@@ -506,6 +499,13 @@ function DC_MainWindow:onToggleJob()
             workerID = self.selectedWorkerSummary.workerID
         })
         self:updateStatus("Removing deceased worker record...")
+        return
+    end
+
+    local activeWorker = getSelectedWorkerForAction(self)
+    if isUnemployedJob(activeWorker) then
+        self:updateStatus("This worker is unemployed. Choose a role first.")
+        self:onCycleJob()
         return
     end
 
