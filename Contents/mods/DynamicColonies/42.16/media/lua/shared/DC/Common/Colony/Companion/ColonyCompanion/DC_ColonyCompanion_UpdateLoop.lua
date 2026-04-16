@@ -23,6 +23,8 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
     local hpMax = health and health.GetMax and health.GetMax(worker) or math.max(1, tonumber(worker.maxHp) or tonumber(Config.DEFAULT_WORKER_MAX_HP) or 100)
 
     if presenceState == Config.PresenceStates.Home then
+        Internal.ReconcileCompanionHomeState(worker, "update-home")
+
         if energy and deltaHours > 0 and hpCurrent > 0 and energy.ApplyHomeRecovery then
             energy.ApplyHomeRecovery(worker, deltaHours, profile)
             if energy.IsForcedRest and energy.IsForcedRest(worker) and energy.CompleteForcedRest then
@@ -68,6 +70,10 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
         if tostring(worker.presenceState or "") ~= presenceState then
             return true
         end
+        if companionData.awaitingDespawn == true then
+            worker.state = Config.States.Working
+            return true
+        end
         if not worker.jobEnabled then
             Internal.BeginWorkerCompanionReturn(nil, worker, Config.ReturnReasons.Manual)
             return true
@@ -97,6 +103,17 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
     end
 
     if presenceState == Config.PresenceStates.CompanionReturning then
+        if companionData.awaitingDespawn == true then
+            worker.state = Config.States.Working
+            return true
+        end
+        if Internal.GetCompanionUUID(worker)
+            and DTNPCServerCore
+            and DTNPCServerCore.GetNPCDataByUUID
+            and DTNPCServerCore.GetNPCDataByUUID(Internal.GetCompanionUUID(worker)) then
+            Internal.BeginWorkerCompanionReturn(nil, worker, worker.returnReason or companionData.returnReason or Config.ReturnReasons.Manual)
+            return true
+        end
         worker.travelHoursRemaining = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
         if deltaHours > 0 then
             worker.travelHoursRemaining = math.max(0, worker.travelHoursRemaining - deltaHours)
