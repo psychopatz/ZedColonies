@@ -3,6 +3,7 @@ require "ISUI/ISButton"
 require "ISUI/ISLabel"
 require "ISUI/ISScrollingListBox"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
+require "DC/Common/Colony/ColonySkills/DC_ColonySkills"
 
 DC_ColonyJobModal = ISCollapsableWindow:derive("DC_ColonyJobModal")
 DC_ColonyJobModal.instance = nil
@@ -45,6 +46,19 @@ local function canSelectJob(config, worker, normalizedJob)
     return true, nil
 end
 
+local function getSkillColor(level)
+    level = tonumber(level) or 0
+    if level >= 5 then
+        return { r = 0.48, g = 0.9, b = 0.48, a = 1 }
+    elseif level >= 3 then
+        return { r = 0.95, g = 0.78, b = 0.36, a = 1 }
+    elseif level >= 1 then
+        return { r = 0.95, g = 0.52, b = 0.52, a = 1 }
+    else
+        return { r = 0.75, g = 0.35, b = 0.35, a = 1 }
+    end
+end
+
 local function buildOrderedJobOptions(config, worker)
     local ordered = {}
     local seen = {}
@@ -60,6 +74,19 @@ local function buildOrderedJobOptions(config, worker)
         local profile = config.GetJobProfile and config.GetJobProfile(normalized) or {}
         local enabled, reason = canSelectJob(config, worker, normalized)
         local label = tostring(profile.displayName or normalized)
+
+        local color = nil
+        local skillID = config.GetWorkerJobSkillID and config.GetWorkerJobSkillID(worker, {jobType = normalized}) or nil
+        if skillID and DC_Colony.Skills then
+            local entry = DC_Colony.Skills.GetSkillEntry(worker, skillID)
+            local level = entry and entry.level or 0
+            local skillLabel = config.GetSkillDisplayName and config.GetSkillDisplayName(skillID) or skillID
+            label = label .. " - Lvl " .. tostring(level) .. " " .. skillLabel
+            color = getSkillColor(level)
+        else
+            color = getJobDisplayColor(config, normalized)
+        end
+
         if enabled == false and normalized == tostring((jobTypes.TravelCompanion or "TravelCompanion")) and string.find(tostring(reason or ""), "V2", 1, true) then
             label = label .. " (Needs V2)"
         end
@@ -68,7 +95,7 @@ local function buildOrderedJobOptions(config, worker)
             label = label,
             enabled = enabled,
             disabledReason = reason,
-            color = getJobDisplayColor(config, normalized),
+            color = color,
             disabledColor = enabled and nil or { r = 0.92, g = 0.28, b = 0.28, a = 1 }
         }
         seen[normalized] = true
@@ -84,6 +111,19 @@ local function buildOrderedJobOptions(config, worker)
         if normalized ~= "" and not seen[normalized] then
             local enabled, reason = canSelectJob(config, worker, normalized)
             local label = tostring(profile and profile.displayName or normalized)
+            
+            local color = nil
+            local skillID = config.GetWorkerJobSkillID and config.GetWorkerJobSkillID(worker, {jobType = normalized}) or nil
+            if skillID and DC_Colony.Skills then
+                local entry = DC_Colony.Skills.GetSkillEntry(worker, skillID)
+                local level = entry and entry.level or 0
+                local skillLabel = config.GetSkillDisplayName and config.GetSkillDisplayName(skillID) or skillID
+                label = label .. " - Lvl " .. tostring(level) .. " " .. skillLabel
+                color = getSkillColor(level)
+            else
+                color = getJobDisplayColor(config, normalized)
+            end
+
             if enabled == false and normalized == tostring((jobTypes.TravelCompanion or "TravelCompanion")) and string.find(tostring(reason or ""), "V2", 1, true) then
                 label = label .. " (Needs V2)"
             end
@@ -92,7 +132,7 @@ local function buildOrderedJobOptions(config, worker)
                 label = label,
                 enabled = enabled,
                 disabledReason = reason,
-                color = getJobDisplayColor(config, normalized),
+                color = color,
                 disabledColor = enabled and nil or { r = 0.92, g = 0.28, b = 0.28, a = 1 }
             }
             seen[normalized] = true
