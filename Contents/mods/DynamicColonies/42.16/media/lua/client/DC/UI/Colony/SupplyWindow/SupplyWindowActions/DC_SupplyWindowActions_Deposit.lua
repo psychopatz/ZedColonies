@@ -163,6 +163,50 @@ local function getSelectedEquipmentRequirementKey(window)
     return Internal.resolveWorkerEquipmentRequirementKey and Internal.resolveWorkerEquipmentRequirementKey(workerEntry, window and window.workerData or nil) or nil
 end
 
+local function resolveSmartEquipmentRequirementKey(window, sourceEntry)
+    local worker = window and window.workerData or nil
+    local selectedRequirementKey = tostring(getSelectedEquipmentRequirementKey(window) or "")
+
+    if not sourceEntry or not worker then
+        return selectedRequirementKey ~= "" and selectedRequirementKey or nil
+    end
+
+    if sourceEntry.kind == "player" and Internal.ensurePlayerEntryEquipmentData then
+        Internal.ensurePlayerEntryEquipmentData(sourceEntry)
+    end
+
+    if Internal.isAmmoRequirementActive
+        and Internal.isAmmoRequirementActive(worker)
+        and Internal.entryMatchesRangedAmmo
+        and Internal.entryMatchesRangedAmmo(sourceEntry, worker) then
+        return "Colony.Combat.Ammo"
+    end
+
+    if selectedRequirementKey ~= ""
+        and Internal.entryMatchesEquipmentRequirement
+        and Internal.entryMatchesEquipmentRequirement(sourceEntry, selectedRequirementKey, worker) then
+        return selectedRequirementKey
+    end
+
+    local matches = Internal.getPlayerEntryEquipmentMatches
+        and Internal.getPlayerEntryEquipmentMatches(sourceEntry, worker)
+        or {}
+
+    if #matches == 1 then
+        local resolvedKey = tostring(matches[1] and matches[1].requirementKey or "")
+        return resolvedKey ~= "" and resolvedKey or nil
+    end
+
+    if Internal.resolveWorkerEquipmentRequirementKey then
+        local resolvedKey = tostring(Internal.resolveWorkerEquipmentRequirementKey(sourceEntry, worker) or "")
+        if resolvedKey ~= "" then
+            return resolvedKey
+        end
+    end
+
+    return selectedRequirementKey ~= "" and selectedRequirementKey or nil
+end
+
 local function takeEntrySubset(entries, quantity)
     local result = {}
     local limit = math.max(1, math.floor(tonumber(quantity) or 1))
@@ -378,30 +422,56 @@ function DC_SupplyWindow:assignToolEntries(entries)
         return
     end
 
-    local requirementKey = getSelectedEquipmentRequirementKey(self)
-    local sentEntries = fittingEntries
-    for _, entry in ipairs(sentEntries) do
-        entry.assignedRequirementKey = requirementKey
+    local groupedEntries = {}
+    local groupOrder = {}
+
+    for _, entry in ipairs(fittingEntries) do
+        local requirementKey = tostring(resolveSmartEquipmentRequirementKey(self, entry) or "")
+        if requirementKey ~= "" then
+            if not groupedEntries[requirementKey] then
+                groupedEntries[requirementKey] = {}
+                groupOrder[#groupOrder + 1] = requirementKey
+            end
+            entry.assignedRequirementKey = requirementKey
+            groupedEntries[requirementKey][#groupedEntries[requirementKey] + 1] = entry
+        end
     end
 
-    if not self:beginSupplyTransfer("equipment", getEquipmentDepositCommand(self), {
-            workerID = self.workerID,
-            itemIDs = getTransferItemIDs(sentEntries),
-            requirementKey = requirementKey,
-        }, sentEntries) then
+    if #groupOrder <= 0 then
+        self:updateStatus("No matching equipment slot could be resolved for the selected item.")
+        return
+    end
+
+    local sentCount = 0
+    for _, requirementKey in ipairs(groupOrder) do
+        local sentEntries = groupedEntries[requirementKey] or {}
+        if #sentEntries > 0 then
+            local requestID = self:beginSupplyTransfer("equipment", getEquipmentDepositCommand(self), {
+                workerID = self.workerID,
+                itemIDs = getTransferItemIDs(sentEntries),
+                requirementKey = requirementKey,
+            }, sentEntries)
+            if requestID then
+                sentCount = sentCount + #sentEntries
+            end
+        end
+    end
+
+    if sentCount <= 0 then
         self:updateStatus("Unable to send equipment assignment to " .. getDepositTargetLabel(self) .. ".")
         return
     end
 
-    if #sentEntries == 1 then
+    if sentCount == 1 then
+        local sentEntry = fittingEntries[1]
         local statusText =
-            "Assigning " .. tostring(sentEntries[1].displayName or sentEntries[1].fullType or "selected tool") .. " to " .. getDepositTargetLabel(self) .. "..."
+            "Assigning " .. tostring(sentEntry and (sentEntry.displayName or sentEntry.fullType) or "selected tool") .. " to " .. getDepositTargetLabel(self) .. "..."
         if blockedCount > 0 then
             statusText = statusText .. " " .. tostring(blockedCount) .. " did not fit."
         end
         self:updateStatus(statusText)
     else
-        local statusText = "Assigning " .. tostring(#sentEntries) .. " tools to " .. getDepositTargetLabel(self) .. "..."
+        local statusText = "Assigning " .. tostring(sentCount) .. " tools to " .. getDepositTargetLabel(self) .. "..."
         if blockedCount > 0 then
             statusText = statusText .. " " .. tostring(blockedCount) .. " did not fit."
         end

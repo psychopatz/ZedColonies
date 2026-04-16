@@ -11,6 +11,9 @@ local Shared = (Network.Workers or {}).Shared or {}
 
 Network.Handlers = Network.Handlers or {}
 
+local canAssignRequirement
+local WeaponMetadataCache = {}
+
 local function buildInventoryToolEntry(invItem)
     local fullType = invItem and invItem.getFullType and invItem:getFullType() or nil
     return Registry.Internal.BuildEquipmentEntryFromInventoryItem and Registry.Internal.BuildEquipmentEntryFromInventoryItem(invItem, invItem:getDisplayName()) or {
@@ -20,15 +23,43 @@ local function buildInventoryToolEntry(invItem)
     }
 end
 
-local function getAmmoTypeForWeapon(fullType)
+local function getWeaponMetadata(fullType)
     local key = tostring(fullType or "")
     if key == "" or not getScriptManager then
         return nil
     end
+
+    if WeaponMetadataCache[key] ~= nil then
+        return WeaponMetadataCache[key]
+    end
+
     local scriptItem = getScriptManager():getItem(key)
     local ammoType = scriptItem and scriptItem.getAmmoType and scriptItem:getAmmoType() or nil
     ammoType = tostring(ammoType or "")
-    return ammoType ~= "" and ammoType or nil
+
+    local metadata = {
+        ammoType = ammoType ~= "" and ammoType or nil,
+        clipSize = math.max(0, tonumber(scriptItem and scriptItem.getClipSize and scriptItem:getClipSize() or 0) or 0),
+    }
+    WeaponMetadataCache[key] = metadata
+    return metadata
+end
+
+local function getAmmoTypeForWeapon(fullType)
+    local metadata = getWeaponMetadata(fullType)
+    return metadata and metadata.ammoType or nil
+end
+
+local function normalizeItemTypeToken(fullType)
+    local token = tostring(fullType or "")
+    if token == "" then
+        return ""
+    end
+
+    token = token:match("([^%.:]+)$") or token
+    token = token:gsub("_", "")
+    token = token:gsub("Box$", "")
+    return string.lower(token)
 end
 
 local function getWorkerRangedAmmoType(worker)
@@ -52,10 +83,46 @@ local function itemMatchesWorkerRangedAmmo(worker, fullType)
     if ammoType == "" or itemType == "" then
         return false
     end
-    return itemType == ammoType or itemType == ammoType .. "Box" or itemType:gsub("Box$", "") == ammoType
+
+    if itemType == ammoType or itemType == ammoType .. "Box" or itemType:gsub("Box$", "") == ammoType then
+        return true
+    end
+
+    return normalizeItemTypeToken(itemType) == normalizeItemTypeToken(ammoType)
 end
 
-local function canAssignRequirement(worker, fullType, requirementKey)
+local function resolveAssignmentRequirementKey(worker, fullType, preferredRequirementKey)
+    local preferredKey = tostring(preferredRequirementKey or "")
+
+    if preferredKey ~= "" and canAssignRequirement(worker, fullType, preferredKey) then
+        return preferredKey
+    end
+
+    if itemMatchesWorkerRangedAmmo(worker, fullType) then
+        return "Colony.Combat.Ammo"
+    end
+
+    if Config.ResolveWorkerEquipmentRequirementKey then
+        local resolvedKey = tostring(Config.ResolveWorkerEquipmentRequirementKey(worker, fullType, preferredKey ~= "" and preferredKey or nil) or "")
+        if resolvedKey ~= "" and canAssignRequirement(worker, fullType, resolvedKey) then
+            return resolvedKey
+        end
+    end
+
+    local matches = Config.GetMatchingEquipmentRequirementDefinitionsForWorker
+        and Config.GetMatchingEquipmentRequirementDefinitionsForWorker(fullType, worker)
+        or {}
+    for _, definition in ipairs(matches) do
+        local requirementKey = tostring(definition and definition.requirementKey or "")
+        if requirementKey ~= "" and canAssignRequirement(worker, fullType, requirementKey) then
+            return requirementKey
+        end
+    end
+
+    return preferredKey ~= "" and preferredKey or nil
+end
+
+canAssignRequirement = function(worker, fullType, requirementKey)
     local targetKey = tostring(requirementKey or "")
     if targetKey == "Colony.Combat.Ammo" then
         return itemMatchesWorkerRangedAmmo(worker, fullType)
@@ -287,16 +354,17 @@ Network.Handlers.AssignWorkerToolset = function(player, args)
         local invItem = Internal.getInventoryItemByID(player, itemID)
         if invItem then
             local fullType = invItem:getFullType()
-            if canAssignRequirement(worker, fullType, requirementKey) then
+            local effectiveRequirementKey = resolveAssignmentRequirementKey(worker, fullType, requirementKey)
+            if canAssignRequirement(worker, fullType, effectiveRequirementKey) then
                 local toolEntry = buildInventoryToolEntry(invItem)
                 if Registry.Internal.IsEquipmentEntryUsable and not Registry.Internal.IsEquipmentEntryUsable(toolEntry) then
                     rejectItem(rejected, itemID, "broken", fullType)
-                elseif storeWorkerToolEntry(worker, toolEntry, requirementKey) then
+                elseif storeWorkerToolEntry(worker, toolEntry, effectiveRequirementKey) then
                     Internal.removeInventoryItem(invItem)
                     acceptedItemIDs[#acceptedItemIDs + 1] = itemID
                     movedCount = movedCount + 1
                 else
-                    rejectItem(rejected, itemID, "capacity", fullType, buildWorkerCapacityDetail(worker, toolEntry, requirementKey))
+                    rejectItem(rejected, itemID, "capacity", fullType, buildWorkerCapacityDetail(worker, toolEntry, effectiveRequirementKey))
                 end
             else
                 rejectItem(rejected, itemID, "not_required_equipment", fullType)

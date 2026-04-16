@@ -8,25 +8,7 @@ function Internal.getOutputTabLabel(worker, window)
         return "Storage"
     end
 
-    if not worker or not worker.jobType then
-        return "Merchandise"
-    end
-
-    local config = Internal.Config or {}
-    local jobTypes = config.JobTypes or {}
-    local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
-
-    if normalizedJob == jobTypes.Farm then
-        return "Yield"
-    end
-    if normalizedJob == jobTypes.Fish then
-        return "Catch"
-    end
-    if normalizedJob == jobTypes.Scavenge then
-        return "Haul"
-    end
-
-    return "Merchandise"
+    return "Inventory"
 end
 
 function Internal.getActiveWorkerTabLabel(window)

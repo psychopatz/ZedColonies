@@ -34,6 +34,7 @@ function Internal.MergeFallbackCombatLoadout(worker, loadout)
     local preferredType = Internal.GetPreferredFallbackLoadoutType(worker)
     local fallback = Internal.GetFallbackLoadoutPreset(preferredType)
     local appliedFallback = false
+    local appliedFallbackRangedWeapon = false
 
     if (not loadout.meleeWeapon or loadout.meleeWeapon == "")
         and (preferredType == "melee" or preferredType == "hybrid")
@@ -49,6 +50,7 @@ function Internal.MergeFallbackCombatLoadout(worker, loadout)
         loadout.rangedWeapon = fallback.rangedWeapon
         loadout.rangedCondition = fallback.rangedCondition
         appliedFallback = true
+        appliedFallbackRangedWeapon = true
     end
 
     if loadout.rangedWeapon and (not loadout.rangedAmmoType or loadout.rangedAmmoType == "") then
@@ -56,7 +58,7 @@ function Internal.MergeFallbackCombatLoadout(worker, loadout)
         appliedFallback = true
     end
 
-    if loadout.rangedWeapon and (tonumber(loadout.ammoCount) or 0) <= 0 then
+    if appliedFallbackRangedWeapon and loadout.rangedWeapon and (tonumber(loadout.ammoCount) or 0) <= 0 then
         local fallbackAmmo = math.max(0, tonumber(fallback.ammoCount) or 0)
         loadout.ammoCount = fallbackAmmo > 0 and fallbackAmmo or Internal.GetFallbackAmmoCount(loadout.rangedWeapon)
         appliedFallback = true

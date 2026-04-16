@@ -112,6 +112,7 @@ local function addOptimisticTool(window, entry)
             fullType = entry.fullType,
             displayName = entry.displayName,
             tags = entry.tags or {},
+            qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
             condition = entry.condition,
             conditionMax = entry.conditionMax,
             isDrainable = entry.isDrainable == true,
@@ -130,6 +131,7 @@ local function addOptimisticTool(window, entry)
         fullType = entry.fullType,
         displayName = entry.displayName,
         tags = entry.tags or {},
+        qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
         condition = entry.condition,
         conditionMax = entry.conditionMax,
         isDrainable = entry.isDrainable == true,
@@ -143,6 +145,15 @@ local function addOptimisticTool(window, entry)
     local insertIndex = nil
 
     for index, existing in ipairs(window.workerData.toolLedger) do
+        if tostring(entry.assignedRequirementKey or "") == "Colony.Combat.Ammo"
+            and tostring(existing and existing.assignedRequirementKey or "") == "Colony.Combat.Ammo"
+            and tostring(existing and existing.fullType or "") == tostring(entry.fullType or "") then
+            existing.qty = math.max(1, math.floor(tonumber(existing.qty) or 1))
+                + math.max(1, math.floor(tonumber(entry.qty) or 1))
+            existing.pending = true
+            return true
+        end
+
         if Internal.getEquipmentPendingDedupeSignature(existing) == dedupeSignature then
             if existing.pending == true then
                 return true

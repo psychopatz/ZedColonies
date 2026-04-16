@@ -11,6 +11,7 @@ Internal.LIST_BUILD_BATCH_SIZE = 32
 Internal.ICON_RESOLVE_BATCH_SIZE = 2
 Internal.NutritionPreviewCache = Internal.NutritionPreviewCache or {}
 Internal.InventoryEntryStaticCache = Internal.InventoryEntryStaticCache or {}
+Internal.WeaponMetadataCache = Internal.WeaponMetadataCache or {}
 Internal.TextureCache = Internal.TextureCache or {}
 Internal.TextureQueue = Internal.TextureQueue or {}
 Internal.TextureQueueSet = Internal.TextureQueueSet or {}

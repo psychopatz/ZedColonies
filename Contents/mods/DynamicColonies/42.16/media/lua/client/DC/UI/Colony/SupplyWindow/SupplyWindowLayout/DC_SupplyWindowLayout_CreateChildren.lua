@@ -172,6 +172,7 @@ function DC_SupplyWindow:createChildren()
     self:addChild(self.btnTabProvisions)
 
     self.btnTabOutput = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, "Merchandise", self, self.onSelectOutputTab)
+    self.btnTabOutput = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, "Inventory", self, self.onSelectOutputTab)
     self.btnTabOutput:initialise()
     self:addChild(self.btnTabOutput)
 
@@ -244,6 +245,10 @@ function DC_SupplyWindow:createChildren()
     self.detailSupportPanel.target = self
     self.detailSupportPanel:setVisible(false)
     self:addChild(self.detailSupportPanel)
+
+    if DC_EquipmentPickerModal and DC_EquipmentPickerModal.Preload then
+        DC_EquipmentPickerModal.Preload()
+    end
 
     self:relayout()
     self:refreshTabButtons()

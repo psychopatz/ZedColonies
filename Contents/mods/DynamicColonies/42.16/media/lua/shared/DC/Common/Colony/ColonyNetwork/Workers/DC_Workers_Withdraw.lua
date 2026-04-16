@@ -68,10 +68,12 @@ local function materializeWithdrawnTool(player, inventory, entry)
         return false
     end
 
+    local quantity = math.max(1, math.floor(tonumber(entry.qty) or 1))
+
     local customData = DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData
         and DC_Colony.Registry.Internal.BuildEquipmentAddItemCustomData(entry)
         or nil
-    local addedItems = Internal.addInventoryItem(inventory, entry.fullType, 1, customData)
+    local addedItems = Internal.addInventoryItem(inventory, entry.fullType, quantity, customData)
     local item = getFirstAddedItem(addedItems)
     if not item then
         return false
@@ -141,7 +143,7 @@ local function withdrawWorkerToolEntries(player, worker, inventory, indexes)
         if entry and entry.fullType then
             if materializeWithdrawnTool(player, inventory, entry) then
                 table.remove(worker.toolLedger, index)
-                moved = moved + 1
+                moved = moved + math.max(1, math.floor(tonumber(entry.qty) or 1))
             end
         end
     end
@@ -156,7 +158,7 @@ local function withdrawWarehouseToolEntries(player, ownerUsername, inventory, in
     for _, entry in ipairs(Warehouse.TakeEquipmentEntries(ownerUsername, indexes) or {}) do
         if entry and entry.fullType then
             if materializeWithdrawnTool(player, inventory, entry) then
-                moved = moved + 1
+                moved = moved + math.max(1, math.floor(tonumber(entry.qty) or 1))
             end
         end
     end

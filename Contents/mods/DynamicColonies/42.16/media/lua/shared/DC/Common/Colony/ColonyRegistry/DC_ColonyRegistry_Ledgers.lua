@@ -78,6 +78,20 @@ local function findRequirementInsertIndex(worker, requirementKey)
     return nil
 end
 
+local function storeReplacedToolInWorkerOutput(worker, entry)
+    if not worker or not entry or not entry.fullType then
+        return false
+    end
+
+    worker.outputLedger = worker.outputLedger or {}
+    if mergeOutputLikeEntry(worker.outputLedger, entry) then
+        Internal.MarkOutputCacheDirty(worker)
+        return true
+    end
+
+    return false
+end
+
 function Registry.GetInventoryWeightState(worker)
     local hasNutritionLedger = worker and type(worker.nutritionLedger) == "table"
     local hasToolLedger = worker and type(worker.toolLedger) == "table"
@@ -189,7 +203,17 @@ function Registry.AddToolEntryForRequirement(worker, entry, requirementKey)
     end
 
     normalized.assignedRequirementKey = targetKey
+    if targetKey == "Colony.Combat.Ammo" and replacingEntry and tostring(replacingEntry.fullType or "") == tostring(normalized.fullType or "") then
+        replacingEntry.qty = math.max(1, math.floor(tonumber(replacingEntry.qty) or 1))
+            + math.max(1, math.floor(tonumber(normalized.qty) or 1))
+        Registry.Internal.MarkToolCacheDirty(worker)
+        return true
+    end
+
     if insertIndex then
+        if replacingEntry then
+            storeReplacedToolInWorkerOutput(worker, replacingEntry)
+        end
         worker.toolLedger[insertIndex] = normalized
     else
         worker.toolLedger[#worker.toolLedger + 1] = normalized

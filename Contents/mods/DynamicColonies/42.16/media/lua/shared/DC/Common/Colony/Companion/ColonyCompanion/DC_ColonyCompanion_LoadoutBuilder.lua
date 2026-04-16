@@ -7,12 +7,8 @@ function Internal.BuildLoadoutFromWorker(worker)
     local chosen = Internal.SelectEquipmentEntries(worker)
     local rangedWeapon = chosen.ranged and chosen.ranged.fullType or nil
     local meleeWeapon = chosen.melee and chosen.melee.fullType or nil
-    local ammoType = chosen.ammo and chosen.ammo.fullType or Internal.GetAmmoTypeForWeapon(rangedWeapon)
-    local ammoCount = chosen.ammo and 24 or 0
-
-    if rangedWeapon and ammoCount <= 0 then
-        ammoCount = Internal.GetFallbackAmmoCount(rangedWeapon)
-    end
+    local ammoType = Internal.GetAmmoTypeForWeapon(rangedWeapon) or (chosen.ammo and chosen.ammo.fullType or nil)
+    local ammoCount = math.max(0, tonumber(chosen.ammo and chosen.ammo.qty or 0) or 0)
 
     local loadout = {
         rangedWeapon = rangedWeapon,

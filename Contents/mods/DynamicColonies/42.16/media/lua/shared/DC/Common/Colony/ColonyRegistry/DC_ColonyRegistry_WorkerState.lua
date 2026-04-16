@@ -200,10 +200,16 @@ function Registry.RecalculateWorker(worker)
     local outputWeight = 0
     local tags = type(worker.assignedToolTags) == "table" and worker.assignedToolTags or {}
 
+    if worker.sourceLoadoutSeeded == nil then
+        worker.sourceLoadoutSeeded = #(worker.toolLedger or {}) > 0
+    end
+
     if (#(worker.toolLedger or {}) <= 0)
+        and worker.sourceLoadoutSeeded ~= true
         and type(worker.sourceLoadout) == "table"
         and Internal.BuildToolLedgerFromLoadout then
         local seededTools = Internal.BuildToolLedgerFromLoadout(worker.sourceLoadout)
+        worker.sourceLoadoutSeeded = true
         if #seededTools > 0 then
             worker.toolLedger = seededTools
             worker.toolCacheDirty = true

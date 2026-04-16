@@ -16,6 +16,12 @@ function Internal.RecordCombatAttack(workerID, npcData, attackType, options)
         return false
     end
 
+    local ammoConsumed = false
+    local ammoRemaining = nil
+    if attackType == "ranged" and Internal.ConsumeWorkerRangedAmmo then
+        ammoConsumed, ammoRemaining = Internal.ConsumeWorkerRangedAmmo(worker, npcData, 1)
+    end
+
     local energy = DC_Colony and DC_Colony.Energy or nil
     local beforeEnergy = energy and energy.GetCurrent and energy.GetCurrent(worker) or nil
     local drainAmount, _, skillLevel, drainMultiplier = Internal.GetCompanionCombatDrainPerAttack(worker, attackType)
@@ -39,9 +45,13 @@ function Internal.RecordCombatAttack(workerID, npcData, attackType, options)
         registry.RecalculateWorker(worker)
     end
 
+    if attackType == "ranged" and npcData and npcData.loadout then
+        npcData.loadout.ammoCount = math.max(0, tonumber(ammoRemaining ~= nil and ammoRemaining or npcData.loadout.ammoCount) or 0)
+    end
+
     local xpGranted = tonumber(xpResult and xpResult.granted) or 0
     local leveledUp = tonumber(xpResult and xpResult.leveledUp) or 0
-    if energyApplied or xpGranted > 0 then
+    if energyApplied or xpGranted > 0 or ammoConsumed then
         local companionData = Internal.GetCompanionData(worker)
         local currentMs = Internal.GetCurrentMillis()
         local lastSavedAt = tonumber(companionData and companionData.combatProgressSavedAt) or 0
@@ -58,6 +68,10 @@ function Internal.RecordCombatAttack(workerID, npcData, attackType, options)
         end
     end
 
+    if attackType == "ranged" and worker and Internal.SyncActiveNPCFromWorker then
+        Internal.SyncActiveNPCFromWorker(worker, false)
+    end
+
     if energy and energy.IsDepleted and energy.IsDepleted(worker) then
         local lowEnergyReason = Config.ReturnReasons and (Config.ReturnReasons.LowEnergy or Config.ReturnReasons.LowTiredness) or "LowEnergy"
         if energy.BeginForcedRest then
@@ -70,6 +84,8 @@ function Internal.RecordCombatAttack(workerID, npcData, attackType, options)
         attackType = attackType,
         skillID = skillID,
         skillLevel = skillLevel,
+        ammoConsumed = ammoConsumed,
+        ammoRemaining = ammoRemaining,
         drainApplied = drainAmount,
         drainMultiplier = drainMultiplier,
         xpResult = xpResult,

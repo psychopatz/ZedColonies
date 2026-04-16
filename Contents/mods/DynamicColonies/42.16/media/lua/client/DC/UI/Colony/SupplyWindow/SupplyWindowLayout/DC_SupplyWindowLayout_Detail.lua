@@ -20,6 +20,27 @@ local function appendConditionLine(text, entry)
     return text .. " <RGB:0.82,0.82,0.82> Condition: <RGB:1,1,1> " .. tostring(durabilityText) .. " <LINE> "
 end
 
+local function isAmmoEquipmentEntry(entry)
+    if type(entry) ~= "table" then
+        return false
+    end
+
+    if tostring(entry.assignedRequirementKey or "") == "Colony.Combat.Ammo" then
+        return true
+    end
+
+    local config = Internal.Config or {}
+    for _, itemTag in ipairs(entry.tags or {}) do
+        local itemKey = tostring(itemTag or "")
+        if itemKey == "Weapon.Ranged.Ammo"
+            or (config.TagMatches and config.TagMatches(itemKey, "Weapon.Ranged.Ammo")) then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function setDetailSupportPanel(window, title, entries)
     if not window or not window.detailSupportPanel then
         return
@@ -145,8 +166,13 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         elseif Internal.isGroupEntry and Internal.isGroupEntry(entry) then
             -- Group details were already rendered above.
         elseif self.activeTab == Internal.Tabs.Equipment then
+            if (tonumber(entry.qty) or 1) > 1 then
+                text = text .. " <RGB:0.82,0.82,0.82> Quantity: <RGB:1,1,1> " .. tostring(entry.qty or 1) .. " <LINE> "
+            end
             text = appendWeightLine(text, entry)
-            text = appendConditionLine(text, entry)
+            if not isAmmoEquipmentEntry(entry) then
+                text = appendConditionLine(text, entry)
+            end
             if Internal.isInventoryView and Internal.isInventoryView(self) then
                 text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Click this row to replace the active matching equipment. <LINE> "
             end
@@ -201,8 +227,13 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         elseif Internal.isGroupEntry and Internal.isGroupEntry(entry) then
             -- Group details were already rendered above.
         elseif self.activeTab == Internal.Tabs.Equipment then
+            if (tonumber(entry.qty) or 1) > 1 then
+                text = text .. " <RGB:0.82,0.82,0.82> Quantity: <RGB:1,1,1> " .. tostring(entry.qty or 1) .. " <LINE> "
+            end
             text = appendWeightLine(text, entry)
-            text = appendConditionLine(text, entry)
+            if not isAmmoEquipmentEntry(entry) then
+                text = appendConditionLine(text, entry)
+            end
         elseif self.activeTab == Internal.Tabs.Output and Internal.isWarehouseView and Internal.isWarehouseView(self) then
             text = appendWeightLine(text, entry)
             text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Store to place this item in warehouse storage for construction and general item use. <LINE> "

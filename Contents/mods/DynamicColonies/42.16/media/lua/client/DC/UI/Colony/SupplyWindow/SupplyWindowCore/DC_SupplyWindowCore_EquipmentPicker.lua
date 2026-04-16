@@ -121,10 +121,33 @@ function Internal.getAmmoTypeForWeaponFullType(fullType)
         return nil
     end
 
+    local cache = Internal.WeaponMetadataCache or {}
+    if cache[key] ~= nil then
+        return cache[key].ammoType
+    end
+
     local scriptItem = getScriptManager():getItem(key)
     local ammoType = scriptItem and scriptItem.getAmmoType and scriptItem:getAmmoType() or nil
     ammoType = tostring(ammoType or "")
-    return ammoType ~= "" and ammoType or nil
+
+    cache[key] = {
+        ammoType = ammoType ~= "" and ammoType or nil,
+        clipSize = math.max(0, tonumber(scriptItem and scriptItem.getClipSize and scriptItem:getClipSize() or 0) or 0),
+    }
+    Internal.WeaponMetadataCache = cache
+    return cache[key].ammoType
+end
+
+local function normalizeItemTypeToken(fullType)
+    local token = tostring(fullType or "")
+    if token == "" then
+        return ""
+    end
+
+    token = token:match("([^%.:]+)$") or token
+    token = token:gsub("_", "")
+    token = token:gsub("Box$", "")
+    return string.lower(token)
 end
 
 function Internal.getWorkerAssignedRangedWeaponEntry(worker)
@@ -168,7 +191,7 @@ function Internal.entryMatchesRangedAmmo(entry, worker)
         return true
     end
 
-    return false
+    return normalizeItemTypeToken(entryFullType) == normalizeItemTypeToken(ammoFullType)
 end
 
 function Internal.buildEquipmentPickerCandidates(window, requirementKey)

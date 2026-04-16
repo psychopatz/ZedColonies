@@ -14,12 +14,43 @@ local function isRelevantEquipmentEntry(entry, window)
 
     local config = Internal.Config or {}
     local worker = window and window.workerData or nil
-    if worker and worker.jobType and Internal.getPlayerEntryEquipmentMatches then
-        return #(Internal.getPlayerEntryEquipmentMatches(entry, worker) or {}) > 0
+
+    if worker and Internal.isAmmoRequirementActive and Internal.isAmmoRequirementActive(worker)
+        and Internal.entryMatchesRangedAmmo and Internal.entryMatchesRangedAmmo(entry, worker) then
+        return true
     end
 
-    if config.GetMatchingEquipmentRequirementDefinitionsForWorker and worker and worker.jobType then
-        return #(config.GetMatchingEquipmentRequirementDefinitionsForWorker(entry.fullType, worker) or {}) > 0
+    if worker and worker.jobType then
+        local cacheKey = table.concat({
+            tostring(worker.workerID or ""),
+            tostring(worker.jobType or ""),
+            tostring(Internal.isAmmoRequirementActive and Internal.isAmmoRequirementActive(worker) or false),
+        }, "|")
+
+        if window._equipmentRequirementKeySetCacheKey ~= cacheKey then
+            local keySet = {}
+            for _, definition in ipairs(config.GetWorkerEquipmentRequirementDefinitions and config.GetWorkerEquipmentRequirementDefinitions(worker) or {}) do
+                local requirementKey = tostring(definition and definition.requirementKey or "")
+                if requirementKey ~= "" then
+                    if requirementKey ~= "Colony.Combat.Ammo"
+                        or (Internal.isAmmoRequirementActive and Internal.isAmmoRequirementActive(worker)) then
+                        keySet[requirementKey] = true
+                    end
+                end
+            end
+            window._equipmentRequirementKeySetCacheKey = cacheKey
+            window._equipmentRequirementKeySet = keySet
+        end
+
+        local keySet = window._equipmentRequirementKeySet or {}
+        for _, definition in ipairs(entry.equipmentRequirementKeys or {}) do
+            local requirementKey = tostring(definition and definition.requirementKey or "")
+            if keySet[requirementKey] then
+                return true
+            end
+        end
+
+        return false
     end
 
     if config.GetMatchingEquipmentRequirementDefinitions and worker and worker.jobType then

@@ -187,6 +187,18 @@ local function shouldShowEquipmentDurability(entry)
         return false
     end
 
+    if tostring(entry.assignedRequirementKey or "") == "Colony.Combat.Ammo" then
+        return false
+    end
+
+    for _, itemTag in ipairs(entry.tags or {}) do
+        local itemKey = tostring(itemTag or "")
+        if itemKey == "Weapon.Ranged.Ammo"
+            or (Internal.Config and Internal.Config.TagMatches and Internal.Config.TagMatches(itemKey, "Weapon.Ranged.Ammo")) then
+            return false
+        end
+    end
+
     if entry.kind == "tool" then
         return true
     end
@@ -201,6 +213,31 @@ local function shouldShowEquipmentDurability(entry)
         and Internal.Config.IsColonyToolFullType
         and Internal.Config.IsColonyToolFullType(fullType)
         or false
+end
+
+local function isAmmoEquipmentEntry(entry)
+    if type(entry) ~= "table" then
+        return false
+    end
+
+    if tostring(entry.assignedRequirementKey or "") == "Colony.Combat.Ammo" then
+        return true
+    end
+
+    for _, itemTag in ipairs(entry.tags or {}) do
+        local itemKey = tostring(itemTag or "")
+        if itemKey == "Weapon.Ranged.Ammo"
+            or (Internal.Config and Internal.Config.TagMatches and Internal.Config.TagMatches(itemKey, "Weapon.Ranged.Ammo")) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function getAmmoQuantityText(entry)
+    local qty = math.max(1, math.floor(tonumber(entry and entry.qty) or 1))
+    return qty > 1 and ("Qty " .. tostring(qty)) or "Ammo"
 end
 
 local function getDurabilityText(entry)
@@ -464,9 +501,10 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
             Internal.ensurePlayerEntryEquipmentData(entry)
         end
         local durabilityText = getDurabilityText(entry)
+        local ammoText = isAmmoEquipmentEntry(entry) and getAmmoQuantityText(entry) or nil
         return {
-            statText = appendWeightText(durabilityText ~= "" and durabilityText or "No condition data", entry),
-            badgeText = entry.canAssignTool and "Tool" or "Preview",
+            statText = appendWeightText(ammoText or (durabilityText ~= "" and durabilityText or "No condition data"), entry),
+            badgeText = isAmmoEquipmentEntry(entry) and "Ammo" or (entry.canAssignTool and "Tool" or "Preview"),
             dimmed = entry.canAssignTool ~= true,
         }
     end
@@ -581,8 +619,11 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
         end
 
         return {
-            statText = appendWeightText(getDurabilityText(entry) ~= "" and getDurabilityText(entry) or "No condition data", entry),
-            badgeText = "",
+            statText = appendWeightText(
+                isAmmoEquipmentEntry(entry) and getAmmoQuantityText(entry) or (getDurabilityText(entry) ~= "" and getDurabilityText(entry) or "No condition data"),
+                entry
+            ),
+            badgeText = isAmmoEquipmentEntry(entry) and "Ammo" or "",
         }
     end
 

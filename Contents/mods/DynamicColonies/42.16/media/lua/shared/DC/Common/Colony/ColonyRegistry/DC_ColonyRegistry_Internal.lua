@@ -220,6 +220,33 @@ local function copyStringArray(values)
     return copy
 end
 
+local function entryHasTag(tags, targetTag)
+    local targetKey = tostring(targetTag or "")
+    if targetKey == "" then
+        return false
+    end
+
+    for _, itemTag in ipairs(tags or {}) do
+        local itemKey = tostring(itemTag or "")
+        if itemKey == targetKey then
+            return true
+        end
+        if Config and Config.TagMatches and Config.TagMatches(itemKey, targetKey) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function isAmmoEquipmentEntry(entry, tags)
+    if tostring(entry and entry.assignedRequirementKey or "") == "Colony.Combat.Ammo" then
+        return true
+    end
+
+    return entryHasTag(tags, "Weapon.Ranged.Ammo")
+end
+
 local function resolveKeepOnDeplete(item, scriptItem)
     if item then
         if item.isKeepOnDeplete and item:isKeepOnDeplete() then
@@ -342,6 +369,7 @@ function Internal.NormalizeEquipmentEntry(entry)
     local defaultTags = entry.tags
         or staticMetadata.tags
         or {}
+    local ammoEntry = isAmmoEquipmentEntry(entry, defaultTags)
     local conditionMax = tonumber(staticMetadata.conditionMax) or 0
     local isDrainable = staticMetadata.isDrainable == true
     local useDelta = tonumber(staticMetadata.useDelta) or 0
@@ -350,9 +378,19 @@ function Internal.NormalizeEquipmentEntry(entry)
         usedDelta = 1
     end
 
+    if ammoEntry then
+        conditionMax = 0
+        isDrainable = false
+        useDelta = 0
+        usedDelta = nil
+    end
+
     local condition = tonumber(entry.condition)
     if condition == nil and conditionMax > 0 then
         condition = conditionMax
+    end
+    if ammoEntry then
+        condition = nil
     end
 
     local hasHeadCondition = staticMetadata.hasHeadCondition == true
@@ -360,6 +398,11 @@ function Internal.NormalizeEquipmentEntry(entry)
     local headCondition = tonumber(entry.headCondition)
     if headCondition == nil and hasHeadCondition then
         headCondition = headConditionMax
+    end
+    if ammoEntry then
+        hasHeadCondition = false
+        headConditionMax = 0
+        headCondition = nil
     end
 
     local quality = tonumber(entry.quality)
@@ -382,17 +425,17 @@ function Internal.NormalizeEquipmentEntry(entry)
         entryID = tostring(entry.entryID or Internal.GenerateLedgerEntryID("eq")),
         displayName = tostring(entry.displayName or Internal.GetDisplayNameForFullType(fullType)),
         tags = copyStringArray(defaultTags),
-        qty = 1,
+        qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
         condition = conditionMax > 0 and math.max(0, math.min(conditionMax, math.floor(condition or conditionMax))) or nil,
         conditionMax = conditionMax > 0 and conditionMax or nil,
         headCondition = headConditionMax > 0 and math.max(0, math.min(headConditionMax, math.floor(headCondition or headConditionMax))) or nil,
         headConditionMax = headConditionMax > 0 and headConditionMax or nil,
-        isDrainable = isDrainable == true,
-        useDelta = isDrainable and math.max(0, tonumber(useDelta) or 0) or nil,
-        usedDelta = isDrainable and math.max(0, math.min(1, tonumber(usedDelta) or 0)) or nil,
+        isDrainable = ammoEntry ~= true and isDrainable == true,
+        useDelta = ammoEntry ~= true and isDrainable and math.max(0, tonumber(useDelta) or 0) or nil,
+        usedDelta = ammoEntry ~= true and isDrainable and math.max(0, math.min(1, tonumber(usedDelta) or 0)) or nil,
         quality = quality ~= nil and math.max(0, math.floor(tonumber(quality) or 0)) or nil,
         haveBeenRepaired = haveBeenRepaired ~= nil and math.max(0, math.floor(tonumber(haveBeenRepaired) or 0)) or nil,
-        keepOnDeplete = staticMetadata.keepOnDeplete == true,
+        keepOnDeplete = ammoEntry ~= true and staticMetadata.keepOnDeplete == true,
         pendingVanillaBreak = entry.pendingVanillaBreak == true,
         assignedRequirementKey = assignedRequirementKey,
     }
@@ -409,6 +452,7 @@ function Internal.BuildEquipmentEntryFromInventoryItem(invItem, overrideDisplayN
         tags = (Config.GetItemCombinedTags and Config.GetItemCombinedTags(invItem:getFullType()))
             or (Config.FindItemTags and Config.FindItemTags(invItem:getFullType()))
             or {},
+        qty = math.max(1, math.floor(tonumber(invItem.getCount and invItem:getCount() or 1) or 1)),
         condition = invItem.getCondition and invItem:getCondition() or nil,
         headCondition = invItem.getHeadCondition and invItem:getHeadCondition() or nil,
         quality = invItem.getQuality and invItem:getQuality() or nil,
@@ -618,7 +662,7 @@ function Internal.BuildToolLedgerFromLoadout(loadout)
     end
 
     local ledger = {}
-    local function append(fullType, requirementKey, condition)
+    local function append(fullType, requirementKey, condition, qty)
         local itemType = tostring(fullType or "")
         if itemType == "" then
             return
@@ -627,6 +671,7 @@ function Internal.BuildToolLedgerFromLoadout(loadout)
             fullType = itemType,
             displayName = Internal.GetDisplayNameForFullType(itemType),
             tags = (Config.GetItemCombinedTags and Config.GetItemCombinedTags(itemType)) or {},
+            qty = qty,
             condition = condition,
             assignedRequirementKey = requirementKey,
         })
@@ -637,7 +682,7 @@ function Internal.BuildToolLedgerFromLoadout(loadout)
 
     append(loadout.meleeWeapon or loadout.primaryMeleeWeapon or loadout.weapon, "Colony.Combat.Melee", loadout.meleeCondition)
     append(loadout.rangedWeapon or loadout.firearm or loadout.gun, "Colony.Combat.Ranged", loadout.rangedCondition)
-    append(loadout.rangedAmmoType or loadout.ammoType or loadout.ammo, "Colony.Combat.Ammo")
+    append(loadout.rangedAmmoType or loadout.ammoType or loadout.ammo, "Colony.Combat.Ammo", nil, loadout.ammoCount)
 
     return ledger
 end

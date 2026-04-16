@@ -88,6 +88,7 @@ function Registry.CreateWorker(ownerUsername, template)
         sourceNPCID = template.sourceNPCID,
         sourceNPCType = template.sourceNPCType,
         sourceLoadout = Internal.CopyShallow(sourceLoadout),
+        sourceLoadoutSeeded = template.sourceLoadoutSeeded == true or #templateToolLedger > 0,
         detailVersion = tonumber(template.detailVersion) or 1
     }
 
