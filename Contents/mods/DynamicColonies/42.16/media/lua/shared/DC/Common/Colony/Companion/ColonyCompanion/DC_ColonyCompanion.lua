@@ -1,0 +1,52 @@
+DC_Colony = DC_Colony or {}
+DC_Colony.Companion = DC_Colony.Companion or {}
+
+local Companion = DC_Colony.Companion
+
+Companion.Internal = Companion.Internal or {}
+
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_Constants"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_Internal"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_RegistryAccess"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_TimeAccess"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_Logging"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_PlayerLookup"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_FactionValidation"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_WorkerSkillAccess"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CompanionDataAccess"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_SoulStoreAccess"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_TravelConfig"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_EquipmentTags"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_EquipmentSelection"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_AmmoResolution"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_LoadoutDefaults"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_LoadoutFallbacks"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_LoadoutBuilder"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_HealthSeedSync"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_MedicalBandages"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CombatDrain"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_StartValidation"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CommanderState"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CommanderAssignment"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CommanderValidation"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CommandClaim"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CommandTransfer"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_OrderIssuing"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_SoulCreation"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_TravelStateTransitions"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ReturnFlow"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_NPCSync"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_WorkerHealthSync"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_SoulStatusEvents"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_HealthReturnHandling"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CompanionStart"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CombatXP"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_UpdateLoop"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiEligibility"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiCommands"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiMedical"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiSync"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiEvents"
+require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiSimulation"
+
+return Companion
