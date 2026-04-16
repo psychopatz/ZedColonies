@@ -5,7 +5,7 @@ require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition"
 require "DC/Common/Colony/ColonySim/DC_Colony_Sim"
 require "DC/Common/Colony/DC_Colony_Presentation"
 require "DC/Common/Buildings/Core/DC_Buildings"
-require "DC/Common/Colony/Resources/DC_ColonyResources"
+require "DC/Common/Colony/Resources/ColonyResources/DC_ColonyResources"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Network = DC_Colony.Network or {}

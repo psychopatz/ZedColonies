@@ -1,4 +1,4 @@
-require "DC/Common/Colony/Resources/DC_ColonyResources"
+require "DC/Common/Colony/Resources/ColonyResources/DC_ColonyResources"
 
 DC_GreenhouseUIUtils = DC_GreenhouseUIUtils or {}
 

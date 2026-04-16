@@ -6,7 +6,7 @@ require "DC/Common/Colony/DC_Colony_Output"
 require "DC/Common/Colony/DC_Colony_Presentation"
 require "DC/Common/Colony/ColonyInteraction/DC_Colony_Interaction"
 require "DC/Common/Colony/Warehouse/DC_ColonyWarehouse"
-require "DC/Common/Colony/Resources/DC_ColonyResources"
+require "DC/Common/Colony/Resources/ColonyResources/DC_ColonyResources"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Sim = DC_Colony.Sim or {}
