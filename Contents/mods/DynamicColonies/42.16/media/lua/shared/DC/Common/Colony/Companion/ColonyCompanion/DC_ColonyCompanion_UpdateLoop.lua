@@ -94,8 +94,33 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
             return true
         end
         if worker.travelHoursRemaining <= 0 then
-            Internal.MarkCompanionActive(worker)
-            Internal.AppendLog(worker, "Reached your location and is now traveling with you.", currentHour, "travel")
+            if isClient() and not isServer() then
+                worker.state = Config.States.Working
+                return true
+            end
+
+            local commanderName = tostring(companionData.commanderUsername or "")
+            local commanderPlayer = commanderName ~= ""
+                and Internal.GetOnlinePlayerByUsername
+                and Internal.GetOnlinePlayerByUsername(commanderName)
+                or nil
+            local ordered = commanderPlayer
+                and Internal.IssueCommanderFollowOrder
+                and Internal.IssueCommanderFollowOrder(worker, commanderPlayer)
+                or false
+
+            if ordered then
+                Internal.MarkCompanionActive(worker)
+                Internal.AppendLog(worker, "Reached your location and is now traveling with you.", currentHour, "travel")
+                Internal.SaveRegistry()
+            else
+                worker.state = Config.States.Working
+                Internal.Debug(
+                    "UpdateTravelCompanionWorker waiting to activate live companion workerID=" .. tostring(worker.workerID)
+                        .. " commander=" .. tostring(commanderName)
+                        .. " hasCommanderPlayer=" .. tostring(commanderPlayer ~= nil)
+                )
+            end
         else
             worker.state = Config.States.Working
         end

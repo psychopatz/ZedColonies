@@ -61,40 +61,7 @@ function Internal.StartWorkerCompanion(player, worker)
         Internal.RestoreWorkerAfterFailedStart(worker)
         return false, "Dynamic Trading V2 server controls are unavailable."
     end
-
-    local spawned = false
-    if DTNPCServerCore.SpawnOffscreenCompanionByUUID then
-        spawned = DTNPCServerCore.SpawnOffscreenCompanionByUUID(uuid, player) == true
-        Internal.Debug("SpawnOffscreenCompanionByUUID workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid) .. " spawned=" .. tostring(spawned))
-    end
-    if not spawned and DTNPCServerCore.SpawnNearbyCompanionByUUID then
-        spawned = DTNPCServerCore.SpawnNearbyCompanionByUUID(uuid, player, 2, 5) == true
-        Internal.Debug("SpawnNearbyCompanionByUUID fallback workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid) .. " spawned=" .. tostring(spawned))
-    end
-
-    local ordered = DTNPCServerCore.IssueOrderByUUID and DTNPCServerCore.IssueOrderByUUID(uuid, player, {
-        state = "Follow",
-        returnStatus = "Resting",
-        systemCompanionOrder = true,
-    })
-    Internal.Debug("IssueOrderByUUID Follow workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid) .. " ordered=" .. tostring(ordered))
-
-    if ordered ~= true then
-        Internal.Debug("StartWorkerCompanion failed to issue follow order workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid))
-        if createdFresh and DynamicTrading_Roster and DynamicTrading_Roster.RemoveSpecificSoul then
-            DynamicTrading_Roster.RemoveSpecificSoul(uuid)
-            local liveCompanionData = Internal.GetCompanionData(worker)
-            if liveCompanionData then
-                liveCompanionData.uuid = nil
-            end
-        end
-        Internal.RestoreWorkerAfterFailedStart(worker)
-        return false, "Unable to issue companion follow order."
-    end
-
     Internal.AppendLog(worker, "Left home and started heading to your location.", Internal.GetCurrentWorldHours(), "travel")
-    if not spawned then
-        Internal.Debug("StartWorkerCompanion continuing after order-driven spawn workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid))
-    end
+    Internal.Debug("StartWorkerCompanion queued outbound travel workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid) .. " travelHours=" .. tostring(worker.travelHoursRemaining))
     return true, uuid
 end
