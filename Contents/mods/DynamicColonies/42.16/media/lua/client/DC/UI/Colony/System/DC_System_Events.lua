@@ -22,6 +22,13 @@ local function onServerCommand(module, command, args)
         return
     end
 
+    if command == "CompanionCommandResult" then
+        if System.CompanionCommands and System.CompanionCommands.HandleResult then
+            System.CompanionCommands.HandleResult(args)
+        end
+        return
+    end
+
     if command ~= "SyncRecruitAttemptResult" then
         if command == "SyncOwnedFactionStatus" then
             System.ownedFactionStatusCache = args and args.status or nil

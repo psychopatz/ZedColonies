@@ -92,6 +92,16 @@ function Config.GetScavengeTravelHours()
     )
 end
 
+function Config.GetCompanionCommandRadius()
+    return math.max(
+        1,
+        Config.GetSandboxNumberAny(
+            { "CompanionCommandRadius" },
+            20
+        ) or 20
+    )
+end
+
 local function roundToNearestWhole(value)
     local numeric = tonumber(value) or 0
     if numeric <= 0 then

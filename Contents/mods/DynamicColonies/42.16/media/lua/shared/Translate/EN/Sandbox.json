@@ -35,5 +35,8 @@
     "Sandbox_DynamicColonies.ColonyDoctorHealthRegenMultiplier_tooltip": "Scales resting HP recovery when doctor treatment hours are available for the worker.",
 
     "Sandbox_DynamicColonies.ColonyBandageTreatmentHours": "Labour: Bandage Treatment Hours",
-    "Sandbox_DynamicColonies.ColonyBandageTreatmentHours_tooltip": "Sets how many in-game hours a clean rag, sterilized rag, or bandage keeps adding healing after it is applied during rest."
+    "Sandbox_DynamicColonies.ColonyBandageTreatmentHours_tooltip": "Sets how many in-game hours a clean rag, sterilized rag, or bandage keeps adding healing after it is applied during rest.",
+
+    "Sandbox_DynamicColonies.CompanionCommandRadius": "Companion Command Radius",
+    "Sandbox_DynamicColonies.CompanionCommandRadius_tooltip": "How many tiles away a commanded Travel Companion can be and still answer a radial command."
 }

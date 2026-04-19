@@ -10,6 +10,7 @@ require "DC/UI/Colony/System/DC_System_Factions"
 require "DC/UI/Colony/System/DC_System_Conversation"
 require "DC/UI/Colony/System/DC_System_Recruitment"
 require "DC/UI/Colony/System/DC_System_Options"
+require "DC/UI/Colony/System/DC_System_CompanionCommands"
 require "DC/UI/Colony/System/DC_System_Events"
 
 return DC_System
