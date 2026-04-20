@@ -1,5 +1,10 @@
 {
-    "Sandbox_DynamicColoniesLabour": "Dynamic Colonies Labour",
+    "Sandbox_DynamicColoniesColony": "Dynamic Colonies: Colony",
+    "Sandbox_DynamicColoniesNeeds": "Dynamic Colonies: Worker Needs",
+    "Sandbox_DynamicColoniesLabour": "Dynamic Colonies: Labour",
+    "Sandbox_DynamicColoniesScavenging": "Dynamic Colonies: Scavenging",
+    "Sandbox_DynamicColoniesMedical": "Dynamic Colonies: Medical",
+    "Sandbox_DynamicColoniesCompanions": "Dynamic Colonies: Companions",
 
     "Sandbox_DynamicColonies.StarterWorkerCount": "Starter Workers",
     "Sandbox_DynamicColonies.StarterWorkerCount_tooltip": "How many generated starter workers each player receives once. Multiplayer players each get their own grant before joining another colony faction.",

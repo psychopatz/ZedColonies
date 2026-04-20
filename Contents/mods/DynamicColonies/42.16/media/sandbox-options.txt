@@ -6,7 +6,7 @@ option DynamicColonies.StarterWorkerCount
     default = 0,
     min = 0,
     max = 10,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesColony,
     translation = DynamicColonies.StarterWorkerCount,
 }
 
@@ -16,7 +16,7 @@ option DynamicColonies.ColonyDailyCaloriesUse
     default = 500,
     min = 0,
     max = 5000,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesNeeds,
     translation = DynamicColonies.ColonyDailyCaloriesUse,
 }
 
@@ -26,7 +26,7 @@ option DynamicColonies.ColonyDailyHydrationUse
     default = 500,
     min = 0,
     max = 5000,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesNeeds,
     translation = DynamicColonies.ColonyDailyHydrationUse,
 }
 
@@ -46,7 +46,7 @@ option DynamicColonies.ColonyScavengeTravelHours
     default = 1.0,
     min = 0.1,
     max = 24.0,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesScavenging,
     translation = DynamicColonies.ColonyScavengeTravelHours,
 }
 
@@ -56,7 +56,7 @@ option DynamicColonies.ColonyBaseWorkAmount
     default = 500,
     min = 1,
     max = 5000,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesScavenging,
     translation = DynamicColonies.ColonyBaseWorkAmount,
 }
 
@@ -66,7 +66,7 @@ option DynamicColonies.ColonyBaseWorkMultiplier
     default = 1.0,
     min = 0.1,
     max = 5.0,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesScavenging,
     translation = DynamicColonies.ColonyBaseWorkMultiplier,
 }
 
@@ -76,7 +76,7 @@ option DynamicColonies.ColonyFishingWorkAmount
     default = 500,
     min = 1,
     max = 5000,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesScavenging,
     translation = DynamicColonies.ColonyFishingWorkAmount,
 }
 
@@ -86,7 +86,7 @@ option DynamicColonies.ColonyHealthRegenPerHour
     default = 3.0,
     min = 0.0,
     max = 25.0,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesMedical,
     translation = DynamicColonies.ColonyHealthRegenPerHour,
 }
 
@@ -96,7 +96,7 @@ option DynamicColonies.ColonyInfirmaryHealthRegenMultiplier
     default = 1.5,
     min = 1.0,
     max = 10.0,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesMedical,
     translation = DynamicColonies.ColonyInfirmaryHealthRegenMultiplier,
 }
 
@@ -106,7 +106,7 @@ option DynamicColonies.ColonyDoctorHealthRegenMultiplier
     default = 4.0,
     min = 1.0,
     max = 20.0,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesMedical,
     translation = DynamicColonies.ColonyDoctorHealthRegenMultiplier,
 }
 
@@ -116,7 +116,7 @@ option DynamicColonies.ColonyBandageTreatmentHours
     default = 24,
     min = 1,
     max = 72,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesMedical,
     translation = DynamicColonies.ColonyBandageTreatmentHours,
 }
 
@@ -126,6 +126,6 @@ option DynamicColonies.CompanionCommandRadius
     default = 20,
     min = 1,
     max = 60,
-    page = DynamicColoniesLabour,
+    page = DynamicColoniesCompanions,
     translation = DynamicColonies.CompanionCommandRadius,
 }
