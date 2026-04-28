@@ -6,7 +6,7 @@ DynamicTrading.RegisterInteractionStrings("Colony", "Command", {
             Follow = {
                 label = "Follow Me",
                 state = "Follow",
-                visualEmote = "Wave",
+                visualEmote = "followme",
                 activityText = "Responded to your call and fell in behind you.",
                 summarySingle = "{name} is moving in behind you.",
                 summaryPlural = "{count} companions are moving in behind you.",
@@ -15,7 +15,7 @@ DynamicTrading.RegisterInteractionStrings("Colony", "Command", {
             Stay = {
                 label = "Wait Here",
                 state = "Stay",
-                visualEmote = "Halt",
+                visualEmote = "freeze",
                 activityText = "Held position on your command.",
                 summarySingle = "{name} is holding position.",
                 summaryPlural = "{count} companions are holding position.",
@@ -24,7 +24,7 @@ DynamicTrading.RegisterInteractionStrings("Colony", "Command", {
             ProtectAuto = {
                 label = "Defend (Auto)",
                 state = "ProtectAuto",
-                visualEmote = "Yes",
+                visualEmote = "signalok",
                 activityText = "Shifted to defensive escort duty on your command.",
                 summarySingle = "{name} is covering you.",
                 summaryPlural = "{count} companions are covering you.",
@@ -33,7 +33,7 @@ DynamicTrading.RegisterInteractionStrings("Colony", "Command", {
             ProtectMelee = {
                 label = "Defend (Melee)",
                 state = "ProtectMelee",
-                visualEmote = "Yes",
+                visualEmote = "comefront",
                 activityText = "Took up melee guard duty on your command.",
                 summarySingle = "{name} is screening with melee weapons.",
                 summaryPlural = "{count} companions are screening with melee weapons.",
@@ -42,7 +42,7 @@ DynamicTrading.RegisterInteractionStrings("Colony", "Command", {
             ProtectRanged = {
                 label = "Defend (Ranged)",
                 state = "ProtectRanged",
-                visualEmote = "Yes",
+                visualEmote = "signalfire",
                 activityText = "Took up ranged overwatch on your command.",
                 summarySingle = "{name} is taking ranged overwatch.",
                 summaryPlural = "{count} companions are taking ranged overwatch.",
@@ -51,7 +51,7 @@ DynamicTrading.RegisterInteractionStrings("Colony", "Command", {
             Dismiss = {
                 label = "Go Home",
                 state = "Dismiss",
-                visualEmote = "Halt",
+                visualEmote = "moveout",
                 activityText = "Broke off companion duty and started heading home on your command.",
                 summarySingle = "{name} is heading home.",
                 summaryPlural = "{count} companions are heading home.",

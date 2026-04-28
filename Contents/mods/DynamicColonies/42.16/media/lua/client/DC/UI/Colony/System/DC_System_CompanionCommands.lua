@@ -19,13 +19,28 @@ local ORDER_ICON_PATHS = {
     ProtectRanged = COMMAND_ICON_PATH,
     Dismiss = COMMAND_ICON_PATH,
 }
+local ORDER_BASE_EMOTES = {
+    Follow = "followme",
+    Stay = "freeze",
+    ProtectAuto = "signalok",
+    ProtectMelee = "comefront",
+    ProtectRanged = "signalfire",
+    Dismiss = "moveout",
+}
+local LEGACY_VISUAL_EMOTES = {
+    Wave = "wavehi",
+    wave = "wavehi",
+    Halt = "freeze",
+    halt = "freeze",
+    Yes = "yes",
+}
 local DEFAULT_ORDER_META = {
-    Follow = { label = "Follow Me", visualEmote = "Wave", emptyText = "No commanded companions are close enough to follow you." },
-    Stay = { label = "Wait Here", visualEmote = "Halt", emptyText = "No commanded companions are close enough to hold here." },
-    ProtectAuto = { label = "Defend (Auto)", visualEmote = "Yes", emptyText = "No commanded companions are close enough to cover you." },
-    ProtectMelee = { label = "Defend (Melee)", visualEmote = "Yes", emptyText = "No melee-capable companions are close enough to guard you." },
-    ProtectRanged = { label = "Defend (Ranged)", visualEmote = "Yes", emptyText = "No ranged-capable companions are close enough to cover you." },
-    Dismiss = { label = "Go Home", visualEmote = "Halt", emptyText = "No commanded companions are close enough to send home." },
+    Follow = { label = "Follow Me", visualEmote = "followme", emptyText = "No commanded companions are close enough to follow you." },
+    Stay = { label = "Wait Here", visualEmote = "freeze", emptyText = "No commanded companions are close enough to hold here." },
+    ProtectAuto = { label = "Defend (Auto)", visualEmote = "signalok", emptyText = "No commanded companions are close enough to cover you." },
+    ProtectMelee = { label = "Defend (Melee)", visualEmote = "comefront", emptyText = "No melee-capable companions are close enough to guard you." },
+    ProtectRanged = { label = "Defend (Ranged)", visualEmote = "signalfire", emptyText = "No ranged-capable companions are close enough to cover you." },
+    Dismiss = { label = "Go Home", visualEmote = "moveout", emptyText = "No commanded companions are close enough to send home." },
 }
 
 local originalInit = ISEmoteRadialMenu.init
@@ -66,6 +81,22 @@ local function getOrderLines(bucketName, order)
     local bucket = strings and strings[bucketName] or nil
     local values = bucket and bucket[order] or nil
     return type(values) == "table" and values or nil
+end
+
+local function resolveBaseVisualEmote(order, visualEmote)
+    local raw = tostring(visualEmote or "")
+    if raw ~= "" then
+        local mapped = LEGACY_VISUAL_EMOTES[raw] or LEGACY_VISUAL_EMOTES[string.lower(raw)]
+        if mapped then
+            return mapped
+        end
+
+        if raw == string.lower(raw) then
+            return raw
+        end
+    end
+
+    return ORDER_BASE_EMOTES[order] or "wavehi"
 end
 
 local function chooseRandomLine(lines, fallback)
@@ -326,7 +357,7 @@ function ISEmoteRadialMenu:init()
 
     ISEmoteRadialMenu.menu[MENU_KEY] = {
         name = MENU_LABEL,
-        subMenu = CompanionCommands.BuildMenuDefinition(self.player),
+        subMenu = CompanionCommands.BuildMenuDefinition(self.character or getLocalPlayer()),
     }
     ISEmoteRadialMenu.icons[MENU_KEY] = getTexture(COMMAND_ICON_PATH)
 end
@@ -340,7 +371,7 @@ function ISEmoteRadialMenu:emote(emote)
     local order = string.sub(emoteName, string.len(ORDER_PREFIX) + 1)
     local meta = getOrderMeta(order)
     CompanionCommands.SendBulkOrder(order)
-    return originalEmote(self, meta.visualEmote or "Wave")
+    return originalEmote(self, resolveBaseVisualEmote(order, meta.visualEmote))
 end
 
 return CompanionCommands
