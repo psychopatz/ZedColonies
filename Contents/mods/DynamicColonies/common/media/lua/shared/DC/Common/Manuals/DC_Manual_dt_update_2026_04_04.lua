@@ -1,12 +1,12 @@
 -- DT_MANUAL_EDITOR_BEGIN
 -- {
 --   "manual_id": "dt_update_2026_04_04",
---   "module": "colony",
+--   "module": "DynamicColonies",
 --   "title": "April 5, 2026 Update",
 --   "description": "Colony management, UI updates",
 --   "start_page_id": "overview",
 --   "audiences": [
---     "colony"
+--     "DynamicColonies"
 --   ],
 --   "sort_order": 10,
 --   "release_version": "0.0.2",
@@ -75,7 +75,7 @@ if DynamicTrading and DynamicTrading.RegisterManual then
         title = "April 5, 2026 Update",
         description = "Colony management, UI updates",
         startPageId = "overview",
-        audiences = { "colony" },
+        audiences = { "DynamicColonies" },
         sortOrder = 10,
         releaseVersion = "0.0.2",
         popupVersion = "0.0.2",

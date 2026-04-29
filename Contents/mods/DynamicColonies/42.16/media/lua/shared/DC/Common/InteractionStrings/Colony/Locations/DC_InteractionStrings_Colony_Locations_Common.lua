@@ -1,6 +1,6 @@
 require "DT/Common/InteractionStrings/DT_InteractionStrings"
 
-DynamicTrading.RegisterInteractionStrings("Colony", "Locations", {
+DynamicTrading.RegisterInteractionStrings("DynamicColonies", "Locations", {
     ScavengeRooms = {
         bathroom = "Bathroom",
         bedroom = "Bedroom",

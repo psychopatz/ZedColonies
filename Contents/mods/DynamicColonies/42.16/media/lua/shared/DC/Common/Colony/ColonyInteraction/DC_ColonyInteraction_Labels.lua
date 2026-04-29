@@ -14,7 +14,7 @@ Interaction.getRoomLabel = function(roomName)
         return nil
     end
 
-    local lookup = DynamicTrading.ResolveInteractionString("Colony", "Locations", "ScavengeRooms." .. roomKey)
+    local lookup = DynamicTrading.ResolveInteractionString("DynamicColonies", "Locations", "ScavengeRooms." .. roomKey)
     if lookup then
         return tostring(lookup)
     end
@@ -41,7 +41,7 @@ Interaction.getZoneLabel = function(zoneType)
         return nil
     end
 
-    local mapped = DynamicTrading.ResolveInteractionString("Colony", "Locations", "ZoneTypes." .. zoneKey)
+    local mapped = DynamicTrading.ResolveInteractionString("DynamicColonies", "Locations", "ZoneTypes." .. zoneKey)
     if mapped then
         return tostring(mapped)
     end
@@ -69,7 +69,7 @@ function Interaction.GetScavengeFallbackProfileLabel(roomName, zoneType)
         return zoneLabel
     end
 
-    return tostring(DynamicTrading.ResolveInteractionString("Colony", "Locations", "JobPlaces.Scavenge.Default") or "Assigned Site")
+    return tostring(DynamicTrading.ResolveInteractionString("DynamicColonies", "Locations", "JobPlaces.Scavenge.Default") or "Assigned Site")
 end
 
 function Interaction.GetPlaceLabel(worker)
@@ -110,7 +110,7 @@ function Interaction.GetPlaceLabel(worker)
 
     local locationKey = jobKey ~= "" and ("JobPlaces." .. jobKey .. ".Default") or nil
     if locationKey then
-        local place = DynamicTrading.ResolveInteractionString("Colony", "Locations", locationKey)
+        local place = DynamicTrading.ResolveInteractionString("DynamicColonies", "Locations", locationKey)
         if place then
             return tostring(place)
         end

@@ -1,12 +1,12 @@
 -- DT_MANUAL_EDITOR_BEGIN
 -- {
 --   "manual_id": "dc_surveyor",
---   "module": "colony",
+--   "module": "DynamicColonies",
 --   "title": "Surveyor's Planning",
 --   "description": "Notes on plotting structures, resource recipes, and power",
 --   "start_page_id": "building_projects",
 --   "audiences": [
---     "colony"
+--     "DynamicColonies"
 --   ],
 --   "sort_order": 200000,
 --   "release_version": "",
@@ -19,7 +19,7 @@
 --   "banner_title": "",
 --   "banner_text": "",
 --   "banner_action_label": "",
---   "source_folder": "Colony",
+--   "source_folder": "DynamicColonies",
 --   "chapters": [
 --     {
 --       "id": "construction_logistics",
@@ -133,7 +133,7 @@ if DynamicTrading and DynamicTrading.RegisterManual then
         title = "Surveyor's Planning",
         description = "Notes on plotting structures, resource recipes, and power",
         startPageId = "building_projects",
-        audiences = { "colony" },
+        audiences = { "DynamicColonies" },
         sortOrder = 200000,
         releaseVersion = "",
         popupVersion = "",

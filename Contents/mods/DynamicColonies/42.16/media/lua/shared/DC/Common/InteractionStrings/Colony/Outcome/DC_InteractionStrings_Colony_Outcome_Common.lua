@@ -1,6 +1,6 @@
 require "DT/Common/InteractionStrings/DT_InteractionStrings"
 
-DynamicTrading.RegisterInteractionStrings("Colony", "Outcome", {
+DynamicTrading.RegisterInteractionStrings("DynamicColonies", "Outcome", {
     Common = {
         TravelStarted = "Set out for {place}.",
         ArrivedAtSite = "Arrived at {place}.",

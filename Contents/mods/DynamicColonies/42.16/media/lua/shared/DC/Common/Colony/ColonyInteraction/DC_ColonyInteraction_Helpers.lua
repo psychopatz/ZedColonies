@@ -5,7 +5,7 @@ local Config = DC_Colony.Config
 local Interaction = DC_Colony.Interaction
 
 Interaction.getInteractionEntry = function(partID, keyPath)
-    return DynamicTrading.ResolveInteractionString("Colony", partID, keyPath)
+    return DynamicTrading.ResolveInteractionString("DynamicColonies", partID, keyPath)
 end
 
 local function getBuilderProjectLabel(worker)

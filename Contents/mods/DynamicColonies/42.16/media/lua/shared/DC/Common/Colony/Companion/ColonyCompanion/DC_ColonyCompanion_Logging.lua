@@ -7,7 +7,7 @@ function Internal.Debug(message)
     local text = "[DC Companion Debug] " .. tostring(message)
     print(text)
     if DynamicTrading and DynamicTrading.Log then
-        DynamicTrading.Log("DTCommons", "Colony", "Companion", tostring(message))
+        DynamicTrading.Log("DTCommons", "DynamicColonies", "Companion", tostring(message))
     end
 end
 

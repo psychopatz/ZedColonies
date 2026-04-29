@@ -1,12 +1,12 @@
 -- DT_MANUAL_EDITOR_BEGIN
 -- {
 --   "manual_id": "dc_founders",
---   "module": "colony",
+--   "module": "DynamicColonies",
 --   "title": "Founder's Handbook",
 --   "description": "Guide to establishing your site, recruiting labor, and t",
 --   "start_page_id": "founding_intro",
 --   "audiences": [
---     "colony"
+--     "DynamicColonies"
 --   ],
 --   "sort_order": 200000,
 --   "release_version": "",
@@ -19,7 +19,7 @@
 --   "banner_title": "",
 --   "banner_text": "",
 --   "banner_action_label": "",
---   "source_folder": "Colony",
+--   "source_folder": "DynamicColonies",
 --   "chapters": [
 --     {
 --       "id": "site_management",
@@ -142,7 +142,7 @@ if DynamicTrading and DynamicTrading.RegisterManual then
         title = "Founder's Handbook",
         description = "Guide to establishing your site, recruiting labor, and t",
         startPageId = "founding_intro",
-        audiences = { "colony" },
+        audiences = { "DynamicColonies" },
         sortOrder = 200000,
         releaseVersion = "",
         popupVersion = "",

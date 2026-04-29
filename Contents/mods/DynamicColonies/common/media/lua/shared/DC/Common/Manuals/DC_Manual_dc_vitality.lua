@@ -1,12 +1,12 @@
 -- DT_MANUAL_EDITOR_BEGIN
 -- {
 --   "manual_id": "dc_vitality",
---   "module": "colony",
+--   "module": "DynamicColonies",
 --   "title": "Colony Needs",
 --   "description": "Hunger and Hydration intake, and managing faction attrition.",
 --   "start_page_id": "nutrition_survival",
 --   "audiences": [
---     "colony"
+--     "DynamicColonies"
 --   ],
 --   "sort_order": 200000,
 --   "release_version": "",
@@ -19,7 +19,7 @@
 --   "banner_title": "",
 --   "banner_text": "",
 --   "banner_action_label": "",
---   "source_folder": "Colony",
+--   "source_folder": "DynamicColonies",
 --   "chapters": [
 --     {
 --       "id": "metabolic_needs",
@@ -133,7 +133,7 @@ if DynamicTrading and DynamicTrading.RegisterManual then
         title = "Colony Needs",
         description = "Hunger and Hydration intake, and managing faction attrition.",
         startPageId = "nutrition_survival",
-        audiences = { "colony" },
+        audiences = { "DynamicColonies" },
         sortOrder = 200000,
         releaseVersion = "",
         popupVersion = "",

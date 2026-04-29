@@ -1,6 +1,6 @@
 require "DT/Common/InteractionStrings/DT_InteractionStrings"
 
-DynamicTrading.RegisterInteractionStrings("Colony", "Progress", {
+DynamicTrading.RegisterInteractionStrings("DynamicColonies", "Progress", {
     Common = {
         TravelToSite = {
             stateLabel = "Walking",

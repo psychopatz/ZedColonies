@@ -52,7 +52,7 @@ end
 
 local function getCommandRegistry()
     if DynamicTrading and DynamicTrading.GetInteractionStrings then
-        return DynamicTrading.GetInteractionStrings("Colony", "Command")
+        return DynamicTrading.GetInteractionStrings("DynamicColonies", "Command")
     end
     return nil
 end

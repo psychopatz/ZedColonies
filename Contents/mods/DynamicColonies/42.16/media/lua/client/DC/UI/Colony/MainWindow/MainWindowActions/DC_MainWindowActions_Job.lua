@@ -14,7 +14,7 @@ local function debugJobAction(message)
     local text = "[DC Job Debug][Client] " .. tostring(message)
     print(text)
     if DynamicTrading and DynamicTrading.Log then
-        DynamicTrading.Log("DTCommons", "Colony", "Job", tostring(message))
+        DynamicTrading.Log("DTCommons", "DynamicColonies", "Job", tostring(message))
     end
 end
 

@@ -1,6 +1,6 @@
 require "DT/Common/InteractionStrings/DT_InteractionStrings"
 
-DynamicTrading.RegisterInteractionStrings("Colony", "Command", {
+DynamicTrading.RegisterInteractionStrings("DynamicColonies", "Command", {
     Companion = {
         OrderMeta = {
             Follow = {

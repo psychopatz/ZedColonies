@@ -14,7 +14,7 @@ local function debugWorkerJob(message)
     local text = "[DC Job Debug][Server] " .. tostring(message)
     print(text)
     if DynamicTrading and DynamicTrading.Log then
-        DynamicTrading.Log("DTCommons", "Colony", "Job", tostring(message))
+        DynamicTrading.Log("DTCommons", "DynamicColonies", "Job", tostring(message))
     end
 end
 
@@ -35,7 +35,7 @@ end
 
 local function getCompanionCommandStrings()
     if DynamicTrading and DynamicTrading.GetInteractionStrings then
-        local registry = DynamicTrading.GetInteractionStrings("Colony", "Command")
+        local registry = DynamicTrading.GetInteractionStrings("DynamicColonies", "Command")
         return registry and registry.Companion or {}
     end
     return {}
