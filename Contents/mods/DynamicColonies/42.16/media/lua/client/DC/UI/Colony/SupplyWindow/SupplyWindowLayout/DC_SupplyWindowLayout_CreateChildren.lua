@@ -246,10 +246,6 @@ function DC_SupplyWindow:createChildren()
     self.detailSupportPanel:setVisible(false)
     self:addChild(self.detailSupportPanel)
 
-    if DC_EquipmentPickerModal and DC_EquipmentPickerModal.Preload then
-        DC_EquipmentPickerModal.Preload()
-    end
-
     self:relayout()
     self:refreshTabButtons()
     self:updateTransferControls()

@@ -40,6 +40,33 @@ local function getTitleParts(entry, presentation)
     return baseText, suffixText, suffixColor
 end
 
+local function getPresentationCacheKey(list, activeTab)
+    local version = list and list.target and tonumber(list.target.presentationCacheVersion) or 0
+    return table.concat({
+        tostring(list and list.mode or "player"),
+        tostring(activeTab or Internal.Tabs.Provisions),
+        tostring(version),
+    }, "|")
+end
+
+local function getCachedPresentation(list, entry, activeTab)
+    local cacheKey = getPresentationCacheKey(list, activeTab)
+    local cache = entry and entry._presentationCache or nil
+    if cache and cache.key == cacheKey then
+        return cache.value
+    end
+
+    local presentation = list.mode == "worker"
+        and Internal.getWorkerEntryPresentation(entry, activeTab)
+        or Internal.getPlayerEntryPresentation(entry, activeTab, list.target and list.target.workerData or nil, list.target)
+
+    entry._presentationCache = {
+        key = cacheKey,
+        value = presentation,
+    }
+    return presentation
+end
+
 function ColonySupplyList:new(x, y, width, height, mode)
     local o = ISScrollingListBox:new(x, y, width, height)
     setmetatable(o, self)
@@ -91,9 +118,7 @@ function ColonySupplyList:doDrawItem(y, item, alt)
     end
 
     local activeTab = self.target and self.target.activeTab or Internal.Tabs.Provisions
-    local presentation = self.mode == "worker"
-        and Internal.getWorkerEntryPresentation(entry, activeTab)
-        or Internal.getPlayerEntryPresentation(entry, activeTab, self.target and self.target.workerData or nil, self.target)
+    local presentation = getCachedPresentation(self, entry, activeTab)
     local width = self:getWidth()
     local isSelected = self.selected == item.index
     local isGroup = Internal.isGroupEntry and Internal.isGroupEntry(entry)

@@ -333,12 +333,6 @@ function Internal.getWorkerTabSummary(window, entries)
         end
 
         local summary = tostring(equippedCount) .. " equipped"
-        if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-            summary = summary .. " | Weight " .. Internal.formatWeightValue(Internal.getWarehouseLedgerWeight(window and window.workerData, activeTab)) .. " total"
-        else
-            summary = summary .. " | Tab Weight " .. Internal.formatWeightValue(Internal.getWorkerLedgerWeight(window and window.workerData, activeTab))
-            summary = appendWorkerInventoryWeight(summary, window and window.workerData)
-        end
         if missingCount > 0 then
             summary = summary .. " | " .. tostring(missingCount) .. " missing"
         end
@@ -356,31 +350,17 @@ function Internal.getWorkerTabSummary(window, entries)
         local config = Internal.Config or {}
         local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
         if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-            local warehouse = worker and worker.warehouse or nil
-            local tabWeight = Internal.getEntryWeightTotal(entries)
             return tostring(stacks)
                 .. " stacks | "
                 .. tostring(totalQty)
-                .. " total | Tab Weight "
-                .. Internal.formatWeightValue(tabWeight)
-                .. " | Warehouse "
-                .. Internal.formatWeightValue(warehouse and warehouse.usedWeight)
-                .. " / "
-                .. Internal.formatWeightValue(warehouse and warehouse.maxWeight)
+                .. " total"
         end
 
-        local summary = tostring(stacks)
-            .. " stacks | "
-            .. tostring(totalQty)
-            .. " total | Tab Weight "
-            .. Internal.formatWeightValue(Internal.getWorkerLedgerWeight(window and window.workerData, activeTab))
+        local summary = tostring(stacks) .. " stacks | " .. tostring(totalQty) .. " total"
         if normalizedJob == ((config.JobTypes or {}).Scavenge) then
-            summary = summary
-                .. " | Carry "
-                .. Internal.formatWeightValue(worker and worker.haulRawWeight)
-                .. " carried"
+            return summary .. " | Haul"
         end
-        return appendWorkerInventoryWeight(summary, worker)
+        return summary
     end
 
     local totals = Internal.getWorkerSupplyTotals(entries)
@@ -389,15 +369,6 @@ function Internal.getWorkerTabSummary(window, entries)
         .. string.format("%.0f hyd", totals.hydration)
     if totals.medicalUnits > 0 then
         summary = summary .. " | " .. tostring(math.floor(totals.medicalUnits + 0.5)) .. " treatment"
-    end
-    if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-        summary = summary .. " | Weight " .. Internal.formatWeightValue(Internal.getWarehouseLedgerWeight(window and window.workerData, activeTab)) .. " total"
-    else
-        summary = summary .. " | Tab Weight " .. Internal.formatWeightValue(Internal.getWorkerLedgerWeight(window and window.workerData, activeTab))
-        summary = appendWorkerInventoryWeight(summary, window and window.workerData)
-    end
-    if totals.money > 0 then
-        summary = summary .. " | $" .. tostring(totals.money)
     end
     return summary
 end

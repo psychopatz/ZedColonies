@@ -127,6 +127,10 @@ function Internal.ensurePlayerEntryEquipmentData(entry)
         return entry
     end
 
+    if Internal.hydrateInventoryEntryForEquipment then
+        Internal.hydrateInventoryEntryForEquipment(entry, entry.invItem)
+    end
+
     Internal.applyDynamicTradingLockState(entry)
 
     local fullType = tostring(entry.fullType or "")
@@ -219,11 +223,46 @@ function Internal.getCachedNutritionPreview(invItem)
     return calories, hydration
 end
 
-function Internal.buildInventoryEntry(invItem)
+local function buildBaseInventoryEntry(invItem)
     local fullType = invItem:getFullType()
     local staticData = Internal.getCachedInventoryEntryStaticData(fullType)
-    local equipmentEntry = getInventoryEquipmentEntry(invItem)
-    local outputEntry = getInventoryOutputEntry(invItem)
+
+    return {
+        kind = "player",
+        invItem = invItem,
+        itemID = invItem:getID(),
+        displayName = invItem:getDisplayName(),
+        fullType = fullType,
+        provisionType = staticData.provisionType,
+        treatmentUnits = staticData.treatmentUnits,
+        calories = 0,
+        hydration = 0,
+        unitWeight = staticData.unitWeight,
+        totalWeight = staticData.unitWeight,
+        canDeposit = staticData.isMedicalProvision == true,
+        canAssignTool = false,
+        hasEquipmentRequirementMatch = false,
+        isUsableEquipment = false,
+        isRottenProvision = false,
+        provisionBlockedReason = nil,
+        equipmentRequirementKeys = nil,
+        tags = nil,
+        searchText = "",
+        equipmentDataReady = false,
+        equipmentHydrated = false,
+        outputHydrated = false,
+        provisionHydrated = false,
+        texture = staticData.texture or (invItem.getTex and invItem:getTex() or nil),
+    }
+end
+
+local function buildProvisionDescriptor(invItem)
+    if not invItem then
+        return nil
+    end
+
+    local fullType = invItem:getFullType()
+    local staticData = Internal.getCachedInventoryEntryStaticData(fullType)
     local rottenProvisionReason = Internal.Nutrition
         and Internal.Nutrition.Internal
         and tostring(Internal.Nutrition.Internal.ROTTEN_PROVISION_MESSAGE or "")
@@ -244,10 +283,9 @@ function Internal.buildInventoryEntry(invItem)
         end
     end
 
-    local entry = {
+    local canDeposit = staticData.isMedicalProvision or ((calories > 0 or hydration > 0) and not isRottenProvision)
+    return {
         kind = "player",
-        invItem = invItem,
-        itemID = invItem:getID(),
         displayName = invItem:getDisplayName(),
         fullType = fullType,
         provisionType = staticData.provisionType,
@@ -256,24 +294,143 @@ function Internal.buildInventoryEntry(invItem)
         hydration = hydration,
         unitWeight = staticData.unitWeight,
         totalWeight = staticData.unitWeight,
-        canDeposit = staticData.isMedicalProvision or ((calories > 0 or hydration > 0) and not isRottenProvision),
+        qty = 1,
+        canDeposit = canDeposit,
         canAssignTool = false,
         hasEquipmentRequirementMatch = false,
-        isUsableEquipment = isUsableEquipmentEntry(equipmentEntry),
+        isUsableEquipment = false,
         isRottenProvision = isRottenProvision == true,
         provisionBlockedReason = isRottenProvision and rottenProvisionReason or nil,
-        equipmentRequirementKeys = nil,
-        tags = nil,
-        searchText = "",
-        equipmentDataReady = false,
-        texture = staticData.texture or (invItem.getTex and invItem:getTex() or nil),
+        texture = nil,
     }
-    copyEquipmentState(entry, equipmentEntry)
-    return copyOutputState(entry, outputEntry)
 end
 
-function Internal.buildPlayerMoneyEntry(player)
-    local wealth = Internal.getPlayerWealth and Internal.getPlayerWealth(player) or 0
+local function copyProvisionDescriptor(target, descriptor)
+    if type(target) ~= "table" or type(descriptor) ~= "table" then
+        return target
+    end
+
+    target.displayName = descriptor.displayName
+    target.fullType = descriptor.fullType
+    target.provisionType = descriptor.provisionType
+    target.treatmentUnits = descriptor.treatmentUnits
+    target.calories = descriptor.calories
+    target.hydration = descriptor.hydration
+    target.unitWeight = descriptor.unitWeight
+    target.totalWeight = descriptor.totalWeight
+    target.qty = descriptor.qty
+    target.canDeposit = descriptor.canDeposit == true
+    target.isRottenProvision = descriptor.isRottenProvision == true
+    target.provisionBlockedReason = descriptor.provisionBlockedReason
+    target.texture = descriptor.texture or target.texture
+    return target
+end
+
+function Internal.buildProvisionDescriptor(invItem)
+    return buildProvisionDescriptor(invItem)
+end
+
+function Internal.buildProvisionEntryFromDescriptor(invItem, descriptor)
+    if not invItem or type(descriptor) ~= "table" then
+        return nil
+    end
+
+    local entry = buildBaseInventoryEntry(invItem)
+    copyProvisionDescriptor(entry, descriptor)
+    entry.texture = nil
+    entry.provisionHydrated = true
+    return entry
+end
+
+function Internal.hydrateInventoryEntryForProvisions(entry, invItem)
+    if not entry or entry.provisionHydrated == true then
+        return entry
+    end
+
+    local targetItem = invItem or entry.invItem
+    if not targetItem then
+        entry.provisionHydrated = true
+        return entry
+    end
+
+    local descriptor = buildProvisionDescriptor(targetItem)
+    if descriptor then
+        copyProvisionDescriptor(entry, descriptor)
+    end
+    entry.provisionHydrated = true
+    return entry
+end
+
+function Internal.hydrateInventoryEntryForEquipment(entry, invItem)
+    if not entry or entry.equipmentHydrated == true then
+        return entry
+    end
+
+    local targetItem = invItem or entry.invItem
+    local equipmentEntry = targetItem and getInventoryEquipmentEntry(targetItem) or nil
+    entry.isUsableEquipment = isUsableEquipmentEntry(equipmentEntry)
+    copyEquipmentState(entry, equipmentEntry)
+    entry.equipmentHydrated = true
+    return entry
+end
+
+function Internal.hydrateInventoryEntryForOutput(entry, invItem)
+    if not entry or entry.outputHydrated == true then
+        return entry
+    end
+
+    local targetItem = invItem or entry.invItem
+    local outputEntry = targetItem and getInventoryOutputEntry(targetItem) or nil
+    copyOutputState(entry, outputEntry)
+    entry.outputHydrated = true
+    return entry
+end
+
+function Internal.buildInventoryEntry(invItem)
+    local entry = buildBaseInventoryEntry(invItem)
+    Internal.hydrateInventoryEntryForProvisions(entry, invItem)
+    Internal.hydrateInventoryEntryForEquipment(entry, invItem)
+    Internal.hydrateInventoryEntryForOutput(entry, invItem)
+    return entry
+end
+
+function Internal.buildInventoryEntryForTab(invItem, tabKey, window)
+    if not invItem then
+        return nil
+    end
+
+    local entry = buildBaseInventoryEntry(invItem)
+    if tabKey == Internal.Tabs.Equipment then
+        Internal.hydrateInventoryEntryForEquipment(entry, invItem)
+        Internal.ensurePlayerEntryEquipmentData(entry)
+        return entry.hasEquipmentRequirementMatch == true and entry or nil
+    end
+
+    if tabKey == Internal.Tabs.Output then
+        if not (Internal.isWarehouseView and Internal.isWarehouseView(window)) then
+            return nil
+        end
+        Internal.hydrateInventoryEntryForOutput(entry, invItem)
+        return Internal.canStoreInWarehouseOutput and Internal.canStoreInWarehouseOutput(entry) and entry or nil
+    end
+
+    local descriptor = buildProvisionDescriptor(invItem)
+    if descriptor and (descriptor.canDeposit == true or tostring(descriptor.provisionBlockedReason or "") ~= "") then
+        return Internal.buildProvisionEntryFromDescriptor(invItem, descriptor)
+    end
+    return nil
+end
+
+function Internal.buildPlayerMoneyEntry(player, window)
+    local wealth = nil
+    if window then
+        local looseCount = math.max(0, tonumber(window.cachedLooseMoneyCount) or 0)
+        local bundleCount = math.max(0, tonumber(window.cachedMoneyBundleCount) or 0)
+        wealth = looseCount + (bundleCount * 100)
+    end
+    if wealth == nil then
+        wealth = Internal.getPlayerWealth and Internal.getPlayerWealth(player) or 0
+    end
     return {
         kind = "money",
         itemID = "player_money",
@@ -281,7 +438,7 @@ function Internal.buildPlayerMoneyEntry(player)
         fullType = "Base.Money",
         amount = wealth,
         canDeposit = wealth > 0,
-        texture = Internal.queueTextureForFullType("Base.MoneyBundle") or Internal.queueTextureForFullType("Base.Money"),
+        texture = nil,
     }
 end
 
@@ -325,7 +482,7 @@ function Internal.buildWorkerMoneyEntry(worker)
         displayName = "Stored Cash",
         fullType = "Base.Money",
         amount = math.max(0, math.floor(tonumber(worker and worker.moneyStored) or 0)),
-        texture = Internal.queueTextureForFullType("Base.MoneyBundle") or Internal.queueTextureForFullType("Base.Money"),
+        texture = nil,
     }
 end
 

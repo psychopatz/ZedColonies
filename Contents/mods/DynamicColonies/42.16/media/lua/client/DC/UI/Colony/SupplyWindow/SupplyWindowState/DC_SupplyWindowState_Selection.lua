@@ -13,6 +13,9 @@ function DC_SupplyWindow:setActiveTab(tabID)
     self.selectedWorkerEntry = nil
     self.selectedPlayerEntry = nil
     self.activeSelectionSide = targetTab == Internal.Tabs.Equipment and "worker" or nil
+    if self.bumpPresentationCacheVersion then
+        self:bumpPresentationCacheVersion()
+    end
 
     if self.refreshTabButtons then
         self:refreshTabButtons()
@@ -21,7 +24,11 @@ function DC_SupplyWindow:setActiveTab(tabID)
         self:updateTransferControls()
     end
 
-    self:rebuildPlayerList()
+    if self.preparePlayerEntriesForActiveTab then
+        self:preparePlayerEntriesForActiveTab()
+    else
+        self:rebuildPlayerList()
+    end
     self:refreshWorkerEntries()
 end
 

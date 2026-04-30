@@ -82,6 +82,24 @@ function Internal.isGroupEntry(entry)
     return type(entry) == "table" and entry.kind == "group"
 end
 
+function Internal.ensureGroupChildEntries(entry)
+    if not Internal.isGroupEntry(entry) then
+        return entry
+    end
+
+    if type(entry.childEntries) == "table" then
+        return entry
+    end
+
+    if type(entry.childEntriesLoader) == "function" then
+        entry.childEntries = entry.childEntriesLoader(entry) or {}
+    else
+        entry.childEntries = {}
+    end
+
+    return entry
+end
+
 function Internal.getEntrySelectionKey(entry)
     if not entry then
         return nil
@@ -104,6 +122,7 @@ function Internal.getGroupedEntryChildren(entry)
     end
 
     if Internal.isGroupEntry(entry) then
+        Internal.ensureGroupChildEntries(entry)
         return entry.childEntries or {}
     end
 
@@ -247,6 +266,14 @@ function Internal.buildGroupedRows(entries, activeTab, side, window)
             end
         else
             rows[#rows + 1] = part
+            if Internal.isGroupEntry(part) and Internal.isGroupExpanded(window, side, part.groupKey) then
+                Internal.ensureGroupChildEntries(part)
+                for _, child in ipairs(part.childEntries or {}) do
+                    child.groupChild = true
+                    child.groupParentKey = part.groupKey
+                    rows[#rows + 1] = child
+                end
+            end
         end
     end
 

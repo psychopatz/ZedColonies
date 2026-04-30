@@ -5,6 +5,30 @@ DC_Colony.Registry.Internal = DC_Colony.Registry.Internal or {}
 local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Skills = DC_Colony.Skills
+local Internal = Registry.Internal
+
+local function copyLedgerEntries(entries)
+    local copied = {}
+    for index, entry in ipairs(entries or {}) do
+        copied[index] = Internal and Internal.CopyDeep and Internal.CopyDeep(entry) or entry
+    end
+    return copied
+end
+
+local function copyWarehouseDetail(warehouse)
+    if type(warehouse) ~= "table" then
+        return warehouse
+    end
+
+    local copied = Internal and Internal.CopyShallow and Internal.CopyShallow(warehouse) or {}
+    local sourceLedgers = type(warehouse.ledgers) == "table" and warehouse.ledgers or {}
+    copied.ledgers = {
+        provisions = copyLedgerEntries(sourceLedgers.provisions),
+        equipment = copyLedgerEntries(sourceLedgers.equipment),
+        output = copyLedgerEntries(sourceLedgers.output),
+    }
+    return copied
+end
 
 local function getCompanionMedicalSupplies(worker)
     local supplies = {}
@@ -194,8 +218,19 @@ function Registry.GetWorkerDetailsForOwner(ownerUsername, workerID, includeWareh
     local worker = Registry.GetWorkerForOwner(ownerUsername, workerID)
     if not worker then return nil end
     Registry.RecalculateWorker(worker)
-    local detail = Registry.Internal.CopyShallow(worker)
+    local detail = Internal.CopyShallow(worker)
     local includeWorkerLedgerData = includeWorkerLedgers ~= false
+    detail.nutritionLedger = includeWorkerLedgerData and copyLedgerEntries(worker.nutritionLedger) or nil
+    detail.toolLedger = includeWorkerLedgerData and copyLedgerEntries(worker.toolLedger) or nil
+    detail.haulLedger = includeWorkerLedgerData and copyLedgerEntries(worker.haulLedger) or nil
+    detail.outputLedger = includeWorkerLedgerData and copyLedgerEntries(worker.outputLedger) or nil
+    detail.activityLog = copyLedgerEntries(worker.activityLog)
+    detail.statusFlags = Internal.CopyDeep and Internal.CopyDeep(worker.statusFlags) or worker.statusFlags
+    detail.energy = Internal.CopyDeep and Internal.CopyDeep(worker.energy) or worker.energy
+    detail.tiredness = Internal.CopyDeep and Internal.CopyDeep(worker.tiredness) or worker.tiredness
+    detail.companion = Internal.CopyDeep and Internal.CopyDeep(worker.companion) or worker.companion
+    detail.selfTreatmentState = Internal.CopyDeep and Internal.CopyDeep(worker.selfTreatmentState) or worker.selfTreatmentState
+    detail.warehouse = copyWarehouseDetail(worker.warehouse)
     if Skills and Skills.BuildClientSkillSnapshotForWorker then
         detail.skills = Skills.BuildClientSkillSnapshotForWorker(worker)
         detail.primarySkillID = Skills.GetPrimarySkillID and Skills.GetPrimarySkillID(worker) or nil

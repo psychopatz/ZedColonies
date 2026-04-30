@@ -70,7 +70,13 @@ function DC_SupplyWindow:refreshWorkerEntries()
     end
 
     table.sort(self.workerEntries, Internal.compareEntries)
+    if self.bumpPresentationCacheVersion then
+        self:bumpPresentationCacheVersion()
+    end
     self:rebuildWorkerList()
+    if self.refreshRenderCaches then
+        self:refreshRenderCaches()
+    end
     if self.updateTransferControls then
         self:updateTransferControls()
     end
@@ -109,6 +115,9 @@ function DC_SupplyWindow:setWorkerData(worker)
     end
     if self.refreshTabButtons then
         self:refreshTabButtons()
+    end
+    if self.bumpPresentationCacheVersion then
+        self:bumpPresentationCacheVersion()
     end
     self:refreshWorkerEntries()
 end

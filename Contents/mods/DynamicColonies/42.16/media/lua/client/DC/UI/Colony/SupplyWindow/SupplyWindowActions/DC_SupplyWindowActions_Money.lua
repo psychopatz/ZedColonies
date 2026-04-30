@@ -33,6 +33,12 @@ function DC_SupplyWindow:openDepositMoneyModal()
                 workerID = self.workerID,
                 amount = quantity
             })
+            if self.refreshPlayerMoneyCache then
+                self:refreshPlayerMoneyCache(true)
+            end
+            if self.refreshWorkerEntries then
+                self:refreshWorkerEntries()
+            end
             self:updateStatus("Depositing $" .. tostring(quantity) .. " to " .. workerName .. "...")
         end
     })
@@ -68,6 +74,12 @@ function DC_SupplyWindow:openWithdrawMoneyModal()
                 workerID = self.workerID,
                 amount = quantity
             })
+            if self.refreshPlayerMoneyCache then
+                self:refreshPlayerMoneyCache(true)
+            end
+            if self.refreshWorkerEntries then
+                self:refreshWorkerEntries()
+            end
             self:updateStatus("Withdrawing $" .. tostring(quantity) .. " from " .. workerName .. "...")
         end
     })

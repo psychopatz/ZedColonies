@@ -7,8 +7,11 @@ function DC_SupplyWindow:render()
     ISCollapsableWindow.render(self)
 
     local layout = self.layout or {}
-    local rightHeader = Internal.getWorkerHeaderTitle(self)
-    local rightSummary = Internal.getActiveWorkerTabLabel(self) .. " | " .. Internal.getWorkerTabSummary(self, self.workerEntries)
+    if (not self.cachedRightHeaderTitle or not self.cachedRightSummary) and self.refreshRenderCaches then
+        self:refreshRenderCaches()
+    end
+    local rightHeader = self.cachedRightHeaderTitle or Internal.getWorkerHeaderTitle(self)
+    local rightSummary = self.cachedRightSummary or (Internal.getActiveWorkerTabLabel(self) .. " | " .. Internal.getWorkerTabSummary(self, self.workerEntries))
 
     self:drawRectBorder(layout.leftX, layout.contentY, layout.leftWidth, layout.listH, 0.25, 1, 1, 1)
     self:drawRectBorder(layout.rightX, layout.contentY, layout.rightWidth, layout.listH, 0.25, 1, 1, 1)

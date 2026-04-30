@@ -9,6 +9,10 @@ Internal.ENTRY_SCAN_BATCH_SIZE = 16
 Internal.RAW_SCAN_STEP_LIMIT = 240
 Internal.LIST_BUILD_BATCH_SIZE = 32
 Internal.ICON_RESOLVE_BATCH_SIZE = 2
+Internal.SCAN_TIME_BUDGET_MS = 2
+Internal.HYDRATION_TIME_BUDGET_MS = 2
+Internal.FINALIZE_TIME_BUDGET_MS = 2
+Internal.LIST_BUILD_TIME_BUDGET_MS = 2
 Internal.NutritionPreviewCache = Internal.NutritionPreviewCache or {}
 Internal.InventoryEntryStaticCache = Internal.InventoryEntryStaticCache or {}
 Internal.WeaponMetadataCache = Internal.WeaponMetadataCache or {}
@@ -36,4 +40,23 @@ end
 
 function Internal.isInventoryView(window)
     return not Internal.isWarehouseView(window)
+end
+
+function Internal.getPerfNowMs()
+    if getTimestampMs then
+        return getTimestampMs()
+    end
+    if getTimestamp then
+        return math.floor((tonumber(getTimestamp()) or 0) * 1000)
+    end
+    return math.floor(os.clock() * 1000)
+end
+
+function Internal.isTimeBudgetExceeded(startMs, budgetMs)
+    local normalizedStart = tonumber(startMs)
+    local normalizedBudget = math.max(0, tonumber(budgetMs) or 0)
+    if not normalizedStart or normalizedBudget <= 0 then
+        return false
+    end
+    return (Internal.getPerfNowMs() - normalizedStart) >= normalizedBudget
 end

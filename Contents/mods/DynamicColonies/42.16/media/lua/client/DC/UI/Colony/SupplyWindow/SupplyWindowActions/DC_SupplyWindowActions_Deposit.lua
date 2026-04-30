@@ -556,7 +556,10 @@ function DC_SupplyWindow:onDepositVisible()
             and ((activeTab == Internal.Tabs.Equipment and entry.canAssignTool)
                 or (activeTab == Internal.Tabs.Output and Internal.canStoreInWarehouseOutput and Internal.canStoreInWarehouseOutput(entry))
                 or (activeTab ~= Internal.Tabs.Equipment and activeTab ~= Internal.Tabs.Output and entry.canDeposit)) then
-            visibleEntries[#visibleEntries + 1] = entry
+            local concreteEntries = Internal.getConcreteTransferEntries and Internal.getConcreteTransferEntries(entry) or { entry }
+            for _, concreteEntry in ipairs(concreteEntries or {}) do
+                visibleEntries[#visibleEntries + 1] = concreteEntry
+            end
         end
     end
 

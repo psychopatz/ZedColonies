@@ -19,6 +19,22 @@ local function copyTable(source)
     return copy
 end
 
+local function copyArrayEntries(source)
+    if type(source) ~= "table" then
+        return nil
+    end
+
+    local copy = {}
+    for index, value in ipairs(source) do
+        if type(value) == "table" then
+            copy[index] = copyTable(value)
+        else
+            copy[index] = value
+        end
+    end
+    return copy
+end
+
 local function mergeWarehouseDetail(previousWarehouse, incomingWarehouse)
     if type(incomingWarehouse) ~= "table" then
         return copyTable(previousWarehouse) or incomingWarehouse
@@ -31,6 +47,21 @@ local function mergeWarehouseDetail(previousWarehouse, incomingWarehouse)
 
     if incomingWarehouse.ledgers == nil and type(previousWarehouse) == "table" and type(previousWarehouse.ledgers) == "table" then
         merged.ledgers = copyTable(previousWarehouse.ledgers)
+        if type(previousWarehouse.ledgers.provisions) == "table" then
+            merged.ledgers.provisions = copyArrayEntries(previousWarehouse.ledgers.provisions)
+        end
+        if type(previousWarehouse.ledgers.equipment) == "table" then
+            merged.ledgers.equipment = copyArrayEntries(previousWarehouse.ledgers.equipment)
+        end
+        if type(previousWarehouse.ledgers.output) == "table" then
+            merged.ledgers.output = copyArrayEntries(previousWarehouse.ledgers.output)
+        end
+    elseif type(incomingWarehouse.ledgers) == "table" then
+        merged.ledgers = {
+            provisions = copyArrayEntries(incomingWarehouse.ledgers.provisions) or {},
+            equipment = copyArrayEntries(incomingWarehouse.ledgers.equipment) or {},
+            output = copyArrayEntries(incomingWarehouse.ledgers.output) or {},
+        }
     end
 
     return merged
@@ -46,20 +77,39 @@ local function mergeWorkerDetail(previousWorker, incomingWorker)
         merged[key] = value
     end
 
+    if incomingWorker.moneyStored == nil and type(previousWorker) == "table" then
+        merged.moneyStored = previousWorker.moneyStored
+    end
+    if incomingWorker.ownerUsername == nil and type(previousWorker) == "table" then
+        merged.ownerUsername = previousWorker.ownerUsername
+    end
+
     if incomingWorker.nutritionLedger == nil and type(previousWorker) == "table" then
-        merged.nutritionLedger = previousWorker.nutritionLedger
+        merged.nutritionLedger = copyArrayEntries(previousWorker.nutritionLedger)
     end
     if incomingWorker.skills == nil and type(previousWorker) == "table" then
         merged.skills = previousWorker.skills
     end
     if incomingWorker.toolLedger == nil and type(previousWorker) == "table" then
-        merged.toolLedger = previousWorker.toolLedger
+        merged.toolLedger = copyArrayEntries(previousWorker.toolLedger)
     end
     if incomingWorker.haulLedger == nil and type(previousWorker) == "table" then
-        merged.haulLedger = previousWorker.haulLedger
+        merged.haulLedger = copyArrayEntries(previousWorker.haulLedger)
     end
     if incomingWorker.outputLedger == nil and type(previousWorker) == "table" then
-        merged.outputLedger = previousWorker.outputLedger
+        merged.outputLedger = copyArrayEntries(previousWorker.outputLedger)
+    end
+    if type(incomingWorker.nutritionLedger) == "table" then
+        merged.nutritionLedger = copyArrayEntries(incomingWorker.nutritionLedger)
+    end
+    if type(incomingWorker.toolLedger) == "table" then
+        merged.toolLedger = copyArrayEntries(incomingWorker.toolLedger)
+    end
+    if type(incomingWorker.haulLedger) == "table" then
+        merged.haulLedger = copyArrayEntries(incomingWorker.haulLedger)
+    end
+    if type(incomingWorker.outputLedger) == "table" then
+        merged.outputLedger = copyArrayEntries(incomingWorker.outputLedger)
     end
 
     if incomingWorker.warehouse == nil then

@@ -44,6 +44,86 @@ local function buildVersionToken(value, seen)
     return table.concat(parts)
 end
 
+local function getWorkerListVersion(ownerUsername)
+    local workersData = Registry.GetWorkersData and Registry.GetWorkersData(ownerUsername, false) or nil
+    if workersData and workersData.version then
+        return "workers:" .. tostring(workersData.version)
+    end
+
+    local colonyData = Registry.GetColonyData and Registry.GetColonyData(ownerUsername, false) or nil
+    local versions = colonyData and colonyData.versions or nil
+    return "workers:" .. tostring(versions and versions.workers or 1)
+end
+
+local function getWorkerLedgerCount(worker, key)
+    local ledger = worker and worker[key] or nil
+    return type(ledger) == "table" and #ledger or 0
+end
+
+local function buildWorkerDetailVersion(worker, workerID, includeWorkerLedgers)
+    if not worker then
+        return table.concat({
+            "worker",
+            tostring(workerID or "missing"),
+            "missing",
+            includeWorkerLedgers == true and "full" or "summary"
+        }, ":")
+    end
+
+    local parts = {
+        "worker",
+        tostring(worker.workerID or workerID or ""),
+        tostring(math.max(1, math.floor(tonumber(worker.detailVersion) or 1))),
+        tostring(worker.state or ""),
+        tostring(worker.presenceState or ""),
+        tostring(worker.jobType or ""),
+        tostring(worker.jobEnabled == true),
+        tostring(worker.assignedSiteID or ""),
+        tostring(worker.travelHoursRemaining or 0),
+        tostring(worker.workProgress or 0),
+        tostring(worker.moneyStored or 0),
+        tostring(worker.toolState or ""),
+    }
+
+    if includeWorkerLedgers == true then
+        parts[#parts + 1] = "full"
+        parts[#parts + 1] = tostring(getWorkerLedgerCount(worker, "nutritionLedger"))
+        parts[#parts + 1] = tostring(getWorkerLedgerCount(worker, "toolLedger"))
+        parts[#parts + 1] = tostring(getWorkerLedgerCount(worker, "haulLedger"))
+        parts[#parts + 1] = tostring(getWorkerLedgerCount(worker, "outputLedger"))
+    else
+        parts[#parts + 1] = "summary"
+    end
+
+    return table.concat(parts, ":")
+end
+
+local function buildWarehouseVersion(warehouse, ownerUsername, includeLedgers)
+    if not warehouse then
+        return table.concat({
+            "warehouse",
+            tostring(ownerUsername or "missing"),
+            "missing",
+            includeLedgers == true and "full" or "summary"
+        }, ":")
+    end
+
+    local base = {
+        "warehouse",
+        tostring(warehouse.ownerUsername or ownerUsername or ""),
+        tostring(math.max(1, math.floor(tonumber(warehouse.version) or 1))),
+    }
+
+    if includeLedgers == true then
+        base[#base + 1] = tostring(math.max(1, math.floor(tonumber(warehouse.itemsVersion) or 1)))
+        base[#base + 1] = "full"
+    else
+        base[#base + 1] = "summary"
+    end
+
+    return table.concat(base, ":")
+end
+
 function Internal.sendResponse(player, module, command, args)
     if DynamicTrading and DynamicTrading.ServerHelpers and DynamicTrading.ServerHelpers.SendResponse then
         DynamicTrading.ServerHelpers.SendResponse(player, module, command, args)
@@ -68,7 +148,7 @@ end
 function Internal.syncWorkerList(player, knownVersion)
     local owner = Config.GetOwnerUsername(player)
     local workers = Registry.GetWorkerSummariesForOwner(owner)
-    local version = buildVersionToken(workers)
+    local version = getWorkerListVersion(owner)
     if knownVersion and tostring(knownVersion) == version then
         Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncPlayerWorkers", {
             version = version,
@@ -91,11 +171,12 @@ function Internal.syncWorkerDetail(player, workerID, knownVersion, includeWorker
         false,
         includeWorkerLedgers ~= false
     )
-    local version = buildVersionToken(worker or { workerID = workerID, missing = true })
+    local version = buildWorkerDetailVersion(worker, workerID, includeWorkerLedgers == true)
     if knownVersion and tostring(knownVersion) == version then
         Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWorkerDetails", {
             workerID = workerID,
             version = version,
+            includeWorkerLedgers = includeWorkerLedgers == true,
             unchanged = true
         })
         return
@@ -104,6 +185,7 @@ function Internal.syncWorkerDetail(player, workerID, knownVersion, includeWorker
     Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWorkerDetails", {
         workerID = workerID,
         version = version,
+        includeWorkerLedgers = includeWorkerLedgers == true,
         worker = worker
     })
 end
@@ -112,10 +194,11 @@ function Internal.syncWarehouse(player, knownVersion, includeLedgers)
     local owner = Config.GetOwnerUsername(player)
     local Warehouse = DC_Colony and DC_Colony.Warehouse or nil
     local warehouse = Warehouse and Warehouse.GetClientSnapshot and Warehouse.GetClientSnapshot(owner, includeLedgers == true) or nil
-    local version = buildVersionToken(warehouse or { ownerUsername = owner, missing = true })
+    local version = buildWarehouseVersion(warehouse, owner, includeLedgers == true)
     if knownVersion and tostring(knownVersion) == version then
         Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWarehouse", {
             version = version,
+            includeLedgers = includeLedgers == true,
             unchanged = true
         })
         return
@@ -123,6 +206,7 @@ function Internal.syncWarehouse(player, knownVersion, includeLedgers)
 
     Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWarehouse", {
         version = version,
+        includeLedgers = includeLedgers == true,
         warehouse = warehouse
     })
 end

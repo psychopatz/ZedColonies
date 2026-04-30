@@ -6,25 +6,26 @@ local Internal = DC_SupplyWindow.Internal
 function DC_SupplyWindow:startInventoryScan()
     local player = Internal.getLocalPlayer()
     local rootContainer = player and player.getInventory and player:getInventory() or nil
+    local targetTab = self.activeTab or Internal.Tabs.Provisions
 
-    self.playerEntries = {}
-    self.playerEntriesByID = {}
+    self.playerEntrySets = {}
+    self.playerEntryMaps = {}
+    self.playerDataReady = {}
+    self.playerProvisionGroups = {}
+    self.scannedInventoryItems = {}
+    self.cachedLooseMoneyCount = 0
+    self.cachedMoneyBundleCount = 0
     self.playerVisibleEntries = {}
     self.selectedPlayerEntry = nil
     self.scanStack = {}
     self.scanProcessed = 0
     self.scanning = false
-    self.pendingPlayerListRows = nil
-    self.pendingPlayerListNextIndex = nil
-    self.pendingPlayerListSelectedKey = nil
-    self.pendingPlayerListSelectedRowIndex = nil
-
-    if self.playerList then
-        self.playerList:clear()
-        self.playerList.selected = -1
-        self.playerList:setScrollHeight(0)
-        self.playerList:setYScroll(0)
-    end
+    self.scanTargetTabKey = targetTab
+    self.playerHydrationState = nil
+    self.playerFinalizeState = nil
+    self:bindPlayerEntrySet(targetTab)
+    self:clearPlayerListUI()
+    self:bumpPresentationCacheVersion()
 
     if not rootContainer then
         self:refreshDetailSelection()
@@ -42,15 +43,14 @@ end
 
 function DC_SupplyWindow:finishInventoryScan()
     self.scanning = false
-    table.sort(self.playerEntries, Internal.compareEntries)
-    self:rebuildPlayerList()
-
-    self:updateStatus(
+    local builtCount = #(self.playerEntries or {})
+    self:beginPlayerEntryFinalize(
+        self.scanTargetTabKey or self.activeTab or Internal.Tabs.Provisions,
         "Loaded "
-        .. tostring(#(self.playerEntries or {}))
-        .. " visible entries from "
-        .. tostring(self.scanProcessed or 0)
-        .. " inventory items."
+            .. tostring(builtCount)
+            .. " visible entries from "
+            .. tostring(self.scanProcessed or 0)
+            .. " inventory items."
     )
 end
 
@@ -61,6 +61,7 @@ function DC_SupplyWindow:processInventoryScan(batchSize)
 
     local visibleProcessed = 0
     local rawSteps = 0
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     while #self.scanStack > 0
         and visibleProcessed < (batchSize or Internal.ENTRY_SCAN_BATCH_SIZE)
         and rawSteps < Internal.RAW_SCAN_STEP_LIMIT do
@@ -94,6 +95,11 @@ function DC_SupplyWindow:processInventoryScan(batchSize)
                     end
                 end
             end
+        end
+
+        if Internal.isTimeBudgetExceeded
+            and Internal.isTimeBudgetExceeded(startedAt, Internal.SCAN_TIME_BUDGET_MS) then
+            break
         end
     end
 

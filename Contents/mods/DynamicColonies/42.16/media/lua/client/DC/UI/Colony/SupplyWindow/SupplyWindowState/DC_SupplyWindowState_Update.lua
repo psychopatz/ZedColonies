@@ -59,6 +59,7 @@ function DC_SupplyWindow:processChunkedListBuild(side, batchSize)
     local selectedRowIndex = self[fields.selectedRowIndex]
     local limit = math.max(1, tonumber(batchSize) or Internal.LIST_BUILD_BATCH_SIZE or 1)
     local added = 0
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
 
     while nextIndex <= #rows and added < limit do
         local entry = rows[nextIndex]
@@ -72,6 +73,10 @@ function DC_SupplyWindow:processChunkedListBuild(side, batchSize)
 
         nextIndex = nextIndex + 1
         added = added + 1
+        if Internal.isTimeBudgetExceeded
+            and Internal.isTimeBudgetExceeded(startedAt, Internal.LIST_BUILD_TIME_BUDGET_MS) then
+            break
+        end
     end
 
     self[fields.nextIndex] = nextIndex
@@ -133,13 +138,86 @@ function DC_SupplyWindow:update()
     self:syncSearchFilters()
     self.detailRefreshTicks = (tonumber(self.detailRefreshTicks) or 0) + 1
 
+    if self.refreshPlayerMoneyCache
+        and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Provisions
+        and Internal.isInventoryView
+        and Internal.isInventoryView(self)
+        and (self.detailRefreshTicks % 15) == 0 then
+        self:refreshPlayerMoneyCache(false)
+    end
+
+    if self.playerMoneyDirty
+        and self.refreshPlayerMoneyCache
+        and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Provisions
+        and Internal.isInventoryView
+        and Internal.isInventoryView(self)
+        and not self.scanning
+        and not self.playerHydrationState
+        and not self.playerFinalizeState
+        and not self.pendingPlayerListRows then
+        self:refreshPlayerMoneyCache(true)
+    end
+
+    if self.initialSummarySyncPending
+        and self.workerID
+        and self.detailRefreshTicks >= 1
+        and self.requestWorkerDetails then
+        self.initialSummarySyncPending = nil
+        self:requestWorkerDetails({
+            includeWorkerLedgers = false,
+            includeWarehouseLedgers = false
+        })
+    end
+
     if self.scanning then
         self:processInventoryScan(Internal.ENTRY_SCAN_BATCH_SIZE)
+    end
+
+    if self.playerHydrationState and not self.scanning then
+        self:processPlayerTabHydration(Internal.ENTRY_SCAN_BATCH_SIZE)
+    end
+
+    if self.playerFinalizeState and not self.scanning and not self.playerHydrationState then
+        self:processPlayerEntryFinalize(Internal.LIST_BUILD_BATCH_SIZE)
     end
 
     self:processPendingListBuilds(Internal.LIST_BUILD_BATCH_SIZE)
     if Internal.processTextureQueue then
         Internal.processTextureQueue(Internal.ICON_RESOLVE_BATCH_SIZE)
+    end
+
+    if self.fullHydrationPending
+        and self.workerID
+        and not self.scanning
+        and not self.pendingPlayerListRows
+        and not self.pendingWorkerListRows
+        and not self:hasPendingSupplyTransfers()
+        and self.requestWorkerDetails then
+        self.fullHydrationDelayTicks = math.max(0, math.floor(tonumber(self.fullHydrationDelayTicks) or 0) - 1)
+        if self.fullHydrationDelayTicks <= 0 then
+            self.fullHydrationPending = nil
+            self.fullHydrationRequested = true
+            self:requestWorkerDetails({
+                includeWorkerLedgers = true,
+                includeWarehouseLedgers = true,
+                bypassWorkerKnownVersion = self.workerDetailVersion == nil,
+                bypassWarehouseKnownVersion = self.warehouseVersion == nil
+            })
+        end
+    end
+
+    if self.deferredEquipmentPreloadPending
+        and self.activeTab == ((Internal.Tabs or {}).Equipment)
+        and not self.scanning
+        and not self.pendingPlayerListRows
+        and not self.pendingWorkerListRows then
+        self.deferredEquipmentPreloadTicks = math.max(0, math.floor(tonumber(self.deferredEquipmentPreloadTicks) or 0) + 1)
+        if self.deferredEquipmentPreloadTicks >= 10 then
+            if DC_EquipmentPickerModal and DC_EquipmentPickerModal.Preload and not DC_EquipmentPickerModal.instance then
+                DC_EquipmentPickerModal.Preload()
+            end
+            self.deferredEquipmentPreloadPending = nil
+        end
     end
 
     if self.workerID

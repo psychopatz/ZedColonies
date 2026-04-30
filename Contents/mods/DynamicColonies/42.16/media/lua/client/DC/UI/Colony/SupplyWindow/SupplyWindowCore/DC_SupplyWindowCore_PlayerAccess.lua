@@ -36,6 +36,18 @@ function Internal.getPlayerWealth(player)
     return looseCount + (bundleCount * 100)
 end
 
+function Internal.getPlayerMoneyBreakdown(player)
+    local targetPlayer = player or Internal.getLocalPlayer()
+    local inventory = targetPlayer and targetPlayer.getInventory and targetPlayer:getInventory() or nil
+    if not inventory then
+        return 0, 0
+    end
+
+    local loose = inventory:getItemsFromType("Base.Money", true)
+    local bundles = inventory:getItemsFromType("Base.MoneyBundle", true)
+    return loose and loose:size() or 0, bundles and bundles:size() or 0
+end
+
 function Internal.getWarehouseOwnerUsername(window)
     local worker = window and window.workerData or nil
     local warehouse = worker and worker.warehouse or nil

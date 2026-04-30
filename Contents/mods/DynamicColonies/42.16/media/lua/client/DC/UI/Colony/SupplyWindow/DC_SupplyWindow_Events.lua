@@ -7,6 +7,35 @@ DC_Colony.UI = DC_Colony.UI or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function copyTable(source)
+    if type(source) ~= "table" then
+        return nil
+    end
+
+    local copy = {}
+    for key, value in pairs(source) do
+        copy[key] = value
+    end
+    return copy
+end
+
+local function mergeWarehouseDetail(previousWarehouse, incomingWarehouse)
+    if type(incomingWarehouse) ~= "table" then
+        return copyTable(previousWarehouse) or incomingWarehouse
+    end
+
+    local merged = copyTable(previousWarehouse) or {}
+    for key, value in pairs(incomingWarehouse) do
+        merged[key] = value
+    end
+
+    if incomingWarehouse.ledgers == nil and type(previousWarehouse) == "table" and type(previousWarehouse.ledgers) == "table" then
+        merged.ledgers = copyTable(previousWarehouse.ledgers)
+    end
+
+    return merged
+end
+
 local function onServerCommand(module, command, args)
     if module ~= Internal.getCommandModule() then
         return
@@ -16,6 +45,12 @@ local function onServerCommand(module, command, args)
     end
     if command == "SyncWorkerDetails" then
         if args and args.unchanged == true then
+            if args.includeWorkerLedgers == true then
+                DC_SupplyWindow.instance.workerDetailVersion = args and args.version or DC_SupplyWindow.instance.workerDetailVersion
+                DC_SupplyWindow.instance.fullHydrationRequested = nil
+            else
+                DC_SupplyWindow.instance.workerSummaryVersion = args and args.version or DC_SupplyWindow.instance.workerSummaryVersion
+            end
             if DC_SupplyWindow.instance.autoRefreshPending then
                 DC_SupplyWindow.instance.autoRefreshPending = nil
             end
@@ -24,9 +59,12 @@ local function onServerCommand(module, command, args)
         local worker = args and args.worker or nil
         if worker and worker.workerID == DC_SupplyWindow.instance.workerID then
             local cache = DC_MainWindow and DC_MainWindow.cachedDetails or nil
+            local includeWorkerLedgers = args and args.includeWorkerLedgers == true
             if DC_MainWindow then
                 DC_MainWindow.cachedDetailVersions = DC_MainWindow.cachedDetailVersions or {}
-                DC_MainWindow.cachedDetailVersions[worker.workerID] = args and args.version or nil
+                if includeWorkerLedgers then
+                    DC_MainWindow.cachedDetailVersions[worker.workerID] = args and args.version or nil
+                end
             end
             local cachedWorker = cache and cache[worker.workerID] or nil
             local currentWorker = DC_SupplyWindow.instance.workerData
@@ -41,7 +79,16 @@ local function onServerCommand(module, command, args)
                 cache[worker.workerID] = mergedWorker
             end
 
+            if includeWorkerLedgers then
+                DC_SupplyWindow.instance.workerDetailVersion = args and args.version or nil
+                DC_SupplyWindow.instance.fullHydrationRequested = nil
+            else
+                DC_SupplyWindow.instance.workerSummaryVersion = args and args.version or nil
+            end
             DC_SupplyWindow.instance:setWorkerData(mergedWorker)
+            if DC_SupplyWindow.instance.refreshPlayerMoneyCache then
+                DC_SupplyWindow.instance:refreshPlayerMoneyCache(true)
+            end
             if DC_SupplyWindow.instance.autoRefreshPending then
                 DC_SupplyWindow.instance.autoRefreshPending = nil
             else
@@ -53,15 +100,27 @@ local function onServerCommand(module, command, args)
         end
     elseif command == "SyncWarehouse" then
         if args and args.unchanged == true then
+            if args.includeLedgers == true then
+                DC_SupplyWindow.instance.warehouseVersion = args and args.version or DC_SupplyWindow.instance.warehouseVersion
+            else
+                DC_SupplyWindow.instance.warehouseSummaryVersion = args and args.version or DC_SupplyWindow.instance.warehouseSummaryVersion
+            end
             if DC_SupplyWindow.instance.autoRefreshPending then
                 DC_SupplyWindow.instance.autoRefreshPending = nil
             end
             return
         end
         local currentWorker = DC_SupplyWindow.instance.workerData or {}
-        currentWorker.warehouse = args and args.warehouse or nil
-        DC_SupplyWindow.instance.warehouseVersion = args and args.version or nil
+        currentWorker.warehouse = mergeWarehouseDetail(currentWorker.warehouse, args and args.warehouse or nil)
+        if args and args.includeLedgers == true then
+            DC_SupplyWindow.instance.warehouseVersion = args and args.version or nil
+        else
+            DC_SupplyWindow.instance.warehouseSummaryVersion = args and args.version or nil
+        end
         DC_SupplyWindow.instance:setWorkerData(currentWorker)
+        if DC_SupplyWindow.instance.refreshPlayerMoneyCache then
+            DC_SupplyWindow.instance:refreshPlayerMoneyCache(true)
+        end
         if not DC_SupplyWindow.instance.autoRefreshPending then
             DC_SupplyWindow.instance:updateStatus("Warehouse reserves refreshed.")
         end
