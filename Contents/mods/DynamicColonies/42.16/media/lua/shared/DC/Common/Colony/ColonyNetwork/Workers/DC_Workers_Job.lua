@@ -5,8 +5,12 @@ local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Network = DC_Colony.Network
 local Companion = DC_Colony.Companion
+local Gatherer = DC_Colony.Gatherer
 local Shared = (Network.Workers or {}).Shared or {}
 local Internal = Network.Internal or {}
+
+pcall(require, "DC/Common/Colony/Job/Gatherer/DC_Job_Gatherer_Config")
+Gatherer = DC_Colony.Gatherer
 
 Network.Handlers = Network.Handlers or {}
 
@@ -236,6 +240,62 @@ Network.Handlers.SetWorkerJobType = function(player, args)
         end
     end
     Shared.saveAndRefreshProcessed(player, worker)
+end
+
+Network.Handlers.SetWorkerGathererConfig = function(player, args)
+    if not args or not args.workerID then
+        return
+    end
+
+    if not Gatherer or not Gatherer.NormalizeConfig then
+        Internal.syncNotice(player, "Gatherer setup is unavailable right now.", "error")
+        return
+    end
+
+    local owner = Config.GetOwnerUsername(player)
+    local worker = Registry.GetWorkerForOwner(owner, args.workerID)
+    if not worker then
+        return
+    end
+
+    local targetJob = tostring((Config.JobTypes or {}).Gatherer or "Gatherer")
+    local currentJobType = Config.NormalizeJobType and Config.NormalizeJobType(worker.jobType) or tostring(worker.jobType or "")
+    local homeState = tostring((Config.PresenceStates or {}).Home or "Home")
+
+    if args.assignJob == true then
+        local canAssign, reason = canAssignJobType(worker, targetJob)
+        if not canAssign then
+            Internal.syncNotice(player, reason or "That worker cannot take the Gatherer job.", "error")
+            Shared.saveAndRefreshBasic(player, worker)
+            return
+        end
+
+        if currentJobType == ((Config.JobTypes or {}).TravelCompanion) and tostring(worker.presenceState or "") ~= homeState then
+            Internal.syncNotice(player, "Send that companion home before changing jobs.", "error")
+            Shared.saveAndRefreshBasic(player, worker)
+            return
+        end
+    elseif currentJobType ~= targetJob then
+        Internal.syncNotice(player, "Gatherer setup is only available for Gatherer workers.", "error")
+        Shared.saveAndRefreshBasic(player, worker)
+        return
+    end
+
+    worker.gathererConfig = Gatherer.NormalizeConfig(args.gathererConfig or args.config or {
+        selectedResources = args.selectedResources
+    })
+
+    if args.assignJob == true then
+        Registry.SetWorkerJobType(worker, targetJob)
+        Registry.SetWorkerJobEnabled(worker, true)
+    end
+
+    worker.gathererSelectionLabel = Gatherer.GetSelectionLabel and Gatherer.GetSelectionLabel(worker) or nil
+    Internal.syncNotice(player, "Gatherer setup saved: " .. tostring(worker.gathererSelectionLabel or "resources selected") .. ".", "info")
+    Shared.saveAndRefreshProcessed(player, worker, true)
+    if Internal.syncResources then
+        Internal.syncResources(player)
+    end
 end
 
 Network.Handlers.SetWorkerCompanionLootConfig = function(player, args)

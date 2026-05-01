@@ -4,6 +4,10 @@ require "ISUI/ISLabel"
 require "ISUI/ISScrollingListBox"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonySkills/DC_ColonySkills"
+require "DC/Common/Colony/Job/Common/DC_Job_Config"
+require "DC/Common/Colony/Job/Common/DC_Job_ConfigLogic"
+require "DC/Common/Colony/Job/Gatherer/DC_Job_Gatherer_Config"
+require "DC/UI/Colony/Gatherer/DC_GathererConfigModal"
 
 DC_ColonyJobModal = ISCollapsableWindow:derive("DC_ColonyJobModal")
 DC_ColonyJobModal.instance = nil
@@ -27,6 +31,9 @@ local function getJobDisplayColor(config, jobType)
     end
     if normalized == tostring(jobTypes.Fish or "Fish") then
         return { r = 0.48, g = 0.78, b = 0.98, a = 1 }
+    end
+    if normalized == tostring(jobTypes.Gatherer or "Gatherer") then
+        return { r = 0.74, g = 0.86, b = 0.42, a = 1 }
     end
     if normalized == tostring(jobTypes.Doctor or "Doctor") then
         return { r = 0.95, g = 0.52, b = 0.52, a = 1 }
@@ -76,9 +83,13 @@ local function buildOrderedJobOptions(config, worker)
         local label = tostring(profile.displayName or normalized)
 
         local color = nil
-        local tempWorker = worker and {scavengeSiteProfileID = worker.scavengeSiteProfileID, jobType = normalized} or {jobType = normalized}
+        local tempWorker = worker and {
+            scavengeSiteProfileID = worker.scavengeSiteProfileID,
+            gathererConfig = worker.gathererConfig,
+            jobType = normalized
+        } or {jobType = normalized}
         local skillID = config.GetWorkerJobSkillID and config.GetWorkerJobSkillID(tempWorker, {jobType = normalized}) or nil
-        
+
         if normalized == tostring((jobTypes.TravelCompanion or "TravelCompanion")) then
             local meleeLevel = 0
             local shootingLevel = 0
@@ -125,6 +136,7 @@ local function buildOrderedJobOptions(config, worker)
 
     addJob(jobTypes.Unemployed)
     addJob(jobTypes.Scavenge)
+    addJob(jobTypes.Gatherer)
     addJob(jobTypes.Farm)
     addJob(jobTypes.Fish)
 
@@ -379,6 +391,27 @@ end
 function DC_ColonyJobModal:onConfirm()
     local option = self.selectedOptionIndex and self.jobOptions[self.selectedOptionIndex] or nil
     if self.onConfirmCallback and option then
+        local config = DC_Colony and DC_Colony.Config or {}
+        local selectedJobType = config.NormalizeJobType and config.NormalizeJobType(option.jobType) or tostring(option.jobType or "")
+        if selectedJobType == tostring((config.JobTypes or {}).Gatherer or "Gatherer") then
+            local workerName = tostring(self.worker and (self.worker.name or self.worker.workerID) or "this worker")
+            if DC_GathererConfigModal and DC_GathererConfigModal.Open then
+                DC_GathererConfigModal.Open({
+                    worker = self.worker,
+                    config = self.worker and self.worker.gathererConfig or nil,
+                    title = "Gatherer Setup",
+                    promptText = "Choose what " .. workerName .. " should gather.",
+                    onSave = function(gathererConfig)
+                        self.onConfirmCallback(option.jobType, option, self.autoRepeatJob == true, {
+                            gathererConfig = gathererConfig
+                        })
+                    end
+                })
+                self:close()
+                return
+            end
+        end
+
         self.onConfirmCallback(option.jobType, option, self.autoRepeatJob == true)
     end
     self:close()
@@ -436,6 +469,7 @@ function DC_ColonyJobModal.Open(args)
     modal.promptText = tostring(args.promptText or "Choose a job.")
     modal.currentJobLabel = tostring(currentJobLabel or "Unknown")
     modal.jobOptions = jobOptions
+    modal.worker = args.worker
     modal.selectedJobType = selectedJobType
     modal.autoRepeatJob = selectedJobType ~= tostring((config.JobTypes or {}).Unemployed or "Unemployed")
     modal.maxVisibleRows = visibleRows
@@ -459,6 +493,7 @@ function DC_ColonyJobModal:new(x, y, width, height)
     o.promptText = "Choose a job."
     o.currentJobLabel = "Unknown"
     o.jobOptions = {}
+    o.worker = nil
     o.selectedJobType = nil
     o.selectedOptionIndex = nil
     o.autoRepeatJob = false

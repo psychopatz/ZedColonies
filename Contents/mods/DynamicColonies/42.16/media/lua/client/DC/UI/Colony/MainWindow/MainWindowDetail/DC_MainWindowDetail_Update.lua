@@ -255,6 +255,11 @@ function DC_MainWindow:updateWorkerDetail(worker)
             .. buildCompanionLootSummary(worker, config)
             .. " <LINE> "
     end
+    if normalizedJobType == (config.JobTypes and config.JobTypes.Gatherer) then
+        text = text .. " <RGB:0.72,0.72,0.72> Gathering: <RGB:1,1,1> "
+            .. tostring(worker.gathererSelectionLabel or (DC_Colony and DC_Colony.Gatherer and DC_Colony.Gatherer.GetSelectionLabel and DC_Colony.Gatherer.GetSelectionLabel(worker)) or "Wood, Stone, Water")
+            .. " <LINE> "
+    end
     text = text .. " <RGB:0.72,0.72,0.72> Tool State: <RGB:1,1,1> " .. tostring(worker.toolState or "Missing") .. " <LINE> "
     text = text .. " <RGB:0.72,0.72,0.72> Housed: <RGB:1,1,1> " .. formatHousingSummary(worker) .. " <LINE> "
     if jobSkillEffects and jobSkillEffects.skillID then

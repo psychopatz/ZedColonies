@@ -78,6 +78,11 @@ function Config.GetWorkerJobCapability(worker, jobType)
     if skillID then
         capability.skillID = skillID
         capability.skillLevel = getWorkerSkillLevel(worker, skillID)
+        if normalizedJobType == ((Config.JobTypes or {}).Gatherer) then
+            capability.capable = true
+            capability.reason = nil
+            return capability
+        end
         capability.capable = capability.skillLevel > 0
         if not capability.capable then
             local skillLabel = Config.GetSkillDisplayName and Config.GetSkillDisplayName(skillID) or skillID
@@ -160,6 +165,7 @@ function Config.GetNextJobType(jobType)
         Config.JobTypes.Unemployed,
         Config.JobTypes.Builder,
         Config.JobTypes.Doctor,
+        Config.JobTypes.Gatherer,
         Config.JobTypes.Scavenge,
         Config.JobTypes.Farm,
         Config.JobTypes.Fish

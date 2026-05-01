@@ -235,6 +235,11 @@ function Sim.ProcessWorker(worker, currentHour)
         worker.fishingHasBackpack = nil
     end
 
+    if normalizedJobType ~= Config.JobTypes.Gatherer then
+        worker.gathererSelectionLabel = nil
+        worker.gathererLastQuantity = nil
+    end
+
     worker.siteState = worker.siteState or "Deferred"
     worker.toolState = toolsReady and "Ready" or "Missing"
 
@@ -290,6 +295,8 @@ function Sim.ProcessWorker(worker, currentHour)
         Sim.ProcessBuilderJob(worker, ctx)
     elseif isDoctorJob then
         Sim.ProcessDoctorJob(worker, ctx)
+    elseif normalizedJobType == Config.JobTypes.Gatherer and Sim.ProcessGathererJob then
+        Sim.ProcessGathererJob(worker, ctx)
     elseif normalizedJobType == Config.JobTypes.Farm then
         Sim.ProcessFarmJob(worker, ctx)
     elseif normalizedJobType == Config.JobTypes.Fish then

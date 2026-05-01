@@ -9,6 +9,7 @@ Config.JobTypes = {
     Doctor = "Doctor",
     Farm = "Farm",
     Fish = "Fish",
+    Gatherer = "Gatherer",
     Scavenge = "Scavenge",
     TravelCompanion = "TravelCompanion"
 }
@@ -64,6 +65,16 @@ Config.JobProfiles = {
         dailyHydrationNeed = 1700,
         outputRules = {}
     },
+    Gatherer = {
+        jobType = Config.JobTypes.Gatherer,
+        displayName = "Gatherer",
+        siteType = nil,
+        requiredToolTags = {},
+        cycleHours = 18,
+        dailyCaloriesNeed = 2200,
+        dailyHydrationNeed = 1800,
+        outputRules = {}
+    },
     Scavenge = {
         jobType = Config.JobTypes.Scavenge,
         displayName = "Scavenging",
@@ -111,7 +122,8 @@ Config.ArchetypeJobBonuses = {
         [Config.JobTypes.Fish] = 1.35
     },
     Scavenger = {
-        [Config.JobTypes.Scavenge] = 1.35
+        [Config.JobTypes.Scavenge] = 1.35,
+        [Config.JobTypes.Gatherer] = 1.15
     }
 }
 

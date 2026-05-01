@@ -76,6 +76,13 @@ function Config.GetWorkerJobSkillID(worker, profile)
     if normalizedJob == Config.JobTypes.Scavenge then
         return Config.GetScavengeSiteSkillID(worker and worker.scavengeSiteProfileID)
     end
+    if normalizedJob == Config.JobTypes.Gatherer then
+        local gatherer = DC_Colony and DC_Colony.Gatherer or nil
+        if gatherer and gatherer.GetPrimarySkillID then
+            return gatherer.GetPrimarySkillID(worker)
+        end
+        return "Construction"
+    end
     return nil
 end
 

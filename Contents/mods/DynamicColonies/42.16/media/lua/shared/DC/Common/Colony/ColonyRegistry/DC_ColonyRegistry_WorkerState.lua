@@ -150,6 +150,10 @@ function Registry.RecalculateWorker(worker)
     worker.jobType = Config.NormalizeJobType(worker.jobType or worker.profession)
     worker.archetypeID = Config.NormalizeArchetypeID(worker.archetypeID or worker.profession)
     worker.profession = worker.profession or worker.jobType
+    if (worker.jobType == (Config.JobTypes and Config.JobTypes.Gatherer) or type(worker.gathererConfig) == "table")
+        and DC_Colony and DC_Colony.Gatherer and DC_Colony.Gatherer.NormalizeConfig then
+        worker.gathererConfig = DC_Colony.Gatherer.NormalizeConfig(worker)
+    end
     worker.baseCarryWeightOverride = tonumber(worker.baseCarryWeightOverride) or nil
     worker.homeX = tonumber(worker.homeX) and math.floor(worker.homeX) or nil
     worker.homeY = tonumber(worker.homeY) and math.floor(worker.homeY) or nil

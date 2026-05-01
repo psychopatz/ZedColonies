@@ -31,6 +31,10 @@ require "DC/Common/Colony/Job/Farming/DC_Job_Farming_Process"
 require "DC/Common/Colony/Job/Fishing/DC_Job_Fishing_ConfigTools"
 require "DC/Common/Colony/Job/Fishing/DC_Job_Fishing_Process"
 
+-- Gatherer Subsystem
+require "DC/Common/Colony/Job/Gatherer/DC_Job_Gatherer_Config"
+require "DC/Common/Colony/Job/Gatherer/DC_Job_Gatherer_Process"
+
 -- Travel Companion
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion"
 

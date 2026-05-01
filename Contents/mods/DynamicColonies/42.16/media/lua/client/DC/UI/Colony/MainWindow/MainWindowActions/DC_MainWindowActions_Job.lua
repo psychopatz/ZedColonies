@@ -631,14 +631,28 @@ function DC_MainWindow:onCycleJob()
         selectedJobType = normalizedJobType,
         autoRepeatJob = currentAutoRepeat,
         worker = worker,
-        onConfirm = function(jobType, option, autoRepeatJob)
+        onConfirm = function(jobType, option, autoRepeatJob, extra)
             local selectedJobType = config.NormalizeJobType and config.NormalizeJobType(jobType) or tostring(jobType or "")
             local targetAutoRepeat = selectedJobType ~= tostring((config.JobTypes or {}).Unemployed or "Unemployed")
             local changedJob = selectedJobType ~= normalizedJobType
             local changedAutoRepeat = targetAutoRepeat ~= currentAutoRepeat
+            local isGatherer = selectedJobType == tostring((config.JobTypes or {}).Gatherer or "Gatherer")
+            local gathererConfig = type(extra) == "table" and extra.gathererConfig or nil
 
-            if not changedJob and not changedAutoRepeat then
+            if not changedJob and not changedAutoRepeat and not gathererConfig then
                 self:updateStatus(workerName .. " is already set to that job.")
+                return
+            end
+
+            if isGatherer and gathererConfig then
+                self:sendColonyCommand("SetWorkerGathererConfig", {
+                    workerID = workerID,
+                    selectedResources = gathererConfig.selectedResources,
+                    gathererConfig = gathererConfig,
+                    assignJob = changedJob
+                })
+                self:updateStatus((changedJob and "Changing worker job to Gatherer" or "Saving gatherer setup")
+                    .. " for " .. workerName .. "...")
                 return
             end
 
