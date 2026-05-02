@@ -309,6 +309,11 @@ function Internal.GetEquipmentStaticMetadata(fullType)
         headConditionMax = tempItem and tempItem.hasHeadCondition and tempItem:hasHeadCondition() and tempItem.getHeadConditionMax and tempItem:getHeadConditionMax() or 0,
         quality = tempItem and tempItem.getQuality and tempItem:getQuality() or nil,
         haveBeenRepaired = tempItem and tempItem.getHaveBeenRepaired and tempItem:getHaveBeenRepaired() or nil,
+        fluidCapacity = tempItem and tempItem.getFluidContainer and tempItem:getFluidContainer() and tempItem:getFluidContainer().getCapacity
+            and math.max(0, tonumber(tempItem:getFluidContainer():getCapacity()) or 0)
+            or (scriptItem and scriptItem.getFluidContainer and scriptItem:getFluidContainer() and scriptItem:getFluidContainer().getCapacity
+                and math.max(0, tonumber(scriptItem:getFluidContainer():getCapacity()) or 0)
+                or 0),
     }
 
     Internal.EquipmentStaticMetadataCache[key] = metadata
@@ -350,6 +355,10 @@ function Internal.ApplyEquipmentEntryState(item, entry)
 
     if entry.haveBeenRepaired ~= nil and item.setHaveBeenRepaired then
         item:setHaveBeenRepaired(math.max(0, math.floor(tonumber(entry.haveBeenRepaired) or 0)))
+    end
+
+    if entry.fluidAmount ~= nil and item.getFluidContainer and item:getFluidContainer() and item:getFluidContainer().setAmount then
+        item:getFluidContainer():setAmount(math.max(0, tonumber(entry.fluidAmount) or 0))
     end
 
     return item
@@ -420,6 +429,12 @@ function Internal.NormalizeEquipmentEntry(entry)
         assignedRequirementKey = nil
     end
 
+    local fluidCapacity = math.max(0, tonumber(entry.fluidCapacity) or tonumber(staticMetadata.fluidCapacity) or 0)
+    local fluidAmount = tonumber(entry.fluidAmount)
+    if fluidAmount == nil and fluidCapacity > 0 then
+        fluidAmount = 0
+    end
+
     return {
         fullType = fullType,
         entryID = tostring(entry.entryID or Internal.GenerateLedgerEntryID("eq")),
@@ -436,6 +451,8 @@ function Internal.NormalizeEquipmentEntry(entry)
         quality = quality ~= nil and math.max(0, math.floor(tonumber(quality) or 0)) or nil,
         haveBeenRepaired = haveBeenRepaired ~= nil and math.max(0, math.floor(tonumber(haveBeenRepaired) or 0)) or nil,
         keepOnDeplete = ammoEntry ~= true and staticMetadata.keepOnDeplete == true,
+        fluidAmount = fluidAmount ~= nil and math.max(0, tonumber(fluidAmount) or 0) or nil,
+        fluidCapacity = fluidCapacity > 0 and fluidCapacity or nil,
         pendingVanillaBreak = entry.pendingVanillaBreak == true,
         assignedRequirementKey = assignedRequirementKey,
     }
@@ -461,6 +478,12 @@ function Internal.BuildEquipmentEntryFromInventoryItem(invItem, overrideDisplayN
             or invItem.getUsedDelta and invItem:getUsedDelta()
             or nil,
         assignedRequirementKey = sourceEntry and sourceEntry.assignedRequirementKey or nil,
+        fluidAmount = invItem.getFluidContainer and invItem:getFluidContainer() and invItem:getFluidContainer().getAmount
+            and math.max(0, tonumber(invItem:getFluidContainer():getAmount()) or 0)
+            or nil,
+        fluidCapacity = invItem.getFluidContainer and invItem:getFluidContainer() and invItem:getFluidContainer().getCapacity
+            and math.max(0, tonumber(invItem:getFluidContainer():getCapacity()) or 0)
+            or nil,
     })
 end
 
@@ -485,6 +508,9 @@ function Internal.BuildEquipmentAddItemCustomData(entry)
     end
     if normalized.haveBeenRepaired ~= nil then
         customData.haveBeenRepaired = normalized.haveBeenRepaired
+    end
+    if normalized.fluidAmount ~= nil then
+        customData.fluidAmount = normalized.fluidAmount
     end
     return customData
 end
@@ -520,6 +546,15 @@ function Internal.NormalizeOutputEntry(entry)
 
     if entry.fluidAmount ~= nil then
         normalized.fluidAmount = math.max(0, tonumber(entry.fluidAmount) or 0)
+    end
+    if entry.fluidCapacity ~= nil then
+        normalized.fluidCapacity = math.max(0, tonumber(entry.fluidCapacity) or 0)
+    elseif normalized.fluidAmount ~= nil then
+        local equipmentState = Internal.NormalizeEquipmentEntry({
+            fullType = fullType,
+            fluidAmount = normalized.fluidAmount,
+        })
+        normalized.fluidCapacity = equipmentState and equipmentState.fluidCapacity or nil
     end
 
     if entry.isRottenProvision == true or entry.isRotten == true or tostring(entry.provisionBlockedReason or "") ~= "" then
@@ -559,6 +594,9 @@ function Internal.BuildOutputEntryFromInventoryItem(invItem, overrideDisplayName
         local fluidContainer = invItem:getFluidContainer()
         if fluidContainer and fluidContainer.getAmount then
             entry.fluidAmount = math.max(0, tonumber(fluidContainer:getAmount()) or 0)
+        end
+        if fluidContainer and fluidContainer.getCapacity then
+            entry.fluidCapacity = math.max(0, tonumber(fluidContainer:getCapacity()) or 0)
         end
     end
 
@@ -610,6 +648,7 @@ function Internal.GetOutputEntryStateSignature(entry)
         tostring(normalized.fullType or ""),
         tostring(normalized.displayName or ""),
         tostring(normalized.fluidAmount ~= nil and string.format("%.4f", normalized.fluidAmount) or ""),
+        tostring(normalized.fluidCapacity ~= nil and string.format("%.4f", normalized.fluidCapacity) or ""),
         tostring(normalized.isRottenProvision == true and "1" or "0"),
         tostring(normalized.condition ~= nil and normalized.condition or ""),
         tostring(normalized.conditionMax ~= nil and normalized.conditionMax or ""),
@@ -632,6 +671,8 @@ function Internal.GetEquipmentDurabilitySignature(entry)
         tostring(normalized.usedDelta ~= nil and string.format("%.4f", normalized.usedDelta) or ""),
         tostring(normalized.useDelta ~= nil and string.format("%.4f", normalized.useDelta) or ""),
         tostring(normalized.keepOnDeplete == true and "1" or "0"),
+        tostring(normalized.fluidAmount ~= nil and string.format("%.4f", normalized.fluidAmount) or ""),
+        tostring(normalized.fluidCapacity ~= nil and string.format("%.4f", normalized.fluidCapacity) or ""),
     }, "|")
 end
 

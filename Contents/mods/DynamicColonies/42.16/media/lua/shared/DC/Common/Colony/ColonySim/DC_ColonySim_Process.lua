@@ -13,6 +13,7 @@ local Medical = DC_Colony.Medical
 local Nutrition = DC_Colony.Nutrition
 local Resources = DC_Colony.Resources
 local Companion = DC_Colony.Companion
+local Gatherer = DC_Colony.Gatherer
 
 local function buildXPAmount(totalQuantity)
     return math.max(10, 20 + math.min(20, math.floor(tonumber(totalQuantity) or 0) * 3))
@@ -180,6 +181,18 @@ function Sim.ProcessWorker(worker, currentHour)
         worker.dumpCooldownHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
     end
 
+    if normalizedJobType == Config.JobTypes.Gatherer then
+        Internal.ensureWorkerHome(worker)
+        local gatherPresence = tostring(worker.presenceState or "")
+        local states = Config.PresenceStates or {}
+        if gatherPresence ~= tostring(states.AwayToSite or "AwayToSite")
+            and gatherPresence ~= tostring(states.Gathering or "Gathering")
+            and gatherPresence ~= tostring(states.AwayToHome or "AwayToHome") then
+            worker.presenceState = states.Home or "Home"
+        end
+        worker.dumpCooldownHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
+    end
+
     local dailyCaloriesNeed = Config.GetEffectiveDailyCaloriesNeed(worker, profile)
     local dailyHydrationNeed = Config.GetEffectiveDailyHydrationNeed(worker, profile)
 
@@ -238,15 +251,32 @@ function Sim.ProcessWorker(worker, currentHour)
     if normalizedJobType ~= Config.JobTypes.Gatherer then
         worker.gathererSelectionLabel = nil
         worker.gathererLastQuantity = nil
+        worker.gathererActiveResourceID = nil
+        worker.gathererActiveResourceLabel = nil
+        worker.gathererEffectiveSpeedMultiplier = nil
     end
 
     worker.siteState = worker.siteState or "Deferred"
     worker.toolState = toolsReady and "Ready" or "Missing"
+    if normalizedJobType == Config.JobTypes.Gatherer and Gatherer and Gatherer.GetLoadout then
+        local gathererLoadout = Gatherer.GetLoadout(worker)
+        if #(gathererLoadout.blockedResourceIDs or {}) > 0 and #(gathererLoadout.runnableResourceIDs or {}) <= 0 then
+            worker.toolState = "Missing"
+        elseif #(gathererLoadout.slowResourceIDs or {}) > 0 then
+            worker.toolState = "Slow"
+        else
+            worker.toolState = "Ready"
+        end
+    end
 
     local forcedRest = Energy and Energy.IsForcedRest and Energy.IsForcedRest(worker) or false
     local canWork = worker.jobEnabled and toolsReady and not forcedRest
     if normalizedJobType == Config.JobTypes.Scavenge then
         canWork = canWork and worker.presenceState == Config.PresenceStates.Scavenging
+    elseif normalizedJobType == Config.JobTypes.Gatherer then
+        canWork = worker.jobEnabled
+            and not forcedRest
+            and tostring(worker.presenceState or "") == tostring((Config.PresenceStates or {}).Gathering or "Gathering")
     end
     local nutritionResult = Nutrition and Nutrition.ProcessWorkerNutrition and Nutrition.ProcessWorkerNutrition(
         worker,

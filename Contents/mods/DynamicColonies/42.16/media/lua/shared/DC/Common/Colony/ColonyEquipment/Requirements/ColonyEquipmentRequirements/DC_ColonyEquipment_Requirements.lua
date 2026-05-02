@@ -21,6 +21,9 @@ require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequiremen
 -- Fish
 require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Fish/DC_ColonyEquipmentRequirements_Fish"
 
+-- Gatherer
+require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Gatherer/DC_ColonyEquipmentRequirements_Gatherer"
+
 -- Scavenge
 require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Scavenge/DC_ColonyEquipmentRequirements_Scavenge"
 
@@ -39,6 +42,9 @@ require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequiremen
 
 -- Fish
 require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Fish/DC_ColonyEquipmentRequirements_Fish_Logic"
+
+-- Gatherer
+require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Gatherer/DC_ColonyEquipmentRequirements_Gatherer_Logic"
 
 -- Scavenge
 require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Scavenge/DC_ColonyEquipmentRequirements_Scavenge_Logic"

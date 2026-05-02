@@ -31,7 +31,8 @@ function Interaction.GetProgressDescriptor(worker, profile)
     local states = Config.PresenceStates or {}
     local tokens = nil
 
-    if jobKey == tostring((Config.JobTypes or {}).Scavenge or "Scavenge") then
+    if jobKey == tostring((Config.JobTypes or {}).Scavenge or "Scavenge")
+        or jobKey == tostring((Config.JobTypes or {}).Gatherer or "Gatherer") then
         local travelTemplate = nil
         if presenceState == tostring(states.AwayToSite or "AwayToSite") then
             travelTemplate = Interaction.getInteractionEntry("Progress", "Common.TravelToSite")
@@ -91,6 +92,63 @@ function Interaction.GetProgressDescriptor(worker, profile)
     local workingState = tostring((Config.States or {}).Working or "Working")
     if tostring(worker.state or "") ~= workingState or worker.jobEnabled ~= true then
         return nil
+    end
+
+    if jobKey == tostring((Config.JobTypes or {}).Gatherer or "Gatherer") then
+        local cycleHours = math.max(
+            0.01,
+            tonumber(worker.workCycleHours)
+                or tonumber(Config.GetEffectiveCycleHours and Config.GetEffectiveCycleHours(worker, profile))
+                or tonumber(profile and profile.cycleHours)
+                or 24
+        )
+        local progressHours = math.max(0, tonumber(worker.workProgress) or 0)
+        if progressHours > cycleHours then
+            progressHours = progressHours % cycleHours
+        end
+
+        local effectiveSpeed = math.max(
+            0.01,
+            tonumber(worker.gathererEffectiveSpeedMultiplier)
+                or tonumber(worker.jobSkillSpeedMultiplier)
+                or 1
+        )
+        local remainingProgressHours = math.max(0, cycleHours - progressHours)
+        local remainingWorldHours = effectiveSpeed > 0 and (remainingProgressHours / effectiveSpeed) or nil
+        local resourceLabel = tostring(worker.gathererActiveResourceLabel or worker.gathererSelectionLabel or "resources")
+        local template = Interaction.getInteractionEntry("Progress", jobKey .. ".Active")
+
+        return {
+            label = type(template) == "table" and DynamicTrading.FormatInteractionString(template.activeText, {
+                resource = resourceLabel,
+                eta = Interaction.formatDurationHours(remainingWorldHours),
+                progress = Interaction.formatDecimal(progressHours, 1),
+                total = Interaction.formatDecimal(cycleHours, 1),
+            }) or ("Gathering " .. resourceLabel),
+            displayText = type(template) == "table" and DynamicTrading.FormatInteractionString(template.activeText, {
+                resource = resourceLabel,
+                eta = Interaction.formatDurationHours(remainingWorldHours),
+                progress = Interaction.formatDecimal(progressHours, 1),
+                total = Interaction.formatDecimal(cycleHours, 1),
+            }) or ("Gathering " .. resourceLabel),
+            fillRatio = math.max(0, math.min(1, progressHours / cycleHours)),
+            captionText = type(template) == "table" and DynamicTrading.FormatInteractionString(template.captionText, {
+                resource = resourceLabel,
+                eta = Interaction.formatDurationHours(remainingWorldHours),
+                progress = Interaction.formatDecimal(progressHours, 1),
+                total = Interaction.formatDecimal(cycleHours, 1),
+            }) or ("ETA " .. Interaction.formatDurationHours(remainingWorldHours)),
+            summaryText = Interaction.formatDecimal(progressHours, 1)
+                .. " / "
+                .. Interaction.formatDecimal(cycleHours, 1)
+                .. "h | Speed x"
+                .. Interaction.formatDecimal(effectiveSpeed, 2),
+            progressHours = progressHours,
+            cycleHours = cycleHours,
+            remainingWorldHours = remainingWorldHours,
+            effectiveSpeedMultiplier = effectiveSpeed,
+            color = type(template) == "table" and template.color or { r = 0.48, g = 0.80, b = 0.54, a = 1 }
+        }
     end
 
     local template = Interaction.getInteractionEntry("Progress", jobKey .. ".Active")

@@ -92,6 +92,7 @@ Config.PresenceStates = {
     Home = "Home",
     AwayToSite = "AwayToSite",
     Scavenging = "Scavenging",
+    Gathering = "Gathering",
     AwayToHome = "AwayToHome",
     CompanionToPlayer = "CompanionToPlayer",
     CompanionActive = "CompanionActive",

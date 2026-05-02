@@ -166,6 +166,15 @@ Network.Handlers.SetWorkerJobEnabled = function(player, args)
             debugWorkerJob("Disabling companion duty at home workerID=" .. tostring(args.workerID))
             Registry.SetWorkerJobEnabled(worker, false)
         end
+    elseif args.enabled ~= true and normalizedJob == ((Config.JobTypes or {}).Gatherer) then
+        local homeState = tostring((Config.PresenceStates or {}).Home or "Home")
+        if tostring(worker.presenceState or "") ~= homeState then
+            debugWorkerJob("Starting gatherer return workerID=" .. tostring(args.workerID))
+            Registry.SendWorkerHome(worker, Config.ReturnReasons.Manual, tonumber(worker.travelHoursRemaining) or nil)
+        else
+            debugWorkerJob("Disabling gatherer job at home workerID=" .. tostring(args.workerID))
+            Registry.SetWorkerJobEnabled(worker, false)
+        end
     else
         Registry.SetWorkerJobEnabled(worker, args.enabled == true)
         if args.enabled == true and normalizedJob == ((Config.JobTypes or {}).TravelCompanion) then

@@ -182,9 +182,13 @@ local function applyRottenTitleSuffix(presentation, entry)
     return presentation
 end
 
-local function shouldShowEquipmentDurability(entry)
+local function canShowItemState(entry)
     if type(entry) ~= "table" then
         return false
+    end
+
+    if (tonumber(entry.fluidCapacity) or 0) > 0 and entry.fluidAmount ~= nil then
+        return true
     end
 
     if tostring(entry.assignedRequirementKey or "") == "Colony.Combat.Ammo" then
@@ -240,13 +244,19 @@ local function getAmmoQuantityText(entry)
     return qty > 1 and ("Qty " .. tostring(qty)) or "Ammo"
 end
 
-local function getDurabilityText(entry)
+local function getItemStateText(entry)
     if type(entry) ~= "table" then
         return ""
     end
 
-    if not shouldShowEquipmentDurability(entry) then
+    if not canShowItemState(entry) then
         return ""
+    end
+
+    local fluidCapacity = math.max(0, tonumber(entry.fluidCapacity) or 0)
+    if fluidCapacity > 0 and entry.fluidAmount ~= nil then
+        local fluidAmount = math.max(0, math.min(fluidCapacity, tonumber(entry.fluidAmount) or 0))
+        return "Fluid " .. tostring(math.floor(fluidAmount + 0.5)) .. "/" .. tostring(math.floor(fluidCapacity + 0.5))
     end
 
     local parts = {}
@@ -273,13 +283,26 @@ local function getDurabilityText(entry)
     return table.concat(parts, " | ")
 end
 
-local function getEquipmentConditionBarData(entry)
+local function getDurabilityText(entry)
+    return getItemStateText(entry)
+end
+
+local function getItemStateBarData(entry)
     if type(entry) ~= "table" then
         return nil
     end
 
-    if not shouldShowEquipmentDurability(entry) then
+    if not canShowItemState(entry) then
         return nil
+    end
+
+    local fluidCapacity = math.max(0, tonumber(entry.fluidCapacity) or 0)
+    if fluidCapacity > 0 and entry.fluidAmount ~= nil then
+        local fluidAmount = math.max(0, math.min(fluidCapacity, tonumber(entry.fluidAmount) or 0))
+        return {
+            fillPercent = fluidCapacity > 0 and math.max(0, math.min(1, fluidAmount / fluidCapacity)) or 0,
+            label = "Fluid " .. tostring(math.floor(fluidAmount + 0.5)) .. "/" .. tostring(math.floor(fluidCapacity + 0.5)),
+        }
     end
 
     local conditionMax = math.max(0, tonumber(entry.conditionMax) or 0)
@@ -302,11 +325,17 @@ local function getEquipmentConditionBarData(entry)
     return nil
 end
 
-Internal.getEquipmentConditionBarData = getEquipmentConditionBarData
-Internal.getEquipmentDurabilityText = getDurabilityText
+Internal.getItemStateBarData = getItemStateBarData
+Internal.getItemStateText = getItemStateText
+Internal.getEquipmentConditionBarData = getItemStateBarData
+Internal.getEquipmentDurabilityText = getItemStateText
 
 local function getOutputStateText(entry)
     if type(entry) ~= "table" or entry.fluidAmount == nil then
+        return ""
+    end
+
+    if (tonumber(entry.fluidCapacity) or 0) > 0 then
         return ""
     end
 
@@ -582,16 +611,23 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
 
     if activeTab == Internal.Tabs.Equipment then
         if entry.kind == "placeholder" then
+            local countText = nil
+            if math.max(0, tonumber(entry.targetCount) or 0) > 0 then
+                countText = tostring(math.max(0, tonumber(entry.currentCount) or 0))
+                    .. "/"
+                    .. tostring(math.max(0, tonumber(entry.targetCount) or 0))
+            end
+            local statusText = tostring(entry.statusText or entry.hintText or "Assign a matching tool from the player inventory")
             return {
-                statText = tostring(entry.hintText or "Assign a matching tool from the player inventory"),
-                badgeText = "Needed",
+                statText = countText and (countText .. " | " .. statusText) or statusText,
+                badgeText = entry.blocking == true and "Needed" or "Boost",
                 dimmed = false,
             }
         end
 
         return {
             statText = appendWeightText(
-                isAmmoEquipmentEntry(entry) and getAmmoQuantityText(entry) or (getDurabilityText(entry) ~= "" and getDurabilityText(entry) or "No condition data"),
+                isAmmoEquipmentEntry(entry) and getAmmoQuantityText(entry) or (getItemStateText(entry) ~= "" and getItemStateText(entry) or "No condition data"),
                 entry
             ),
             badgeText = isAmmoEquipmentEntry(entry) and "Ammo" or "",
@@ -601,7 +637,7 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
     if activeTab == Internal.Tabs.Output then
         return applyRottenTitleSuffix({
             statText = appendWeightText(
-                appendSegment("Qty " .. tostring(entry.qty or 1), appendSegment(getDurabilityText(entry), getOutputStateText(entry))),
+                appendSegment("Qty " .. tostring(entry.qty or 1), appendSegment(getItemStateText(entry), getOutputStateText(entry))),
                 entry
             ),
             badgeText = "",

@@ -26,6 +26,8 @@ local function copyEquipmentState(target, source)
     target.useDelta = source.useDelta
     target.usedDelta = source.usedDelta
     target.keepOnDeplete = source.keepOnDeplete == true
+    target.fluidAmount = source.fluidAmount
+    target.fluidCapacity = source.fluidCapacity
     return target
 end
 
@@ -35,6 +37,7 @@ local function copyOutputState(target, source)
     end
 
     target.fluidAmount = source.fluidAmount
+    target.fluidCapacity = source.fluidCapacity
     target.isRottenProvision = source.isRottenProvision == true or source.isRotten == true
     target.provisionBlockedReason = source.provisionBlockedReason
     return target
@@ -530,6 +533,11 @@ function Internal.buildWorkerToolPlaceholderEntry(definition)
         supportedFullTypes = definition.supportedFullTypes or {},
         texture = definition.texture or (Internal.peekTextureForFullType and Internal.peekTextureForFullType(definition.iconFullType) or nil),
         iconFullType = definition.iconFullType,
+        currentCount = math.max(0, tonumber(definition.currentCount) or 0),
+        minimumCount = math.max(0, tonumber(definition.minimumCount) or 0),
+        targetCount = math.max(0, tonumber(definition.targetCount) or 0),
+        blocking = definition.blocking == true,
+        statusText = definition.statusText,
     }
 end
 

@@ -24,6 +24,38 @@ function Resources.GetWaterCapacity(ownerUsername)
     return math.max(0, math.floor(total + 0.5))
 end
 
+function Resources.GetWaterStored(ownerUsername)
+    local owner = Internal.GetAuthorityOwner(ownerUsername)
+    local ownerData = Resources.EnsureOwner(owner)
+    local capacity = Resources.GetWaterCapacity(owner)
+    return math.max(0, math.min(capacity, tonumber(ownerData and ownerData.waterStored) or 0))
+end
+
+function Resources.GetWaterAvailableCapacity(ownerUsername)
+    local capacity = Resources.GetWaterCapacity(ownerUsername)
+    return math.max(0, capacity - Resources.GetWaterStored(ownerUsername))
+end
+
+function Resources.AddWaterStored(ownerUsername, amount)
+    local owner = Internal.GetAuthorityOwner(ownerUsername)
+    local requested = math.max(0, tonumber(amount) or 0)
+    if requested <= 0 then
+        return 0
+    end
+
+    local ownerData = Resources.EnsureOwner(owner)
+    local capacity = Resources.GetWaterCapacity(owner)
+    local stored = math.max(0, math.min(capacity, tonumber(ownerData and ownerData.waterStored) or 0))
+    local accepted = math.max(0, math.min(requested, capacity - stored))
+    if accepted <= 0 then
+        return 0
+    end
+
+    ownerData.waterStored = stored + accepted
+    Resources.Save(owner)
+    return accepted
+end
+
 function Resources.GetWaterCollectionRatePerHour(ownerUsername)
     local owner = Internal.GetAuthorityOwner(ownerUsername)
     local total = 0

@@ -133,6 +133,18 @@ function Interaction.GetDisplayStateLabel(worker)
         end
     end
 
+    if jobKey == tostring((Config.JobTypes or {}).Gatherer or "Gatherer") then
+        if presenceState == tostring(states.AwayToSite or "AwayToSite") then
+            return tostring(Interaction.getInteractionEntry("Progress", "Common.TravelToSite.stateLabel") or "Walking")
+        end
+        if presenceState == tostring(states.AwayToHome or "AwayToHome") then
+            return tostring(Interaction.getInteractionEntry("Progress", "Common.TravelToHome.stateLabel") or "Walking")
+        end
+        if presenceState == tostring(states.Gathering or "Gathering") then
+            return "Gathering"
+        end
+    end
+
     if jobKey == tostring((Config.JobTypes or {}).TravelCompanion or "TravelCompanion") then
         if presenceState == tostring(states.CompanionToPlayer or "CompanionToPlayer") then
             return "Joining You"

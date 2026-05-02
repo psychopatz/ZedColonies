@@ -56,12 +56,39 @@ local function isTrackedScavengeWorker(worker)
         or presenceState == tostring(states.Scavenging or "")
 end
 
+local function isTrackedGathererWorker(worker)
+    if not worker then
+        return false
+    end
+
+    local normalizedJob = Config.NormalizeJobType and Config.NormalizeJobType(worker.jobType) or tostring(worker.jobType or "")
+    if normalizedJob ~= ((Config.JobTypes or {}).Gatherer) then
+        return false
+    end
+
+    if (worker.workX == nil or worker.workY == nil) and (worker.homeX == nil or worker.homeY == nil) then
+        return false
+    end
+
+    if worker.jobEnabled ~= true then
+        return false
+    end
+
+    local presenceState = tostring(worker.presenceState or "")
+    local states = Config.PresenceStates or {}
+    return presenceState == tostring(states.AwayToSite or "")
+        or presenceState == tostring(states.Gathering or "")
+end
+
 local function getWorkerTint(worker)
     local presenceState = tostring(worker and worker.presenceState or "")
     local states = Config.PresenceStates or {}
 
     if presenceState == tostring(states.Scavenging or "") then
         return 0.18, 0.78, 0.32, 0.95
+    end
+    if presenceState == tostring(states.Gathering or "") then
+        return 0.54, 0.82, 0.26, 0.95
     end
 
     return 0.95, 0.70, 0.16, 0.92
@@ -113,12 +140,12 @@ function Provider.getMarkers(playerObj, state)
     local markers = {}
 
     for _, worker in ipairs(getWorkerList(playerObj, state)) do
-        if isTrackedScavengeWorker(worker) then
+        if isTrackedScavengeWorker(worker) or isTrackedGathererWorker(worker) then
             local r, g, b, a = getWorkerTint(worker)
             markers[#markers + 1] = {
                 symbolID = Provider.SymbolIDs.ScavengeSite,
-                x = worker.workX,
-                y = worker.workY,
+                x = worker.workX or worker.homeX,
+                y = worker.workY or worker.homeY,
                 r = r,
                 g = g,
                 b = b,

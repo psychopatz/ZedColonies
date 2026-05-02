@@ -105,6 +105,9 @@ function Internal.getScavengePresenceDetailLabel(worker)
     if presenceState == states.Scavenging then
         return "Scavenging"
     end
+    if presenceState == states.Gathering then
+        return "Gathering"
+    end
     return "Home"
 end
 

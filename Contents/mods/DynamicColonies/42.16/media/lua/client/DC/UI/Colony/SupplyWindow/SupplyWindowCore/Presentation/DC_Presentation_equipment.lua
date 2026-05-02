@@ -58,6 +58,25 @@ local function workerHasRequirementDefinition(worker, definition)
     return false
 end
 
+local function getRequirementProgress(worker, definition)
+    local currentCount = tonumber(definition and definition.currentCount)
+    if currentCount == nil then
+        currentCount = workerHasRequirementDefinition(worker, definition) and 1 or 0
+    end
+
+    local minimumCount = math.max(0, tonumber(definition and definition.minimumCount) or 0)
+    local targetCount = math.max(minimumCount, tonumber(definition and definition.targetCount) or minimumCount)
+    if targetCount <= 0 then
+        targetCount = math.max(1, currentCount)
+    end
+
+    return {
+        currentCount = math.max(0, math.floor(currentCount)),
+        minimumCount = minimumCount,
+        targetCount = targetCount,
+    }
+end
+
 function Internal.getMissingEquipmentPlaceholderEntries(worker)
     local entries = {}
 
@@ -65,8 +84,10 @@ function Internal.getMissingEquipmentPlaceholderEntries(worker)
         local requirementKey = tostring(definition and definition.requirementKey or "")
         local skipRequirement = requirementKey == "Colony.Combat.Ammo"
             and not (Internal.isAmmoRequirementActive and Internal.isAmmoRequirementActive(worker))
+        local progress = getRequirementProgress(worker, definition)
+        local missingTarget = progress.currentCount < progress.targetCount
 
-        if not skipRequirement and not workerHasRequirementDefinition(worker, definition) then
+        if not skipRequirement and missingTarget then
             local iconFullType = definition.iconFullType
             if requirementKey == "Colony.Combat.Ammo" and Internal.getWorkerRangedAmmoFullType then
                 iconFullType = Internal.getWorkerRangedAmmoFullType(worker) or iconFullType
@@ -80,6 +101,11 @@ function Internal.getMissingEquipmentPlaceholderEntries(worker)
                 requirementTags = definition.requirementTags or { definition.requirementKey },
                 supportedFullTypes = definition.supportedFullTypes,
                 iconFullType = iconFullType,
+                currentCount = progress.currentCount,
+                minimumCount = progress.minimumCount,
+                targetCount = progress.targetCount,
+                blocking = definition.blocking == true and progress.currentCount < progress.minimumCount,
+                statusText = definition.statusText or definition.hintText,
             })
         end
     end
@@ -94,6 +120,9 @@ function Internal.getMissingEquipmentSummary(worker, maxCount)
         local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
         if normalizedJob == ((config.JobTypes or {}).Scavenge) then
             return "Scavenger loadout ready"
+        end
+        if normalizedJob == ((config.JobTypes or {}).Gatherer) then
+            return "Gatherer loadout ready"
         end
         return "Required equipment already equipped"
     end
@@ -120,7 +149,12 @@ function Internal.getRequiredToolSummary(worker)
 
     local labels = {}
     for _, definition in ipairs(definitions) do
-        labels[#labels + 1] = tostring(definition.label or definition.requirementKey or "Tool")
+        local progress = getRequirementProgress(worker, definition)
+        local label = tostring(definition.label or definition.requirementKey or "Tool")
+        if progress.targetCount > 1 then
+            label = label .. " x" .. tostring(progress.targetCount)
+        end
+        labels[#labels + 1] = label
     end
 
     return table.concat(labels, ", ")

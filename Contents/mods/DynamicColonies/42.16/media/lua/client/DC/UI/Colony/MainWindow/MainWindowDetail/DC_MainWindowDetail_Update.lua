@@ -259,6 +259,29 @@ function DC_MainWindow:updateWorkerDetail(worker)
         text = text .. " <RGB:0.72,0.72,0.72> Gathering: <RGB:1,1,1> "
             .. tostring(worker.gathererSelectionLabel or (DC_Colony and DC_Colony.Gatherer and DC_Colony.Gatherer.GetSelectionLabel and DC_Colony.Gatherer.GetSelectionLabel(worker)) or "Wood, Stone, Water")
             .. " <LINE> "
+        text = text .. " <RGB:0.72,0.72,0.72> Loadout: <RGB:1,1,1> "
+            .. tostring(worker.gathererHasAxe and "Axe ready" or "No axe")
+            .. " | "
+            .. tostring(worker.gathererHasPickaxe and "Pickaxe ready" or "No pickaxe")
+            .. " | "
+            .. tostring(worker.gathererHasSack and "Sack ready" or "No sack")
+            .. " <LINE> "
+        text = text .. " <RGB:0.72,0.72,0.72> Water Containers: <RGB:1,1,1> "
+            .. tostring(math.max(0, tonumber(worker.gathererWaterContainerCount) or 0))
+            .. " assigned"
+            .. " | Free "
+            .. tostring(math.floor((tonumber(worker.gathererWaterCollectableCapacity) or tonumber(worker.gathererWaterFreeCapacity) or 0) + 0.5))
+            .. " / "
+            .. tostring(math.floor((tonumber(worker.gathererWaterCapacity) or 0) + 0.5))
+            .. " <LINE> "
+        text = text .. " <RGB:0.72,0.72,0.72> Water Carry: <RGB:1,1,1> "
+            .. tostring(math.floor((tonumber(worker.gathererWaterCarryAmount) or 0) + 0.5))
+            .. " | Storage "
+            .. tostring(math.floor((tonumber(worker.gathererWaterStorageStored) or 0) + 0.5))
+            .. " / "
+            .. tostring(math.floor((tonumber(worker.gathererWaterStorageCapacity) or 0) + 0.5))
+            .. " <LINE> "
+        text = text .. " <RGB:0.72,0.72,0.72> Notes: <RGB:1,1,1> Wood and stone still work without tools, but much slower. Water uses all assigned fluid containers and needs built water storage with free capacity. <LINE> "
     end
     text = text .. " <RGB:0.72,0.72,0.72> Tool State: <RGB:1,1,1> " .. tostring(worker.toolState or "Missing") .. " <LINE> "
     text = text .. " <RGB:0.72,0.72,0.72> Housed: <RGB:1,1,1> " .. formatHousingSummary(worker) .. " <LINE> "
@@ -296,7 +319,8 @@ function DC_MainWindow:updateWorkerDetail(worker)
             if MainWindowLayout.applyToggleButtonStyle then
                 MainWindowLayout.applyToggleButtonStyle(self.btnToggleJob, true)
             end
-        elseif normalizedJobType == (config.JobTypes and config.JobTypes.Scavenge) then
+        elseif normalizedJobType == (config.JobTypes and config.JobTypes.Scavenge)
+            or normalizedJobType == (config.JobTypes and config.JobTypes.Gatherer) then
             local presenceState = tostring(worker.presenceState or "")
             local homeState = tostring((config.PresenceStates or {}).Home or "Home")
             if worker.jobEnabled and presenceState ~= homeState then

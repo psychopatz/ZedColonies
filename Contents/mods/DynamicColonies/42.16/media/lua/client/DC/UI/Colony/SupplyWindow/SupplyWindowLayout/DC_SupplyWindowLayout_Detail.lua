@@ -12,12 +12,14 @@ local function appendWeightLine(text, entry)
 end
 
 local function appendConditionLine(text, entry)
-    local durabilityText = Internal.getEquipmentDurabilityText and Internal.getEquipmentDurabilityText(entry) or ""
-    if tostring(durabilityText or "") == "" then
+    local stateText = Internal.getItemStateText and Internal.getItemStateText(entry)
+        or (Internal.getEquipmentDurabilityText and Internal.getEquipmentDurabilityText(entry))
+        or ""
+    if tostring(stateText or "") == "" then
         return text
     end
 
-    return text .. " <RGB:0.82,0.82,0.82> Condition: <RGB:1,1,1> " .. tostring(durabilityText) .. " <LINE> "
+    return text .. " <RGB:0.82,0.82,0.82> State: <RGB:1,1,1> " .. tostring(stateText) .. " <LINE> "
 end
 
 local function isAmmoEquipmentEntry(entry)

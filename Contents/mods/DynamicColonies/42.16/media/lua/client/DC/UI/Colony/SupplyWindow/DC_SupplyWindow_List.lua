@@ -186,8 +186,9 @@ function ColonySupplyList:doDrawItem(y, item, alt)
     local titleBaseMaxWidth = math.max(20, textMaxWidth - suffixWidth)
     local titleText = fitTextToWidth(UIFont.Small, titleBaseText, titleBaseMaxWidth)
     local statText = fitTextToWidth(UIFont.Small, presentation.statText or "", textMaxWidth)
-    local conditionBar = Internal.getEquipmentConditionBarData
-        and Internal.getEquipmentConditionBarData(entry)
+    local conditionBar = Internal.getItemStateBarData
+        and Internal.getItemStateBarData(entry)
+        or (Internal.getEquipmentConditionBarData and Internal.getEquipmentConditionBarData(entry))
         or nil
 
     self:drawText(titleText, textX, y + 5, textR, textG, textB, 1, UIFont.Small)

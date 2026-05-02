@@ -225,6 +225,8 @@ function Internal.buildGroupedRows(entries, activeTab, side, window)
                     isDrainable = first.isDrainable == true,
                     useDelta = first.useDelta,
                     usedDelta = first.usedDelta,
+                    fluidAmount = first.fluidAmount,
+                    fluidCapacity = first.fluidCapacity,
                     keepOnDeplete = first.keepOnDeplete == true,
                     assignedRequirementKey = first.assignedRequirementKey,
                     transferPending = false,
