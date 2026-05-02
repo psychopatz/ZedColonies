@@ -20,7 +20,7 @@ function Sim.ProcessScavengeJob(worker, ctx)
     local workableHours = ctx.workableHours
     local deltaHours = ctx.deltaHours
     local lowEnergyReason = ctx.lowEnergyReason
-    local scavengeLoadout = ctx.scavengeLoadout
+    local scavengeLoadout = ctx.jobLoadout
     local jobSkillEffects = ctx.jobSkillEffects
     
     local totalCaloriesAvailable, totalHydrationAvailable = Internal.getAvailableProvisionTotals(worker)
@@ -174,4 +174,26 @@ end
 
 if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Scavenge then
     DC_Colony.Config.JobProfiles.Scavenge.processHandler = Sim.ProcessScavengeJob
+    DC_Colony.Config.JobProfiles.Scavenge.hooks.initPresence = function(worker, currentHour)
+        Internal.ensureWorkerHome(worker)
+        worker.presenceState = Internal.getScavengePresenceState(worker)
+        if worker.presenceState == DC_Colony.Config.PresenceStates.Home and worker.haulLedger and #worker.haulLedger > 0 then
+            Internal.completeScavengeReturnHome(worker, currentHour)
+        end
+        worker.dumpCooldownHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
+    end
+    DC_Colony.Config.JobProfiles.Scavenge.hooks.prepareLoadout = function(worker, speedMultiplier)
+        if not DC_Colony.Config.GetScavengeLoadout then return speedMultiplier, nil end
+        local loadout = DC_Colony.Config.GetScavengeLoadout(worker)
+        worker.scavengeTier = loadout.tier or 0
+        worker.scavengeTierLabel = DC_Colony.Config.GetScavengeTierLabel and DC_Colony.Config.GetScavengeTierLabel(loadout.tier) or nil
+        worker.scavengePoolRolls = loadout.poolRolls or 0
+        worker.scavengeFailureWeight = loadout.failureWeight or 0
+        worker.scavengeSearchSpeedMultiplier = loadout.searchSpeedMultiplier or 1
+        worker.scavengeCapabilities = loadout.capabilityList or {}
+        return speedMultiplier * (tonumber(loadout.searchSpeedMultiplier) or 1), loadout
+    end
+    DC_Colony.Config.JobProfiles.Scavenge.hooks.getCanWork = function(worker, defaultCanWork, forcedRest)
+        return defaultCanWork and worker.presenceState == DC_Colony.Config.PresenceStates.Scavenging
+    end
 end

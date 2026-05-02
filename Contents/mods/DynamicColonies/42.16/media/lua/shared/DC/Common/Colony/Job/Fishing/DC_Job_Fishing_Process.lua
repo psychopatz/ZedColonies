@@ -310,4 +310,19 @@ end
 
 if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Fish then
     DC_Colony.Config.JobProfiles.Fish.processHandler = Sim.ProcessFishingJob
+    DC_Colony.Config.JobProfiles.Fish.hooks.onJobBlocked = function(worker)
+        local Config = DC_Colony.Config
+        worker.fishingTier = 0
+        worker.fishingTierLabel = Config.GetFishingTierLabel and Config.GetFishingTierLabel(0) or nil
+        worker.fishingCapabilities = {}
+        worker.fishingBaitActive = false
+        worker.fishingHasBackpack = false
+    end
+    DC_Colony.Config.JobProfiles.Fish.hooks.clearStaleFields = function(worker)
+        worker.fishingTier = nil
+        worker.fishingTierLabel = nil
+        worker.fishingCapabilities = nil
+        worker.fishingBaitActive = nil
+        worker.fishingHasBackpack = nil
+    end
 end

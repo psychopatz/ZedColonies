@@ -26,7 +26,8 @@ Config.JobProfiles = {
         outputRules = {},
         skillID = nil,          -- no skill tracked for unemployed workers
         sortOrder = 10,          -- position in the cycle returned by GetNextJobType
-        defaultForArchetype = nil
+        defaultForArchetype = nil,
+        hooks = {}
     },
     Builder = {
         jobType = Config.JobTypes.Builder,
@@ -42,7 +43,8 @@ Config.JobProfiles = {
         outputRules = {},
         skillID = "Construction",
         sortOrder = 20,
-        defaultForArchetype = "Builder"
+        defaultForArchetype = "Builder",
+        hooks = {}
     },
     Doctor = {
         jobType = Config.JobTypes.Doctor,
@@ -55,7 +57,8 @@ Config.JobProfiles = {
         outputRules = {},
         skillID = "Medical",
         sortOrder = 30,
-        defaultForArchetype = "Doctor"
+        defaultForArchetype = "Doctor",
+        hooks = {}
     },
     Farm = {
         jobType = Config.JobTypes.Farm,
@@ -70,7 +73,8 @@ Config.JobProfiles = {
         outputRules = {},
         skillID = "Plants",
         sortOrder = 60,
-        defaultForArchetype = "Farmer"
+        defaultForArchetype = "Farmer",
+        hooks = {}
     },
     Fish = {
         jobType = Config.JobTypes.Fish,
@@ -83,7 +87,8 @@ Config.JobProfiles = {
         outputRules = {},
         skillID = "Animals",
         sortOrder = 70,
-        defaultForArchetype = "Angler"
+        defaultForArchetype = "Angler",
+        hooks = {}
     },
     Gatherer = {
         jobType = Config.JobTypes.Gatherer,
@@ -96,7 +101,8 @@ Config.JobProfiles = {
         outputRules = {},
         skillID = nil,          -- dynamic: resolved via Gatherer.GetPrimarySkillID(worker)
         sortOrder = 40,
-        defaultForArchetype = nil
+        defaultForArchetype = nil,
+        hooks = {}
     },
     Scavenge = {
         jobType = Config.JobTypes.Scavenge,
@@ -113,7 +119,8 @@ Config.JobProfiles = {
         },
         skillID = nil,          -- dynamic: resolved via ScavengeSiteSkillMap[worker.scavengeSiteProfileID]
         sortOrder = 50,
-        defaultForArchetype = "Scavenger"
+        defaultForArchetype = "Scavenger",
+        hooks = {}
     },
     TravelCompanion = {
         jobType = Config.JobTypes.TravelCompanion,
@@ -132,7 +139,8 @@ Config.JobProfiles = {
         skillID = nil,          -- dynamic: combat XP handled separately by companion combat logic
         sortOrder = 45,          -- inserted between Gatherer(40) and Scavenge(50) when V2 active
         requiresV2 = true,      -- excluded from GetNextJobType when IsTravelCompanionSupported() is false
-        defaultForArchetype = nil
+        defaultForArchetype = nil,
+        hooks = {}
     }
 }
 

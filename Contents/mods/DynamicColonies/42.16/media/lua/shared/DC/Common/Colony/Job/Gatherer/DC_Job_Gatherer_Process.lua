@@ -819,6 +819,39 @@ end
 
 if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Gatherer then
     DC_Colony.Config.JobProfiles.Gatherer.processHandler = Sim.ProcessGathererJob
+    DC_Colony.Config.JobProfiles.Gatherer.hooks.initPresence = function(worker, currentHour)
+        Internal.ensureWorkerHome(worker)
+        local gatherPresence = tostring(worker.presenceState or "")
+        local states = DC_Colony.Config.PresenceStates or {}
+        if gatherPresence ~= tostring(states.AwayToSite or "AwayToSite")
+            and gatherPresence ~= tostring(states.Gathering or "Gathering")
+            and gatherPresence ~= tostring(states.AwayToHome or "AwayToHome") then
+            worker.presenceState = states.Home or "Home"
+        end
+        worker.dumpCooldownHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
+    end
+    DC_Colony.Config.JobProfiles.Gatherer.hooks.clearStaleFields = function(worker)
+        worker.gathererSelectionLabel = nil
+        worker.gathererLastQuantity = nil
+        worker.gathererActiveResourceID = nil
+        worker.gathererActiveResourceLabel = nil
+        worker.gathererEffectiveSpeedMultiplier = nil
+    end
+    DC_Colony.Config.JobProfiles.Gatherer.hooks.getToolState = function(worker)
+        if not (Gatherer and Gatherer.GetLoadout) then return nil end
+        local loadout = Gatherer.GetLoadout(worker)
+        if #(loadout.blockedResourceIDs or {}) > 0 and #(loadout.runnableResourceIDs or {}) <= 0 then
+            return "Missing"
+        elseif #(loadout.slowResourceIDs or {}) > 0 then
+            return "Slow"
+        end
+        return "Ready"
+    end
+    DC_Colony.Config.JobProfiles.Gatherer.hooks.getCanWork = function(worker, defaultCanWork, forcedRest)
+        return worker.jobEnabled
+            and not forcedRest
+            and tostring(worker.presenceState or "") == tostring((DC_Colony.Config.PresenceStates or {}).Gathering or "Gathering")
+    end
 end
 
 return Sim

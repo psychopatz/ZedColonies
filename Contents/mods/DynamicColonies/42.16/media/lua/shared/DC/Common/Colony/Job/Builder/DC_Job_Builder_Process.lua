@@ -154,4 +154,14 @@ end
 
 if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Builder then
     DC_Colony.Config.JobProfiles.Builder.processHandler = Sim.ProcessBuilderJob
+    DC_Colony.Config.JobProfiles.Builder.hooks.getCycleHours = function(worker, defaultCycleHours)
+        local buildings = DC_Buildings or nil
+        if buildings and buildings.GetProjectForWorker then
+            local project = buildings.GetProjectForWorker(worker)
+            if project then
+                return math.max(1, tonumber(project.requiredWorkPoints) or defaultCycleHours)
+            end
+        end
+        return defaultCycleHours
+    end
 end

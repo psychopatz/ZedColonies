@@ -13,7 +13,6 @@ local Medical = DC_Colony.Medical
 local Nutrition = DC_Colony.Nutrition
 local Resources = DC_Colony.Resources
 local Companion = DC_Colony.Companion
-local Gatherer = DC_Colony.Gatherer
 
 local function buildXPAmount(totalQuantity)
     return math.max(10, 20 + math.min(20, math.floor(tonumber(totalQuantity) or 0) * 3))
@@ -69,14 +68,10 @@ function Sim.ProcessWorker(worker, currentHour)
     local profile = Config.GetJobProfile(worker.jobType)
     local normalizedJobType = Config.NormalizeJobType(worker.jobType)
     local isUnemployedJob = normalizedJobType == (Config.JobTypes and Config.JobTypes.Unemployed)
-    local isBuilderJob = normalizedJobType == (Config.JobTypes and Config.JobTypes.Builder)
-    local isDoctorJob = normalizedJobType == (Config.JobTypes and Config.JobTypes.Doctor)
-    local scavengeLoadout = nil
     local cycleHours = Config.GetEffectiveWorkTarget and Config.GetEffectiveWorkTarget(worker, profile)
         or (Config.GetEffectiveCycleHours and Config.GetEffectiveCycleHours(worker, profile))
         or (profile.cycleHours or 24)
     local baseWorkSpeedMultiplier = Config.GetBaseWorkSpeedMultiplier and Config.GetBaseWorkSpeedMultiplier(worker, profile) or 1.0
-    local scavengeBaseWorkPerHour = Config.GetScavengeBaseWorkPerHour and Config.GetScavengeBaseWorkPerHour() or 1.0
     local lastHour = tonumber(worker.lastSimHour) or tonumber(currentHour) or 0
     local deltaHours = math.max(0, currentHour - lastHour)
     local lowEnergyReason = (Config.ReturnReasons and (Config.ReturnReasons.LowEnergy or Config.ReturnReasons.LowTiredness)) or "LowEnergy"
@@ -109,12 +104,8 @@ function Sim.ProcessWorker(worker, currentHour)
         worker.jobEnabled = false
         worker.state = Config.States.Idle
         worker.workProgress = 0
-        if normalizedJobType == Config.JobTypes.Fish then
-            worker.fishingTier = 0
-            worker.fishingTierLabel = Config.GetFishingTierLabel and Config.GetFishingTierLabel(0) or nil
-            worker.fishingCapabilities = {}
-            worker.fishingBaitActive = false
-            worker.fishingHasBackpack = false
+        if profile and profile.hooks and profile.hooks.onJobBlocked then
+            profile.hooks.onJobBlocked(worker)
         end
         if deltaHours > 0 then
             worker.lastSimHour = currentHour
@@ -163,34 +154,16 @@ function Sim.ProcessWorker(worker, currentHour)
         Registry.RecalculateWorker(worker)
         return
     end
-    if isBuilderJob and DC_Buildings and DC_Buildings.GetProjectForWorker then
-        local builderProject = DC_Buildings.GetProjectForWorker(worker)
-        if builderProject then
-            cycleHours = math.max(1, tonumber(builderProject.requiredWorkPoints) or cycleHours)
-            worker.workTarget = cycleHours
-            worker.workCycleHours = cycleHours
-        end
+    -- Allow the job to override cycleHours (e.g. Builder reads project work points).
+    if profile and profile.hooks and profile.hooks.getCycleHours then
+        cycleHours = profile.hooks.getCycleHours(worker, cycleHours) or cycleHours
     end
+    worker.workTarget = cycleHours
+    worker.workCycleHours = cycleHours
 
-    if normalizedJobType == Config.JobTypes.Scavenge then
-        Internal.ensureWorkerHome(worker)
-        worker.presenceState = Internal.getScavengePresenceState(worker)
-        if worker.presenceState == Config.PresenceStates.Home and worker.haulLedger and #worker.haulLedger > 0 then
-            Internal.completeScavengeReturnHome(worker, currentHour)
-        end
-        worker.dumpCooldownHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
-    end
-
-    if normalizedJobType == Config.JobTypes.Gatherer then
-        Internal.ensureWorkerHome(worker)
-        local gatherPresence = tostring(worker.presenceState or "")
-        local states = Config.PresenceStates or {}
-        if gatherPresence ~= tostring(states.AwayToSite or "AwayToSite")
-            and gatherPresence ~= tostring(states.Gathering or "Gathering")
-            and gatherPresence ~= tostring(states.AwayToHome or "AwayToHome") then
-            worker.presenceState = states.Home or "Home"
-        end
-        worker.dumpCooldownHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
+    -- Allow the job to initialize presence state (e.g. Scavenge, Gatherer travel loop).
+    if profile and profile.hooks and profile.hooks.initPresence then
+        profile.hooks.initPresence(worker, currentHour)
     end
 
     local dailyCaloriesNeed = Config.GetEffectiveDailyCaloriesNeed(worker, profile)
@@ -222,61 +195,29 @@ function Sim.ProcessWorker(worker, currentHour)
     Registry.RecalculateWorker(worker)
     local toolsReady = Registry.WorkerHasRequiredTools(worker)
 
-    if normalizedJobType == Config.JobTypes.Scavenge and Config.GetScavengeLoadout then
-        scavengeLoadout = Config.GetScavengeLoadout(worker)
-        worker.scavengeTier = scavengeLoadout.tier or 0
-        worker.scavengeTierLabel = Config.GetScavengeTierLabel and Config.GetScavengeTierLabel(scavengeLoadout.tier) or nil
-        worker.scavengePoolRolls = scavengeLoadout.poolRolls or 0
-        worker.scavengeFailureWeight = scavengeLoadout.failureWeight or 0
-        worker.scavengeSearchSpeedMultiplier = scavengeLoadout.searchSpeedMultiplier or 1
-        worker.scavengeCapabilities = scavengeLoadout.capabilityList or {}
-        speedMultiplier = speedMultiplier * (tonumber(scavengeLoadout.searchSpeedMultiplier) or 1)
-    else
-        worker.scavengeTier = nil
-        worker.scavengeTierLabel = nil
-        worker.scavengePoolRolls = nil
-        worker.scavengeFailureWeight = nil
-        worker.scavengeSearchSpeedMultiplier = nil
-        worker.scavengeCapabilities = nil
+    -- Allow the active job to prepare its loadout and adjust speedMultiplier.
+    -- Other profiles clear their own stale fields via clearStaleFields.
+    local jobLoadout = nil
+    if profile and profile.hooks and profile.hooks.prepareLoadout then
+        speedMultiplier, jobLoadout = profile.hooks.prepareLoadout(worker, speedMultiplier)
     end
-
-    if normalizedJobType ~= Config.JobTypes.Fish then
-        worker.fishingTier = nil
-        worker.fishingTierLabel = nil
-        worker.fishingCapabilities = nil
-        worker.fishingBaitActive = nil
-        worker.fishingHasBackpack = nil
-    end
-
-    if normalizedJobType ~= Config.JobTypes.Gatherer then
-        worker.gathererSelectionLabel = nil
-        worker.gathererLastQuantity = nil
-        worker.gathererActiveResourceID = nil
-        worker.gathererActiveResourceLabel = nil
-        worker.gathererEffectiveSpeedMultiplier = nil
+    for _, p in pairs(Config.JobProfiles or {}) do
+        if p.jobType ~= normalizedJobType and p.hooks and p.hooks.clearStaleFields then
+            p.hooks.clearStaleFields(worker)
+        end
     end
 
     worker.siteState = worker.siteState or "Deferred"
     worker.toolState = toolsReady and "Ready" or "Missing"
-    if normalizedJobType == Config.JobTypes.Gatherer and Gatherer and Gatherer.GetLoadout then
-        local gathererLoadout = Gatherer.GetLoadout(worker)
-        if #(gathererLoadout.blockedResourceIDs or {}) > 0 and #(gathererLoadout.runnableResourceIDs or {}) <= 0 then
-            worker.toolState = "Missing"
-        elseif #(gathererLoadout.slowResourceIDs or {}) > 0 then
-            worker.toolState = "Slow"
-        else
-            worker.toolState = "Ready"
-        end
+    if profile and profile.hooks and profile.hooks.getToolState then
+        local ts = profile.hooks.getToolState(worker)
+        if ts then worker.toolState = ts end
     end
 
     local forcedRest = Energy and Energy.IsForcedRest and Energy.IsForcedRest(worker) or false
     local canWork = worker.jobEnabled and toolsReady and not forcedRest
-    if normalizedJobType == Config.JobTypes.Scavenge then
-        canWork = canWork and worker.presenceState == Config.PresenceStates.Scavenging
-    elseif normalizedJobType == Config.JobTypes.Gatherer then
-        canWork = worker.jobEnabled
-            and not forcedRest
-            and tostring(worker.presenceState or "") == tostring((Config.PresenceStates or {}).Gathering or "Gathering")
+    if profile and profile.hooks and profile.hooks.getCanWork then
+        canWork = profile.hooks.getCanWork(worker, canWork, forcedRest)
     end
     local nutritionResult = Nutrition and Nutrition.ProcessWorkerNutrition and Nutrition.ProcessWorkerNutrition(
         worker,
@@ -313,7 +254,7 @@ function Sim.ProcessWorker(worker, currentHour)
         supportedHours = supportedHours,
         deltaHours = deltaHours,
         lowEnergyReason = lowEnergyReason,
-        scavengeLoadout = scavengeLoadout,
+        jobLoadout = jobLoadout,
         jobSkillEffects = jobSkillEffects
     }
 
