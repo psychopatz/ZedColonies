@@ -325,7 +325,13 @@ local function fillWaterContainers(worker, loadout, amount)
         end
     end
 
-    if next(containerIDs) == nil then
+    local hasContainerIDs = false
+    for _ in pairs(containerIDs) do
+        hasContainerIDs = true
+        break
+    end
+
+    if not hasContainerIDs then
         return 0
     end
 
