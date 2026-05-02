@@ -171,3 +171,7 @@ function Sim.ProcessScavengeJob(worker, ctx)
         end
     end
 end
+
+if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Scavenge then
+    DC_Colony.Config.JobProfiles.Scavenge.processHandler = Sim.ProcessScavengeJob
+end

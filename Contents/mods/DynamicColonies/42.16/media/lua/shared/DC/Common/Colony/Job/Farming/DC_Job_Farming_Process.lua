@@ -193,3 +193,7 @@ function Sim.ProcessFarmJob(worker, ctx)
 
     finalizeWorkerState(worker, ctx, didWorkThisTick)
 end
+
+if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Farm then
+    DC_Colony.Config.JobProfiles.Farm.processHandler = Sim.ProcessFarmJob
+end

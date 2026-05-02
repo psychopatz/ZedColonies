@@ -16,15 +16,12 @@ require "DC/Common/Colony/Job/Scavenging/DC_Job_Scavenging_Sim"
 require "DC/Common/Colony/Job/Scavenging/DC_Job_Scavenging_Process"
 
 -- Builder Subsystem
-require "DC/Common/Colony/Job/Builder/DC_Job_Builder_ConfigTools"
 require "DC/Common/Colony/Job/Builder/DC_Job_Builder_Process"
 
 -- Doctor Subsystem
-require "DC/Common/Colony/Job/Doctor/DC_Job_Doctor_ConfigTools"
 require "DC/Common/Colony/Job/Doctor/DC_Job_Doctor_Process"
 
 -- Farming Subsystem
-require "DC/Common/Colony/Job/Farming/DC_Job_Farming_ConfigTools"
 require "DC/Common/Colony/Job/Farming/DC_Job_Farming_Process"
 
 -- Fishing Subsystem

@@ -151,3 +151,7 @@ function Sim.ProcessBuilderJob(worker, ctx)
         worker.state = Config.States.Idle
     end
 end
+
+if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Builder then
+    DC_Colony.Config.JobProfiles.Builder.processHandler = Sim.ProcessBuilderJob
+end

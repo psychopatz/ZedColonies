@@ -307,3 +307,7 @@ function Sim.ProcessFishingJob(worker, ctx)
         worker.state = Config.States.Working
     end
 end
+
+if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Fish then
+    DC_Colony.Config.JobProfiles.Fish.processHandler = Sim.ProcessFishingJob
+end

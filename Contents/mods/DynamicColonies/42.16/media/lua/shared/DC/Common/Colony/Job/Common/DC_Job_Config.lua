@@ -32,7 +32,10 @@ Config.JobProfiles = {
         jobType = Config.JobTypes.Builder,
         displayName = "Builder",
         siteType = nil,
-        requiredToolTags = {},
+        requiredToolTags = {
+            "Builder.Tool.Hammer",
+            "Builder.Tool.Saw"
+        },
         cycleHours = 36,
         dailyCaloriesNeed = 2200,
         dailyHydrationNeed = 1800,
@@ -58,7 +61,9 @@ Config.JobProfiles = {
         jobType = Config.JobTypes.Farm,
         displayName = "Farmer",
         siteType = Config.SiteTypes.FarmPlotSite,
-        requiredToolTags = {},
+        requiredToolTags = {
+            "Tool.Farming"
+        },
         cycleHours = 24,
         dailyCaloriesNeed = 2200,
         dailyHydrationNeed = 1800,

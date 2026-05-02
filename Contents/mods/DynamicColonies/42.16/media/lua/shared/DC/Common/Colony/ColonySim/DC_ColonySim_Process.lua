@@ -317,20 +317,9 @@ function Sim.ProcessWorker(worker, currentHour)
         jobSkillEffects = jobSkillEffects
     }
 
-    if normalizedJobType == Config.JobTypes.Scavenge then
-        Sim.ProcessScavengeJob(worker, ctx)
-    elseif normalizedJobType == Config.JobTypes.TravelCompanion and Companion and Companion.UpdateTravelCompanionWorker then
-        Companion.UpdateTravelCompanionWorker(worker, ctx)
-    elseif isBuilderJob then
-        Sim.ProcessBuilderJob(worker, ctx)
-    elseif isDoctorJob then
-        Sim.ProcessDoctorJob(worker, ctx)
-    elseif normalizedJobType == Config.JobTypes.Gatherer and Sim.ProcessGathererJob then
-        Sim.ProcessGathererJob(worker, ctx)
-    elseif normalizedJobType == Config.JobTypes.Farm then
-        Sim.ProcessFarmJob(worker, ctx)
-    elseif normalizedJobType == Config.JobTypes.Fish then
-        Sim.ProcessFishingJob(worker, ctx)
+    local handler = profile and profile.processHandler
+    if handler then
+        handler(worker, ctx)
     else
         Sim.ProcessGenericJob(worker, ctx)
     end

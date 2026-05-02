@@ -89,3 +89,7 @@ function Sim.ProcessDoctorJob(worker, ctx)
         worker.state = Config.States.Working
     end
 end
+
+if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Doctor then
+    DC_Colony.Config.JobProfiles.Doctor.processHandler = Sim.ProcessDoctorJob
+end

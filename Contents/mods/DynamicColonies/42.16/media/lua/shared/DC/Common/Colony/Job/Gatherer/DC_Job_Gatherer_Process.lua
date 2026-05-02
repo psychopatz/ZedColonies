@@ -817,4 +817,8 @@ function Sim.ProcessGathererJob(worker, ctx)
     end
 end
 
+if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Gatherer then
+    DC_Colony.Config.JobProfiles.Gatherer.processHandler = Sim.ProcessGathererJob
+end
+
 return Sim
