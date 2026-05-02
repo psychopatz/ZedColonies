@@ -61,18 +61,7 @@ function Config.GetWorkerJobSkillID(worker, profile)
     if normalizedJob == Config.JobTypes.Unemployed then
         return nil
     end
-    if normalizedJob == Config.JobTypes.Builder then
-        return "Construction"
-    end
-    if normalizedJob == Config.JobTypes.Doctor then
-        return "Medical"
-    end
-    if normalizedJob == Config.JobTypes.Farm then
-        return "Plants"
-    end
-    if normalizedJob == Config.JobTypes.Fish then
-        return "Animals"
-    end
+    -- Dynamic cases that cannot be expressed as a static field in JobProfiles:
     if normalizedJob == Config.JobTypes.Scavenge then
         return Config.GetScavengeSiteSkillID(worker and worker.scavengeSiteProfileID)
     end
@@ -83,7 +72,9 @@ function Config.GetWorkerJobSkillID(worker, profile)
         end
         return "Construction"
     end
-    return nil
+    -- Static cases: read skillID from the job profile definition.
+    local jobProfile = Config.JobProfiles and Config.JobProfiles[normalizedJob] or nil
+    return jobProfile and jobProfile.skillID or nil
 end
 
 function Config.GetCompanionCombatXPPerAttack(attackType, worker)

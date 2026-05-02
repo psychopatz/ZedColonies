@@ -23,7 +23,10 @@ Config.JobProfiles = {
         cycleHours = 24,
         dailyCaloriesNeed = 2000,
         dailyHydrationNeed = 1600,
-        outputRules = {}
+        outputRules = {},
+        skillID = nil,          -- no skill tracked for unemployed workers
+        sortOrder = 10,          -- position in the cycle returned by GetNextJobType
+        defaultForArchetype = nil
     },
     Builder = {
         jobType = Config.JobTypes.Builder,
@@ -33,7 +36,10 @@ Config.JobProfiles = {
         cycleHours = 36,
         dailyCaloriesNeed = 2200,
         dailyHydrationNeed = 1800,
-        outputRules = {}
+        outputRules = {},
+        skillID = "Construction",
+        sortOrder = 20,
+        defaultForArchetype = "Builder"
     },
     Doctor = {
         jobType = Config.JobTypes.Doctor,
@@ -43,7 +49,10 @@ Config.JobProfiles = {
         cycleHours = 24,
         dailyCaloriesNeed = 2100,
         dailyHydrationNeed = 1700,
-        outputRules = {}
+        outputRules = {},
+        skillID = "Medical",
+        sortOrder = 30,
+        defaultForArchetype = "Doctor"
     },
     Farm = {
         jobType = Config.JobTypes.Farm,
@@ -53,7 +62,10 @@ Config.JobProfiles = {
         cycleHours = 24,
         dailyCaloriesNeed = 2200,
         dailyHydrationNeed = 1800,
-        outputRules = {}
+        outputRules = {},
+        skillID = "Plants",
+        sortOrder = 60,
+        defaultForArchetype = "Farmer"
     },
     Fish = {
         jobType = Config.JobTypes.Fish,
@@ -63,7 +75,10 @@ Config.JobProfiles = {
         cycleHours = 18,
         dailyCaloriesNeed = 2100,
         dailyHydrationNeed = 1700,
-        outputRules = {}
+        outputRules = {},
+        skillID = "Animals",
+        sortOrder = 70,
+        defaultForArchetype = "Angler"
     },
     Gatherer = {
         jobType = Config.JobTypes.Gatherer,
@@ -73,7 +88,10 @@ Config.JobProfiles = {
         cycleHours = 18,
         dailyCaloriesNeed = 2200,
         dailyHydrationNeed = 1800,
-        outputRules = {}
+        outputRules = {},
+        skillID = nil,          -- dynamic: resolved via Gatherer.GetPrimarySkillID(worker)
+        sortOrder = 40,
+        defaultForArchetype = nil
     },
     Scavenge = {
         jobType = Config.JobTypes.Scavenge,
@@ -87,7 +105,10 @@ Config.JobProfiles = {
             { tags = { "Quality.Waste" }, picks = 1, minQty = 1, maxQty = 2 },
             { tags = { "Resource.Material.General" }, picks = 1, minQty = 1, maxQty = 2 },
             { tags = { "Tool.General" }, picks = 1, minQty = 1, maxQty = 1 }
-        }
+        },
+        skillID = nil,          -- dynamic: resolved via ScavengeSiteSkillMap[worker.scavengeSiteProfileID]
+        sortOrder = 50,
+        defaultForArchetype = "Scavenger"
     },
     TravelCompanion = {
         jobType = Config.JobTypes.TravelCompanion,
@@ -102,7 +123,11 @@ Config.JobProfiles = {
         cycleHours = 24,
         dailyCaloriesNeed = 2300,
         dailyHydrationNeed = 1900,
-        outputRules = {}
+        outputRules = {},
+        skillID = nil,          -- dynamic: combat XP handled separately by companion combat logic
+        sortOrder = 45,          -- inserted between Gatherer(40) and Scavenge(50) when V2 active
+        requiresV2 = true,      -- excluded from GetNextJobType when IsTravelCompanionSupported() is false
+        defaultForArchetype = nil
     }
 }
 

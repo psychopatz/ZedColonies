@@ -117,20 +117,10 @@ end
 
 function Config.GetDefaultJobForArchetype(archetypeID)
     local normalized = Config.NormalizeArchetypeID(archetypeID)
-    if normalized == "Builder" then
-        return Config.JobTypes.Builder
-    end
-    if normalized == "Doctor" then
-        return Config.JobTypes.Doctor
-    end
-    if normalized == "Farmer" then
-        return Config.JobTypes.Farm
-    end
-    if normalized == "Angler" then
-        return Config.JobTypes.Fish
-    end
-    if normalized == "Scavenger" then
-        return Config.JobTypes.Scavenge
+    for _, jobProfile in pairs(Config.JobProfiles or {}) do
+        if jobProfile.defaultForArchetype == normalized then
+            return jobProfile.jobType
+        end
     end
     return Config.JobTypes.Unemployed
 end
@@ -161,18 +151,23 @@ function Config.GetWorkerBaseCarryWeight(worker)
 end
 
 function Config.GetNextJobType(jobType)
-    local order = {
-        Config.JobTypes.Unemployed,
-        Config.JobTypes.Builder,
-        Config.JobTypes.Doctor,
-        Config.JobTypes.Gatherer,
-        Config.JobTypes.Scavenge,
-        Config.JobTypes.Farm,
-        Config.JobTypes.Fish
-    }
-    if Config.IsTravelCompanionSupported and Config.IsTravelCompanionSupported() then
-        table.insert(order, 5, Config.JobTypes.TravelCompanion)
+    -- Build the ordered list from JobProfiles.sortOrder.
+    -- TravelCompanion is included only when IsTravelCompanionSupported() is true.
+    local v2Active = Config.IsTravelCompanionSupported and Config.IsTravelCompanionSupported()
+    local candidates = {}
+    for _, jobProfile in pairs(Config.JobProfiles or {}) do
+        if not (jobProfile.requiresV2 == true and not v2Active) then
+            candidates[#candidates + 1] = jobProfile
+        end
     end
+    table.sort(candidates, function(a, b)
+        return (a.sortOrder or 0) < (b.sortOrder or 0)
+    end)
+    local order = {}
+    for _, jobProfile in ipairs(candidates) do
+        order[#order + 1] = jobProfile.jobType
+    end
+
     local normalized = Config.NormalizeJobType(jobType)
     for index, value in ipairs(order) do
         if value == normalized then
