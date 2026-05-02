@@ -72,26 +72,21 @@ function Sim.ProcessBuilderJob(worker, ctx)
         end
         waitingForProjectMaterials = buildResult and buildResult.waitingForMaterials == true or false
         if buildResult and buildResult.completed and buildResult.project then
-            local xpResult = buildResult.xpResult or nil
-            local xpText = ""
-            if xpResult and (tonumber(xpResult.granted) or 0) > 0 then
-                xpText = " Earned "
-                    .. tostring(math.floor((tonumber(xpResult.granted) or 0) + 0.5))
-                    .. " Construction XP."
-                if (tonumber(xpResult.leveledUp) or 0) > 0 then
-                    xpText = xpText
-                        .. " Construction increased to level "
-                        .. tostring(xpResult.newLevel or 0)
-                        .. "."
-                end
+            if buildResult.xpResult and (tonumber(buildResult.xpResult.granted) or 0) > 0 then
+                Sim.grantWorkerJobXP(worker, currentHour, {
+                    skillID = "Construction",
+                    skillLabel = "Construction",
+                    granted = buildResult.xpResult.granted,
+                    leveledUp = buildResult.xpResult.leveledUp,
+                    newLevel = buildResult.xpResult.newLevel
+                }, 0)
             end
             Internal.appendWorkerLog(
                 worker,
                 tostring(buildResult.project.buildingType or "Building")
                     .. " reached level "
                     .. tostring(buildResult.project.targetLevel or 1)
-                    .. "."
-                    .. xpText,
+                    .. ".",
                 currentHour,
                 "buildings"
             )

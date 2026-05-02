@@ -7,45 +7,8 @@ local Output = DC_Colony.Output
 local Sim = DC_Colony.Sim
 local Internal = Sim.Internal
 local Energy = DC_Colony.Energy
-local Skills = DC_Colony.Skills
-local Health = DC_Colony.Health
-local Medical = DC_Colony.Medical
-local Nutrition = DC_Colony.Nutrition
 local Resources = DC_Colony.Resources
 local Companion = DC_Colony.Companion
-
-local function buildXPAmount(totalQuantity)
-    return math.max(10, 20 + math.min(20, math.floor(tonumber(totalQuantity) or 0) * 3))
-end
-
-local function grantWorkerJobXP(worker, currentHour, skillEffects, totalQuantity)
-    if not Skills or not Skills.GrantXP or not skillEffects or not skillEffects.skillID then
-        return
-    end
-
-    local result = Skills.GrantXP(worker, skillEffects.skillID, buildXPAmount(totalQuantity))
-    if not result or (tonumber(result.granted) or 0) <= 0 then
-        return
-    end
-
-    local message = "Earned " .. tostring(math.floor((tonumber(result.granted) or 0) + 0.5)) .. " " .. tostring(skillEffects.skillLabel or skillEffects.skillID or "Skill") .. " XP."
-
-    if (tonumber(result.leveledUp) or 0) > 0 then
-        message = message .. " " .. tostring(skillEffects.skillLabel or skillEffects.skillID or "Skill")
-            .. " increased to level "
-            .. tostring(result.newLevel)
-            .. "."
-    end
-
-    Internal.appendWorkerLog(
-        worker,
-        message,
-        currentHour,
-        "skills"
-    )
-end
-
-Sim.grantWorkerJobXP = grantWorkerJobXP
 
 local function getBuildings()
     return DC_Buildings or nil
@@ -219,25 +182,6 @@ function Sim.ProcessWorker(worker, currentHour)
     if profile and profile.hooks and profile.hooks.getCanWork then
         canWork = profile.hooks.getCanWork(worker, canWork, forcedRest)
     end
-    local nutritionResult = Nutrition and Nutrition.ProcessWorkerNutrition and Nutrition.ProcessWorkerNutrition(
-        worker,
-        currentHour,
-        dailyCaloriesNeed,
-        dailyHydrationNeed,
-        canWork
-    )
-    local workableHours = math.max(0, tonumber(nutritionResult and nutritionResult.workableHours) or 0)
-    local supportedHours = math.max(0, tonumber(nutritionResult and nutritionResult.supportedHours) or 0)
-    local hasCalories = nutritionResult and nutritionResult.hasCalories == true or false
-    local hasHydration = nutritionResult and nutritionResult.hasHydration == true or false
-    local hp = Health and Health.GetCurrent(worker) or 100
-
-    if Health and Health.ApplySleepHealing then
-        hp = select(1, Health.ApplySleepHealing(worker, forcedRest, supportedHours))
-    end
-
-    worker.starvationHours = 0
-    worker.dehydrationHours = 0
 
     local ctx = {
         currentHour = currentHour,
@@ -246,17 +190,22 @@ function Sim.ProcessWorker(worker, currentHour)
         speedMultiplier = speedMultiplier,
         cycleHours = cycleHours,
         toolsReady = toolsReady,
-        hp = hp,
-        hasCalories = hasCalories,
-        hasHydration = hasHydration,
+        hp = nil,
+        hasCalories = false,
+        hasHydration = false,
         forcedRest = forcedRest,
-        workableHours = workableHours,
-        supportedHours = supportedHours,
+        canWork = canWork,
+        workableHours = 0,
+        supportedHours = 0,
+        dailyCaloriesNeed = dailyCaloriesNeed,
+        dailyHydrationNeed = dailyHydrationNeed,
         deltaHours = deltaHours,
         lowEnergyReason = lowEnergyReason,
         jobLoadout = jobLoadout,
         jobSkillEffects = jobSkillEffects
     }
+
+    Sim.RunWorkerLifeCycle(worker, ctx)
 
     local handler = profile and profile.processHandler
     if handler then

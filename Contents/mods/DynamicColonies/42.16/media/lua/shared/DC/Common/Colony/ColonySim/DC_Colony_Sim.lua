@@ -23,10 +23,12 @@ Sim.lastProcessedHour = Sim.lastProcessedHour or -1
 
 require "DC/Common/Colony/ColonySim/DC_ColonySim_Helpers"
 require "DC/Common/Colony/ColonySim/DC_ColonySim_Outcome"
+require "DC/Common/Colony/ColonySim/DC_ColonySim_XP"
 require "DC/Common/Colony/ColonyHealth/DC_ColonyHealth"
 require "DC/Common/Colony/ColonyMedical/DC_ColonyMedical"
 require "DC/Common/Colony/Job/Common/DC_Job"
 require "DC/Common/Colony/ColonySim/DC_ColonySim_Tools"
+require "DC/Common/Colony/ColonySim/DC_ColonySim_LifeCycle"
 require "DC/Common/Colony/ColonySim/DC_ColonySim_Process"
 
 Events.OnTick.Add(Sim.OnTick)
