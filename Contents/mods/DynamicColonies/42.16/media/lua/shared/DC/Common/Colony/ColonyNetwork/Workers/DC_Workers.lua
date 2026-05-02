@@ -14,11 +14,13 @@ DC_Colony.Network.Workers = DC_Colony.Network.Workers or {}
 -- Keep explicit load order so shared worker helpers exist before dependent handlers.
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Shared"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Assignment"
+require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Equipment"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Deposit"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Money"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Withdraw"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Drop"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Job"
+require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Companion"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Lifecycle"
 
 return DC_Colony.Network
