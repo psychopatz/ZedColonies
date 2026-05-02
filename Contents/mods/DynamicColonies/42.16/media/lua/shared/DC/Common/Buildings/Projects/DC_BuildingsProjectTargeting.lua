@@ -1,3 +1,5 @@
+require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Descriptions"
+
 DC_Buildings = DC_Buildings or {}
 DC_Buildings.Internal = DC_Buildings.Internal or {}
 
@@ -945,64 +947,9 @@ function Buildings.BuildPlotBuildOptions(ownerUsername, plotX, plotY, sourcePlay
     for _, definition in ipairs(Config.GetDefinitionList and Config.GetDefinitionList() or {}) do
         if tostring(definition and definition.buildingType or "") ~= "Barricade" then
         local preview = Buildings.BuildProjectPreview(ownerUsername, definition.buildingType, "build", plotX, plotY, nil, nil, sourcePlayer, availableCounts)
-        local description = "Placeholder building."
-        local effectLines = {}
-
-        if definition.buildingType == "Headquarters" then
-            description = "Establishes the settlement core. Unsafe-zone growth expands in circular frontier rings as you secure barricades around the perimeter."
-            effectLines[#effectLines + 1] = "Expansion Rule: complete every barricade slot on the current ring to reveal the next ring"
-            effectLines[#effectLines + 1] = "Frontier Capacity: scales with the active ring perimeter"
-        elseif definition.buildingType == "Barracks" then
-            description = "Provides housing for your workers and improves recovery for the occupants living inside."
-            if preview.effects and preview.effects.housingSlots then
-                effectLines[#effectLines + 1] = "Housing Slots: " .. tostring(preview.effects.housingSlots)
-            end
-            if preview.effects and preview.effects.recoveryMultiplier then
-                effectLines[#effectLines + 1] = "Recovery Multiplier: x" .. tostring(preview.effects.recoveryMultiplier)
-            end
-        elseif definition.buildingType == "Warehouse" then
-            description = "Expands total warehouse storage for your settlement. Higher levels unlock extra storage installations."
-            if preview.effects and preview.effects.warehouseBaseBonus then
-                effectLines[#effectLines + 1] = "Base Capacity Bonus: +" .. tostring(preview.effects.warehouseBaseBonus)
-            end
-            effectLines[#effectLines + 1] = "Only one Warehouse can exist in each ring band."
-        elseif definition.buildingType == "WaterCollector" then
-            description = "A unique colony rain catcher that stores water and passively fills whenever it rains."
-            if preview.effects and preview.effects.waterStorageBonus then
-                effectLines[#effectLines + 1] = "Water Storage: +" .. tostring(preview.effects.waterStorageBonus)
-            end
-            if preview.effects and preview.effects.waterCollectionRate then
-                effectLines[#effectLines + 1] = "Rain Collection: +" .. tostring(preview.effects.waterCollectionRate) .. " / hour"
-            end
-            effectLines[#effectLines + 1] = "Only one Water Collector can exist per colony."
-        elseif definition.buildingType == "WaterTank" then
-            description = "A modular reservoir that expands total colony water storage."
-            if preview.effects and preview.effects.waterStorageBonus then
-                effectLines[#effectLines + 1] = "Water Storage: +" .. tostring(preview.effects.waterStorageBonus)
-            end
-        elseif definition.buildingType == "Greenhouse" then
-            description = "Protected crop beds for the Farmer job. Plant seeds, set the thermostat, and spend water to raise harvests indoors."
-            if preview.effects and preview.effects.gardenSlots then
-                effectLines[#effectLines + 1] = "Garden Slots: " .. tostring(preview.effects.gardenSlots)
-            end
-            if preview.effects and preview.effects.greenhouseWaterPerDayPerSlot then
-                effectLines[#effectLines + 1] = "Water Use: " .. tostring(preview.effects.greenhouseWaterPerDayPerSlot) .. " / day per planted slot"
-            end
-        elseif definition.buildingType == "ElectricityGenerator" then
-            description = "Reserved for the future electricity grid. The resource card exists now, but power modules are still placeholder."
-            effectLines[#effectLines + 1] = "Coming soon."
-        elseif definition.buildingType == "Infirmary" then
-            description = "Treats injured workers while they sleep. Beds expand capacity, and Doctors can use medical provisions to speed recovery."
-            if preview.effects and preview.effects.infirmaryBaseCapacity then
-                effectLines[#effectLines + 1] = "Base Medical Slots: +" .. tostring(preview.effects.infirmaryBaseCapacity)
-            end
-            if preview.effects and preview.effects.infirmaryCapacityCap then
-                effectLines[#effectLines + 1] = "Medical Slot Cap: " .. tostring(preview.effects.infirmaryCapacityCap)
-            end
-        else
-            description = "Planned for a future update. This building is shown as a placeholder for expansion."
-            effectLines[#effectLines + 1] = "Currently unavailable in this build."
-        end
+        local descInfo = Internal.GetBuildOptionText(definition.buildingType, preview.effects)
+        local description = descInfo.description
+        local effectLines = descInfo.effectLines
 
         options[#options + 1] = {
             buildingType = definition.buildingType,
