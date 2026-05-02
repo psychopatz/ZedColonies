@@ -852,6 +852,84 @@ if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Gatherer then
             and not forcedRest
             and tostring(worker.presenceState or "") == tostring((DC_Colony.Config.PresenceStates or {}).Gathering or "Gathering")
     end
+    DC_Colony.Config.JobProfiles.Gatherer.hooks.getProgressDescriptor = function(worker, profile)
+        local Cfg = DC_Colony.Config
+        local Inter = DC_Colony.Interaction
+        local presenceState = tostring(worker.presenceState or "")
+        local states = Cfg.PresenceStates or {}
+
+        if presenceState == tostring(states.AwayToSite or "AwayToSite")
+            or presenceState == tostring(states.AwayToHome or "AwayToHome") then
+            local travelTemplate = presenceState == tostring(states.AwayToSite or "AwayToSite")
+                and Inter.getInteractionEntry("Progress", "Common.TravelToSite")
+                or Inter.getInteractionEntry("Progress", "Common.TravelToHome")
+            if type(travelTemplate) == "table" then
+                local totalHours = Inter.getTravelTotalHours()
+                local remainingWorldHours = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
+                local progressHours = math.max(0, totalHours - remainingWorldHours)
+                local tokens = Inter.buildProgressTokens(worker, progressHours, totalHours, remainingWorldHours)
+                return {
+                    label = DynamicTrading.FormatInteractionString(travelTemplate.activeText, tokens),
+                    displayText = DynamicTrading.FormatInteractionString(travelTemplate.activeText, tokens),
+                    fillRatio = math.max(0, math.min(1, progressHours / totalHours)),
+                    captionText = DynamicTrading.FormatInteractionString(travelTemplate.captionText, tokens),
+                    summaryText = Inter.formatDecimal(progressHours, 1) .. " / " .. Inter.formatDecimal(totalHours, 1) .. "h",
+                    progressHours = progressHours,
+                    cycleHours = totalHours,
+                    remainingWorldHours = remainingWorldHours,
+                    color = travelTemplate.color
+                }
+            end
+        end
+
+        local workingState = tostring((Cfg.States or {}).Working or "Working")
+        if tostring(worker.state or "") ~= workingState or worker.jobEnabled ~= true then
+            return nil
+        end
+
+        local cycleHours = math.max(0.01,
+            tonumber(worker.workCycleHours)
+                or tonumber(Cfg.GetEffectiveCycleHours and Cfg.GetEffectiveCycleHours(worker, profile))
+                or tonumber(profile and profile.cycleHours) or 24
+        )
+        local progressHours = math.max(0, tonumber(worker.workProgress) or 0)
+        if progressHours > cycleHours then progressHours = progressHours % cycleHours end
+
+        local effectiveSpeed = math.max(0.01,
+            tonumber(worker.gathererEffectiveSpeedMultiplier)
+                or tonumber(worker.jobSkillSpeedMultiplier) or 1
+        )
+        local remainingProgressHours = math.max(0, cycleHours - progressHours)
+        local remainingWorldHours = effectiveSpeed > 0 and (remainingProgressHours / effectiveSpeed) or nil
+        local resourceLabel = tostring(worker.gathererActiveResourceLabel or worker.gathererSelectionLabel or "resources")
+        local template = Inter.getInteractionEntry("Progress", "Gatherer.Active")
+        local tokens = {
+            resource = resourceLabel,
+            eta = Inter.formatDurationHours(remainingWorldHours),
+            progress = Inter.formatDecimal(progressHours, 1),
+            total = Inter.formatDecimal(cycleHours, 1),
+        }
+        return {
+            label = type(template) == "table"
+                and DynamicTrading.FormatInteractionString(template.activeText, tokens)
+                or ("Gathering " .. resourceLabel),
+            displayText = type(template) == "table"
+                and DynamicTrading.FormatInteractionString(template.activeText, tokens)
+                or ("Gathering " .. resourceLabel),
+            fillRatio = math.max(0, math.min(1, progressHours / cycleHours)),
+            captionText = type(template) == "table"
+                and DynamicTrading.FormatInteractionString(template.captionText, tokens)
+                or ("ETA " .. Inter.formatDurationHours(remainingWorldHours)),
+            summaryText = Inter.formatDecimal(progressHours, 1)
+                .. " / " .. Inter.formatDecimal(cycleHours, 1)
+                .. "h | Speed x" .. Inter.formatDecimal(effectiveSpeed, 2),
+            progressHours = progressHours,
+            cycleHours = cycleHours,
+            remainingWorldHours = remainingWorldHours,
+            effectiveSpeedMultiplier = effectiveSpeed,
+            color = type(template) == "table" and template.color or { r = 0.48, g = 0.80, b = 0.54, a = 1 }
+        }
+    end
 end
 
 return Sim

@@ -325,4 +325,73 @@ if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.Fish then
         worker.fishingBaitActive = nil
         worker.fishingHasBackpack = nil
     end
+    DC_Colony.Config.JobProfiles.Fish.hooks.getProgressDescriptor = function(worker, profile)
+        local Cfg = DC_Colony.Config
+        local Inter = DC_Colony.Interaction
+
+        local workingState = tostring((Cfg.States or {}).Working or "Working")
+        if tostring(worker.state or "") ~= workingState or worker.jobEnabled ~= true then
+            return nil
+        end
+
+        local template = Inter.getInteractionEntry("Progress", "Fish.Active")
+        if type(template) ~= "table" then return nil end
+
+        local workTarget = math.max(1,
+            tonumber(worker.workTarget)
+                or tonumber(Cfg.GetEffectiveWorkTarget and Cfg.GetEffectiveWorkTarget(worker, profile))
+                or tonumber(Cfg.GetEffectiveCycleHours and Cfg.GetEffectiveCycleHours(worker, profile))
+                or tonumber(profile and profile.cycleHours) or 1
+        )
+        local progressAmount = math.max(0, tonumber(worker.workProgress) or 0)
+        if progressAmount > workTarget then progressAmount = progressAmount % workTarget end
+
+        local baseSpeed = math.max(0.01,
+            tonumber(worker.baseWorkSpeedMultiplier)
+                or tonumber(Cfg.GetBaseWorkSpeedMultiplier and Cfg.GetBaseWorkSpeedMultiplier(worker, profile))
+                or 1
+        )
+        local Skills = DC_Colony.Skills
+        local skillEffects = Skills and Skills.GetWorkerJobEffects and Skills.GetWorkerJobEffects(worker, profile) or nil
+        local skillSpeed = math.max(0.01, tonumber(skillEffects and skillEffects.speedMultiplier or worker.jobSkillSpeedMultiplier or 1) or 1)
+        local loadout = Cfg.GetFishingLoadout and Cfg.GetFishingLoadout(worker) or nil
+        local equipmentSpeed = 1
+        if loadout and loadout.baitApplies then
+            equipmentSpeed = math.max(1.0, tonumber(loadout.baitSpeedMultiplier) or 1.0)
+        end
+        local effectiveSpeed = baseSpeed * skillSpeed * equipmentSpeed
+        local baseWorkPerHour = math.max(0.01,
+            tonumber(Cfg.GetFishingBaseWorkPerHour and Cfg.GetFishingBaseWorkPerHour()) or 1
+        )
+        local effectiveWorkPerHour = baseWorkPerHour * effectiveSpeed
+        local remainingWorkAmount = math.max(0, workTarget - progressAmount)
+        local remainingWorldHours = effectiveWorkPerHour > 0 and (remainingWorkAmount / effectiveWorkPerHour) or nil
+        local tokens = {
+            place = Inter.GetPlaceLabel(worker),
+            count = tostring(math.max(0, tonumber(worker.outputCount) or 0)),
+            eta = Inter.formatDurationHours(remainingWorldHours),
+            progress = Inter.formatWholeAmount(progressAmount),
+            total = Inter.formatWholeAmount(workTarget)
+        }
+        return {
+            label = DynamicTrading.FormatInteractionString(template.activeText, tokens),
+            displayText = DynamicTrading.FormatInteractionString(template.activeText, tokens),
+            fillRatio = math.max(0, math.min(1, progressAmount / workTarget)),
+            captionText = DynamicTrading.FormatInteractionString(template.captionText, tokens),
+            summaryText = Inter.formatWholeAmount(progressAmount)
+                .. " / " .. Inter.formatWholeAmount(workTarget)
+                .. " work | Speed x" .. Inter.formatDecimal(effectiveSpeed, 2),
+            progressAmount = progressAmount,
+            workTarget = workTarget,
+            progressHours = progressAmount,
+            cycleHours = workTarget,
+            remainingWorldHours = remainingWorldHours,
+            baseSpeedMultiplier = baseSpeed,
+            skillSpeedMultiplier = skillSpeed,
+            equipmentSpeedMultiplier = equipmentSpeed,
+            effectiveSpeedMultiplier = effectiveSpeed,
+            effectiveWorkPerHour = effectiveWorkPerHour,
+            color = template.color
+        }
+    end
 end
