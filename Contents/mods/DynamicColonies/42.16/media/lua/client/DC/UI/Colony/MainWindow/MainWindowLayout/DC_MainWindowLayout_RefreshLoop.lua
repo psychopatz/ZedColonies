@@ -65,8 +65,7 @@ function DC_MainWindow:prerender()
 
     local th = self:titleBarHeight()
     local pad = 10
-    local listY = th + pad + 38
+    local listY = th + (self.headerPanel and self.headerPanel:getHeight() or 34) + pad + 38
     local contentHeight = self.height - listY - 38 - pad
     self:drawRectBorder(10, listY, 280, contentHeight, 0.4, 1, 1, 1)
-    self:drawTextCentre("LABOUR MANAGEMENT", self.width / 2, th + 6, 1, 1, 1, 1, UIFont.Large)
 end

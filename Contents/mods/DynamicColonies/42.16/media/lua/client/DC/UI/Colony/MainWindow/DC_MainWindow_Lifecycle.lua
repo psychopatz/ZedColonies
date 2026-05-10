@@ -1,7 +1,7 @@
 DC_MainWindow = DC_MainWindow or {}
 DC_MainWindow.Internal = DC_MainWindow.Internal or {}
 
-function DC_MainWindow.ToggleWindow()
+function DC_MainWindow.ToggleWindow(device)
     if DC_MainWindow.instance then
         if DC_MainWindow.instance:getIsVisible() then
             DC_MainWindow.instance:close()
@@ -9,6 +9,7 @@ function DC_MainWindow.ToggleWindow()
             DC_MainWindow.instance:setVisible(true)
             DC_MainWindow.instance:addToUIManager()
             DC_MainWindow.instance:bringToTop()
+            DC_MainWindow.instance.device = device
             DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers or {})
             if DC_MainWindow.instance.onRefresh then
                 DC_MainWindow.instance:onRefresh()
@@ -18,14 +19,15 @@ function DC_MainWindow.ToggleWindow()
         return
     end
 
-    DC_MainWindow.Open()
+    DC_MainWindow.Open(device)
 end
 
-function DC_MainWindow.Open()
+function DC_MainWindow.Open(device)
     if DC_MainWindow.instance then
         DC_MainWindow.instance:setVisible(true)
         DC_MainWindow.instance:addToUIManager()
         DC_MainWindow.instance:bringToTop()
+        DC_MainWindow.instance.device = device
         DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers or {})
         if DC_MainWindow.instance.onRefresh then
             DC_MainWindow.instance:onRefresh()
@@ -42,6 +44,7 @@ function DC_MainWindow.Open()
     local window = DC_MainWindow:new(x, y, width, height)
     window:initialise()
     window:instantiate()
+    window.device = device
     window:setVisible(true)
     window:addToUIManager()
     window:bringToTop()

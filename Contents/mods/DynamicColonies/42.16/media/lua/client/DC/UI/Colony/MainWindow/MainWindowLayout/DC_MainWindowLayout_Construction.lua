@@ -40,11 +40,58 @@ function MainWindowLayout.applyToggleButtonStyle(button, isDanger)
     }
 end
 
-function DC_MainWindow:initialise()
-    ISCollapsableWindow.initialise(self)
-    self:setResizable(true)
-    self.minimumWidth = 980
-    self.minimumHeight = 620
+-- Header Panel Class
+DC_MainWindowHeaderPanel = ISPanel:derive("DC_MainWindowHeaderPanel")
+
+function DC_MainWindowHeaderPanel:createChildren()
+    ISPanel.createChildren(self)
+
+    local btnSize = 18
+    self.btnOptions = ISButton:new(self.width - btnSize - 10, 5, btnSize, btnSize, "", self, function()
+        if DT_V2_OptionsManager and DT_V2_OptionsManager.ToggleWindow then
+            DT_V2_OptionsManager.ToggleWindow()
+        end
+    end)
+    self.btnOptions:initialise()
+    self.btnOptions.borderColor = { r = 1, g = 1, b = 1, a = 0.2 }
+    self.btnOptions.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
+    self.btnOptions:setImage(getTexture("media/ui/inventoryPanes/Button_Settings.png"))
+    self.btnOptions.displayBackground = false
+    self:addChild(self.btnOptions)
+
+    self.btnHelpIcon = ISButton:new(self.width - (btnSize * 2) - 15, 5, btnSize, btnSize, "", self, function()
+        if self.parent and self.parent.onOpenHelp then
+            self.parent:onOpenHelp()
+        end
+    end)
+    self.btnHelpIcon:initialise()
+    self.btnHelpIcon.borderColor = { r = 1, g = 1, b = 1, a = 0.2 }
+    self.btnHelpIcon.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
+    self.btnHelpIcon:setImage(getTexture("media/ui/Entity/BTN_Missing_Icon_48x48.png"))
+    self.btnHelpIcon.displayBackground = false
+    self:addChild(self.btnHelpIcon)
+end
+
+function DC_MainWindowHeaderPanel:prerender()
+    ISPanel.prerender(self)
+    local th = 0 -- Relative to panel
+    self:drawTextCentre("LABOUR MANAGEMENT", self.width / 2, 6, 1, 1, 1, 1, UIFont.Large)
+
+    if self.btnOptions then
+        self.btnOptions:setX(self.width - self.btnOptions:getWidth() - 10)
+    end
+    if self.btnHelpIcon then
+        local offset = self.btnOptions and (self.btnOptions:getWidth() + 5) or 0
+        self.btnHelpIcon:setX(self.width - self.btnHelpIcon:getWidth() - 10 - offset)
+    end
+end
+
+function DC_MainWindowHeaderPanel:new(x, y, width, height)
+    local o = ISPanel:new(x, y, width, height)
+    setmetatable(o, self)
+    self.__index = self
+    o.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
+    return o
 end
 
 function DC_MainWindow:createChildren()
@@ -52,7 +99,14 @@ function DC_MainWindow:createChildren()
 
     local th = self:titleBarHeight()
     local pad = 10
-    local headerY = th + pad + MainWindowLayout.WINDOW_HEADER_CLEARANCE
+    local headerH = 34
+    
+    self.headerPanel = DC_MainWindowHeaderPanel:new(0, th, self.width, headerH)
+    self.headerPanel:initialise()
+    self.headerPanel:setAnchorRight(true)
+    self:addChild(self.headerPanel)
+
+    local headerY = th + headerH + pad
     local buttonY = headerY
     local listY = headerY + 38
     local footerH = 38
@@ -73,7 +127,7 @@ function DC_MainWindow:createChildren()
     self.btnRefresh:initialise()
     self:addChild(self.btnRefresh)
 
-    self.btnToggleJob = ISButton:new(110, buttonY, 120, 28, "Start Job", self, self.onToggleJob)
+    self.btnToggleJob = ISButton:new(110, buttonY, 120, 28, "Start Duty", self, self.onToggleJob)
     self.btnToggleJob:initialise()
     MainWindowLayout.applyToggleButtonStyle(self.btnToggleJob, false)
     self:addChild(self.btnToggleJob)
@@ -91,11 +145,7 @@ function DC_MainWindow:createChildren()
     self.btnBuildings:initialise()
     self:addChild(self.btnBuildings)
 
-    self.btnHelp = ISButton:new(600, buttonY, 80, 28, "Help", self, self.onOpenHelp)
-    self.btnHelp:initialise()
-    self:addChild(self.btnHelp)
-
-    self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Faction", self, self.onOpenFaction)
+    self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Open Faction", self, self.onOpenFaction)
     self.btnFaction:initialise()
     self:addChild(self.btnFaction)
 

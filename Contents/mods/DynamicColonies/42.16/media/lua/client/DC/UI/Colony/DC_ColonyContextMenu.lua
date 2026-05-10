@@ -7,13 +7,14 @@ local function openColonyWindow()
     DC_System.OpenWindow()
 end
 
-local function OnFillWorldObjectContextMenu(playerNum, context, worldObjects, test)
-    if test then return end
-
-    local player = getSpecificPlayer(playerNum)
-    if not player then return end
-
-    context:addOption("Colony Management", nil, openColonyWindow)
-end
-
-Events.OnFillWorldObjectContextMenu.Add(OnFillWorldObjectContextMenu)
+-- The Colony Management right-click option has been moved to the Radio UI.
+-- local function OnFillWorldObjectContextMenu(playerNum, context, worldObjects, test)
+--     if test then return end
+-- 
+--     local player = getSpecificPlayer(playerNum)
+--     if not player then return end
+-- 
+--     context:addOption("Colony Management", nil, openColonyWindow)
+-- end
+-- 
+-- Events.OnFillWorldObjectContextMenu.Add(OnFillWorldObjectContextMenu)
