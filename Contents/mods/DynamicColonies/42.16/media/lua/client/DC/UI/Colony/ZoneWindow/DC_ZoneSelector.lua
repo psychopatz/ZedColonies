@@ -86,6 +86,123 @@ function DC_ZoneSelector:initialise()
     self.btnExpand:instantiate()
     self.btnExpand:setVisible(false)
     self:addChild(self.btnExpand)
+
+    -- Fine-tune row (Higher up)
+    local fy = y - BUTTON_HGT - 8
+    local arrowW = 32
+    local labelW = 60
+
+    -- Nudge label
+    self.lblNudge = ISLabel:new(UI_BORDER_SPACING, fy + 4, 18, "Nudge:", 1, 1, 1, 1, UIFont.Small, true)
+    self.lblNudge:initialise()
+    self.lblNudge:setVisible(false)
+    self:addChild(self.lblNudge)
+
+    -- Nudge Buttons (Left, Right, Up, Down)
+    local nx = UI_BORDER_SPACING + labelW
+    self.btnNudgeW = ISButton:new(nx, fy, arrowW, 22, "<", self, function() self:nudge(-1, 0) end)
+    self.btnNudgeW:initialise()
+    self.btnNudgeW:setVisible(false)
+    self:addChild(self.btnNudgeW)
+
+    self.btnNudgeE = ISButton:new(nx + arrowW + 4, fy, arrowW, 22, ">", self, function() self:nudge(1, 0) end)
+    self.btnNudgeE:initialise()
+    self.btnNudgeE:setVisible(false)
+    self:addChild(self.btnNudgeE)
+
+    self.btnNudgeN = ISButton:new(nx + (arrowW + 4) * 2, fy, arrowW, 22, "^", self, function() self:nudge(0, -1) end)
+    self.btnNudgeN:initialise()
+    self.btnNudgeN:setVisible(false)
+    self:addChild(self.btnNudgeN)
+
+    self.btnNudgeS = ISButton:new(nx + (arrowW + 4) * 3, fy, arrowW, 22, "v", self, function() self:nudge(0, 1) end)
+    self.btnNudgeS:initialise()
+    self.btnNudgeS:setVisible(false)
+    self:addChild(self.btnNudgeS)
+
+    -- Scale Row
+    local sy = fy - 26
+    self.lblScale = ISLabel:new(UI_BORDER_SPACING, sy + 4, 18, "Scale:", 1, 1, 1, 1, UIFont.Small, true)
+    self.lblScale:initialise()
+    self.lblScale:setVisible(false)
+    self:addChild(self.lblScale)
+
+    local sx = UI_BORDER_SPACING + labelW
+    self.btnScaleW = ISButton:new(sx, sy, arrowW, 22, "W", self, function() self:scale("W", 1) end)
+    self.btnScaleW:initialise()
+    self.btnScaleW:setVisible(false)
+    self:addChild(self.btnScaleW)
+
+    self.btnScaleE = ISButton:new(sx + arrowW + 4, sy, arrowW, 22, "E", self, function() self:scale("E", 1) end)
+    self.btnScaleE:initialise()
+    self.btnScaleE:setVisible(false)
+    self:addChild(self.btnScaleE)
+
+    self.btnScaleN = ISButton:new(sx + (arrowW + 4) * 2, sy, arrowW, 22, "N", self, function() self:scale("N", 1) end)
+    self.btnScaleN:initialise()
+    self.btnScaleN:setVisible(false)
+    self:addChild(self.btnScaleN)
+
+    self.btnScaleS = ISButton:new(sx + (arrowW + 4) * 3, sy, arrowW, 22, "S", self, function() self:scale("S", 1) end)
+    self.btnScaleS:initialise()
+    self.btnScaleS:setVisible(false)
+    self:addChild(self.btnScaleS)
+
+    -- Shift logic: if holding shift, scale inwards
+    self.btnScaleW_Inner = ISButton:new(sx + 160, sy, arrowW, 22, "-W", self, function() self:scale("W", -1) end)
+    self.btnScaleW_Inner:initialise()
+    self.btnScaleW_Inner:setVisible(false)
+    self:addChild(self.btnScaleW_Inner)
+
+    self.btnScaleE_Inner = ISButton:new(sx + 160 + arrowW + 4, sy, arrowW, 22, "-E", self, function() self:scale("E", -1) end)
+    self.btnScaleE_Inner:initialise()
+    self.btnScaleE_Inner:setVisible(false)
+    self:addChild(self.btnScaleE_Inner)
+
+    self.btnScaleN_Inner = ISButton:new(sx + 160 + (arrowW + 4) * 2, sy, arrowW, 22, "-N", self, function() self:scale("N", -1) end)
+    self.btnScaleN_Inner:initialise()
+    self.btnScaleN_Inner:setVisible(false)
+    self:addChild(self.btnScaleN_Inner)
+
+    self.btnScaleS_Inner = ISButton:new(sx + 160 + (arrowW + 4) * 3, sy, arrowW, 22, "-S", self, function() self:scale("S", -1) end)
+    self.btnScaleS_Inner:initialise()
+    self.btnScaleS_Inner:setVisible(false)
+    self:addChild(self.btnScaleS_Inner)
+end
+
+
+-- ---------------------------------------------------------------------------
+-- Fine-tune Actions
+-- ---------------------------------------------------------------------------
+
+function DC_ZoneSelector:nudge(dx, dy)
+    self.startingX = self.startingX + dx
+    self.endX = self.endX + dx
+    self.startingY = self.startingY + dy
+    self.endY = self.endY + dy
+end
+
+function DC_ZoneSelector:scale(edge, amount)
+    -- Order rect so we know which side is which
+    local x1 = math.min(self.startingX, self.endX)
+    local x2 = math.max(self.startingX, self.endX)
+    local y1 = math.min(self.startingY, self.endY)
+    local y2 = math.max(self.startingY, self.endY)
+
+    if edge == "W" then x1 = x1 - amount
+    elseif edge == "E" then x2 = x2 + amount
+    elseif edge == "N" then y1 = y1 - amount
+    elseif edge == "S" then y2 = y2 + amount
+    end
+
+    -- Enforce min size
+    if x1 > x2 - 1 then x1 = x2 - 1 end
+    if y1 > y2 - 1 then y1 = y2 - 1 end
+
+    self.startingX = x1
+    self.endX = x2
+    self.startingY = y1
+    self.endY = y2
 end
 
 
@@ -146,7 +263,25 @@ function DC_ZoneSelector:setPreviewButtonsVisible(visible)
     if self.btnConfirm then self.btnConfirm:setVisible(visible) end
     if self.btnReset then self.btnReset:setVisible(visible) end
     if self.btnExpand then self.btnExpand:setVisible(visible) end
+
+    -- Fine-tune controls
+    if self.lblNudge then self.lblNudge:setVisible(visible) end
+    if self.btnNudgeW then self.btnNudgeW:setVisible(visible) end
+    if self.btnNudgeE then self.btnNudgeE:setVisible(visible) end
+    if self.btnNudgeN then self.btnNudgeN:setVisible(visible) end
+    if self.btnNudgeS then self.btnNudgeS:setVisible(visible) end
+
+    if self.lblScale then self.lblScale:setVisible(visible) end
+    if self.btnScaleW then self.btnScaleW:setVisible(visible) end
+    if self.btnScaleE then self.btnScaleE:setVisible(visible) end
+    if self.btnScaleN then self.btnScaleN:setVisible(visible) end
+    if self.btnScaleS then self.btnScaleS:setVisible(visible) end
+    if self.btnScaleW_Inner then self.btnScaleW_Inner:setVisible(visible) end
+    if self.btnScaleE_Inner then self.btnScaleE_Inner:setVisible(visible) end
+    if self.btnScaleN_Inner then self.btnScaleN_Inner:setVisible(visible) end
+    if self.btnScaleS_Inner then self.btnScaleS_Inner:setVisible(visible) end
 end
+
 
 
 -- ---------------------------------------------------------------------------

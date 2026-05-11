@@ -21,6 +21,23 @@ function DC_ZoneWindow:refreshDetailPanel()
     if self.btnShowArea then self.btnShowArea:setEnable(hasRect) end
     if self.btnEditArea then self.btnEditArea:setEnable(hasRect) end
 
+    -- Nudge/Scale buttons
+    if self.btnNudgeW_Main then self.btnNudgeW_Main:setEnable(hasRect) end
+    if self.btnNudgeE_Main then self.btnNudgeE_Main:setEnable(hasRect) end
+    if self.btnNudgeN_Main then self.btnNudgeN_Main:setEnable(hasRect) end
+    if self.btnNudgeS_Main then self.btnNudgeS_Main:setEnable(hasRect) end
+
+    if self.btnScaleW_Main then self.btnScaleW_Main:setEnable(hasRect) end
+    if self.btnScaleE_Main then self.btnScaleE_Main:setEnable(hasRect) end
+    if self.btnScaleN_Main then self.btnScaleN_Main:setEnable(hasRect) end
+    if self.btnScaleS_Main then self.btnScaleS_Main:setEnable(hasRect) end
+
+    if self.btnScaleW_Inn_Main then self.btnScaleW_Inn_Main:setEnable(hasRect) end
+    if self.btnScaleE_Inn_Main then self.btnScaleE_Inn_Main:setEnable(hasRect) end
+    if self.btnScaleN_Inn_Main then self.btnScaleN_Inn_Main:setEnable(hasRect) end
+    if self.btnScaleS_Inn_Main then self.btnScaleS_Inn_Main:setEnable(hasRect) end
+
+
     -- Name entry
     if self.detailNameEntry then
         if hasZone then
@@ -95,5 +112,21 @@ function DC_ZoneWindow:onRectListMouseDown(item)
         if self.btnDeleteArea then self.btnDeleteArea:setEnable(true) end
         if self.btnShowArea then self.btnShowArea:setEnable(true) end
         if self.btnEditArea then self.btnEditArea:setEnable(true) end
+
+        if self.btnNudgeW_Main then self.btnNudgeW_Main:setEnable(true) end
+        if self.btnNudgeE_Main then self.btnNudgeE_Main:setEnable(true) end
+        if self.btnNudgeN_Main then self.btnNudgeN_Main:setEnable(true) end
+        if self.btnNudgeS_Main then self.btnNudgeS_Main:setEnable(true) end
+
+        if self.btnScaleW_Main then self.btnScaleW_Main:setEnable(true) end
+        if self.btnScaleE_Main then self.btnScaleE_Main:setEnable(true) end
+        if self.btnScaleN_Main then self.btnScaleN_Main:setEnable(true) end
+        if self.btnScaleS_Main then self.btnScaleS_Main:setEnable(true) end
+
+        if self.btnScaleW_Inn_Main then self.btnScaleW_Inn_Main:setEnable(true) end
+        if self.btnScaleE_Inn_Main then self.btnScaleE_Inn_Main:setEnable(true) end
+        if self.btnScaleN_Inn_Main then self.btnScaleN_Inn_Main:setEnable(true) end
+        if self.btnScaleS_Inn_Main then self.btnScaleS_Inn_Main:setEnable(true) end
     end
+
 end

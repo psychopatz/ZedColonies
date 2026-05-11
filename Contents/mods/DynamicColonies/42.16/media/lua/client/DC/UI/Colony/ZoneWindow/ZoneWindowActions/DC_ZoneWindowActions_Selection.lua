@@ -130,3 +130,26 @@ function DC_ZoneWindow:onEditArea()
     selector:initialise()
     selector:addToUIManager()
 end
+
+
+--- Nudge the selected rect.
+function DC_ZoneWindow:onNudgeRect(dx, dy)
+    if not self.selectedZone or not self.selectedRect then return end
+    local rect = self.selectedZone.rects[self.selectedRect]
+    if not rect then return end
+
+    DC_ZoneData.nudgeRect(rect, dx, dy)
+    self:refreshDetailPanel()
+end
+
+
+--- Scale the selected rect.
+function DC_ZoneWindow:onScaleRect(edge, amount)
+    if not self.selectedZone or not self.selectedRect then return end
+    local rect = self.selectedZone.rects[self.selectedRect]
+    if not rect then return end
+
+    DC_ZoneData.scaleRect(rect, edge, amount)
+    self:refreshDetailPanel()
+end
+
