@@ -14,9 +14,12 @@ function DC_ZoneWindow:refreshDetailPanel()
 
     -- Enable/disable controls based on selection
     local hasZone = zone ~= nil
+    local hasRect = hasZone and self.selectedRect ~= nil
     if self.btnDeleteZone then self.btnDeleteZone:setEnable(hasZone) end
     if self.btnAddArea then self.btnAddArea:setEnable(hasZone) end
-    if self.btnDeleteArea then self.btnDeleteArea:setEnable(false) end
+    if self.btnDeleteArea then self.btnDeleteArea:setEnable(hasRect) end
+    if self.btnShowArea then self.btnShowArea:setEnable(hasRect) end
+    if self.btnEditArea then self.btnEditArea:setEnable(hasRect) end
 
     -- Name entry
     if self.detailNameEntry then
@@ -89,8 +92,8 @@ function DC_ZoneWindow:onRectListMouseDown(item)
 
     if data and data.index then
         self.selectedRect = data.index
-        if self.btnDeleteArea then
-            self.btnDeleteArea:setEnable(true)
-        end
+        if self.btnDeleteArea then self.btnDeleteArea:setEnable(true) end
+        if self.btnShowArea then self.btnShowArea:setEnable(true) end
+        if self.btnEditArea then self.btnEditArea:setEnable(true) end
     end
 end

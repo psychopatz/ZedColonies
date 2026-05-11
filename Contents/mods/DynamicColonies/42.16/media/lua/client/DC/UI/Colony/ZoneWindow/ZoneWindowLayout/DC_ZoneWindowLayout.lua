@@ -8,3 +8,4 @@ DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
 require "DC/UI/Colony/ZoneWindow/ZoneWindowLayout/DC_ZoneWindowLayout_Shared"
 require "DC/UI/Colony/ZoneWindow/ZoneWindowLayout/DC_ZoneWindowLayout_DynamicLayout"
 require "DC/UI/Colony/ZoneWindow/ZoneWindowLayout/DC_ZoneWindowLayout_Construction"
+-- NOTE: ZoneWindowMap must be loaded before Layout_Construction (handled by entry point)

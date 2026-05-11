@@ -63,7 +63,8 @@ function DC_ZoneWindow:createChildren()
     -- Computed positions (will be refined by applyWindowLayout)
     local headerY    = th + pad + L.WINDOW_HEADER_CLEARANCE
     local toolbarY   = headerY + L.HEADER_HEIGHT + 4
-    local contentY   = toolbarY + L.TOOLBAR_HEIGHT + pad
+    local tabBarH    = L.TAB_BAR_HEIGHT or 30
+    local contentY   = toolbarY + L.TOOLBAR_HEIGHT + tabBarH + pad
     local footerH    = L.BUTTON_BAR_HEIGHT
     local contentH   = self.height - contentY - footerH - pad
     local listWidth  = math.max(L.LIST_MIN_WIDTH, math.floor(self.width * 0.35))
@@ -101,6 +102,30 @@ function DC_ZoneWindow:createChildren()
     self.btnDeleteZone.backgroundColor = { r = 0.45, g = 0.08, b = 0.08, a = 1 }
     self.btnDeleteZone.backgroundColorMouseOver = { r = 0.62, g = 0.12, b = 0.12, a = 1 }
     self.toolbar:addChild(self.btnDeleteZone)
+
+
+    -- ===== TAB BAR =====
+    local tabBarY = toolbarY + L.TOOLBAR_HEIGHT + 2
+    self.tabBar = ISPanel:new(pad, tabBarY, self.width - pad * 2, 28)
+    self.tabBar:initialise()
+    self.tabBar.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
+    self.tabBar:setAnchorRight(true)
+    self:addChild(self.tabBar)
+
+    self.btnTabZones = ISButton:new(0, 0, 100, 26, "Zones", self, DC_ZoneWindow.onSwitchTab)
+    self.btnTabZones.internal = "TAB_ZONES"
+    self.btnTabZones:initialise()
+    self.btnTabZones.backgroundColor = { r = 0.2, g = 0.2, b = 0.2, a = 1 }
+    self.btnTabZones.backgroundColorMouseOver = { r = 0.3, g = 0.3, b = 0.3, a = 1 }
+    self.btnTabZones.borderColor = { r = 0.6, g = 0.8, b = 1.0, a = 0.6 }
+    self.tabBar:addChild(self.btnTabZones)
+
+    self.btnTabMap = ISButton:new(110, 0, 100, 26, "Map", self, DC_ZoneWindow.onSwitchTab)
+    self.btnTabMap.internal = "TAB_MAP"
+    self.btnTabMap:initialise()
+    self.tabBar:addChild(self.btnTabMap)
+
+    self.activeTab = "TAB_ZONES"
 
 
     -- ===== ZONE LIST (left side) =====
@@ -206,6 +231,27 @@ function DC_ZoneWindow:createChildren()
     self.btnDeleteArea.backgroundColor = { r = 0.45, g = 0.08, b = 0.08, a = 1 }
     self.btnDeleteArea.backgroundColorMouseOver = { r = 0.62, g = 0.12, b = 0.12, a = 1 }
     self.rectToolbar:addChild(self.btnDeleteArea)
+
+    self.btnShowArea = ISButton:new(240, 3, 110, 28, "Show Area", self, DC_ZoneWindow.onShowArea)
+    self.btnShowArea:initialise()
+    self.btnShowArea:setEnable(false)
+    self.rectToolbar:addChild(self.btnShowArea)
+
+    self.btnEditArea = ISButton:new(360, 3, 110, 28, "Edit Area", self, DC_ZoneWindow.onEditArea)
+    self.btnEditArea:initialise()
+    self.btnEditArea:setEnable(false)
+    self.rectToolbar:addChild(self.btnEditArea)
+
+
+    -- ===== MAP PANEL (hidden by default, shown on Map tab) =====
+    self.mapPanel = DC_ZoneWindowMapPanel and DC_ZoneWindowMapPanel:new(pad, contentY, self.width - pad * 2, contentH, self) or nil
+    if self.mapPanel then
+        self.mapPanel:initialise()
+        self.mapPanel:setVisible(false)
+        self.mapPanel:setAnchorRight(true)
+        self.mapPanel:setAnchorBottom(true)
+        self:addChild(self.mapPanel)
+    end
 
 
     -- Apply dynamic layout

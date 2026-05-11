@@ -12,6 +12,7 @@ ZoneWindowLayout.PANEL_INNER_PAD       = 8
 ZoneWindowLayout.PANEL_HEADER_HEIGHT   = 32
 ZoneWindowLayout.HEADER_HEIGHT         = 34
 ZoneWindowLayout.TOOLBAR_HEIGHT        = 34
+ZoneWindowLayout.TAB_BAR_HEIGHT        = 30
 ZoneWindowLayout.LIST_MIN_WIDTH        = 220
 ZoneWindowLayout.DETAIL_MIN_HEIGHT     = 150
 ZoneWindowLayout.RECT_LIST_MIN_HEIGHT  = 120

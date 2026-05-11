@@ -29,3 +29,15 @@ function DC_ZoneWindow:new(x, y, width, height, player, colonyId)
 
     return o
 end
+
+
+--- Render tick
+function DC_ZoneWindow:prerender()
+    ISCollapsableWindow.prerender(self)
+
+    -- Handle 3D area highlight "flashing"
+    if self.tickShowArea then
+        self:tickShowArea()
+    end
+end
+
