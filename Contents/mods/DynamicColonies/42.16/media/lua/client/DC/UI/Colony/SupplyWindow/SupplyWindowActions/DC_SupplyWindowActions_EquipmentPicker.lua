@@ -62,6 +62,10 @@ function DC_SupplyWindow:openEquipmentPickerForWorkerEntry(entry)
         return false
     end
 
+    if self.requireCanonicalWorkerDetail == true and not self:canTransferWithWorker(true) then
+        return true
+    end
+
     local targetEntry = entry
     if Internal.isGroupEntry and Internal.isGroupEntry(entry) then
         targetEntry = (entry.childEntries and entry.childEntries[1]) or nil

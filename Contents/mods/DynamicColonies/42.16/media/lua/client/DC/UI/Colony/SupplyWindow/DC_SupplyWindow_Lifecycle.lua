@@ -160,7 +160,7 @@ function DC_SupplyWindow.Preload()
     return window
 end
 
-function DC_SupplyWindow.Open(worker, viewMode)
+function DC_SupplyWindow.Open(worker, viewMode, options)
     if not worker or not worker.workerID then
         return
     end
@@ -168,10 +168,15 @@ function DC_SupplyWindow.Open(worker, viewMode)
     closeConflictingWindows()
 
     local window = DC_SupplyWindow.Preload()
+    options = type(options) == "table" and options or {}
 
     window.workerID = worker.workerID
     window.workerName = worker.name or worker.workerID
     window.viewMode = viewMode or (DC_SupplyWindow.Internal.ViewModes and DC_SupplyWindow.Internal.ViewModes.Inventory) or "inventory"
+    window.openContext = options
+    window.isCompanionOpen = options.companionOpen == true
+    window.requireCanonicalWorkerDetail = options.requireCanonicalWorkerDetail == true
+    window.forceRefresh = options.forceRefresh == true
     window.activeTab = DC_SupplyWindow.Internal and DC_SupplyWindow.Internal.Tabs and DC_SupplyWindow.Internal.Tabs.Provisions or "provisions"
     window.selectedPlayerEntry = nil
     window.selectedWorkerEntry = nil
@@ -198,7 +203,10 @@ function DC_SupplyWindow.Open(worker, viewMode)
     window.fullHydrationRequested = false
     window.deferredEquipmentPreloadPending = true
     window.deferredEquipmentPreloadTicks = 0
-    local cachedWorker = DC_MainWindow and DC_MainWindow.cachedDetails and DC_MainWindow.cachedDetails[worker.workerID] or nil
+    local cachedWorker = DC_SupplyWindow.Internal
+        and DC_SupplyWindow.Internal.resolveWorkerDetail
+        and DC_SupplyWindow.Internal.resolveWorkerDetail(worker.workerID)
+        or (DC_MainWindow and DC_MainWindow.cachedDetails and DC_MainWindow.cachedDetails[worker.workerID] or nil)
     if cachedWorker then
         window.workerDetailVersion = DC_MainWindow and DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[worker.workerID] or nil
         window.initialSummarySyncPending = nil
@@ -209,9 +217,19 @@ function DC_SupplyWindow.Open(worker, viewMode)
     window:bringToTop()
     window:setWorkerData(mergeWorkerData(cachedWorker, buildWorkerShell(worker)))
     window:startInventoryScan()
+    if window.requireCanonicalWorkerDetail and window.requestWorkerDetails then
+        window:requestWorkerDetails({
+            includeWorkerLedgers = true,
+            includeWarehouseLedgers = true,
+            bypassWorkerKnownVersion = window.forceRefresh == true,
+            bypassWarehouseKnownVersion = window.forceRefresh == true,
+        })
+    end
     window:updateStatus(
-        (window.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) and "Opening warehouse for " or "Opening inventory for ")
-            .. subjectName .. "..."
+        window.isCompanionOpen == true
+            and ("Loading companion inventory for " .. subjectName .. "...")
+            or ((window.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) and "Opening warehouse for " or "Opening inventory for ")
+                .. subjectName .. "...")
     )
 end
 

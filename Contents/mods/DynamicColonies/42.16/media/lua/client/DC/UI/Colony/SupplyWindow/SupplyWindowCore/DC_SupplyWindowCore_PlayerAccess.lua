@@ -3,6 +3,24 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function getWorkerIDCandidates(workerID)
+    if workerID == nil then
+        return {}
+    end
+
+    local textID = tostring(workerID)
+    if textID == "" then
+        return {}
+    end
+
+    local candidates = { textID }
+    local numericID = tonumber(textID)
+    if numericID ~= nil then
+        candidates[#candidates + 1] = numericID
+    end
+    return candidates
+end
+
 function Internal.getCommandModule()
     local config = Internal.Config
     if type(config) == "table" and config.COMMAND_MODULE and config.COMMAND_MODULE ~= "" then
@@ -100,7 +118,15 @@ function Internal.resolveWorkerDetail(workerID)
 
     if isClient() and not isServer() then
         local cache = DC_MainWindow and DC_MainWindow.cachedDetails or nil
-        return cache and cache[workerID] or nil
+        if type(cache) == "table" then
+            for _, candidate in ipairs(getWorkerIDCandidates(workerID)) do
+                local worker = cache[candidate]
+                if worker then
+                    return worker
+                end
+            end
+        end
+        return nil
     end
 
     if DC_Colony and DC_Colony.Registry and DC_Colony.Registry.GetWorkerDetailsForOwner then
@@ -109,7 +135,12 @@ function Internal.resolveWorkerDetail(workerID)
         if Internal.Config and Internal.Config.GetOwnerUsername then
             owner = Internal.Config.GetOwnerUsername(player)
         end
-        return DC_Colony.Registry.GetWorkerDetailsForOwner(owner or "local", workerID, false, true)
+        for _, candidate in ipairs(getWorkerIDCandidates(workerID)) do
+            local worker = DC_Colony.Registry.GetWorkerDetailsForOwner(owner or "local", candidate, false, true)
+            if worker then
+                return worker
+            end
+        end
     end
 
     return nil

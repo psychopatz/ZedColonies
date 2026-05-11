@@ -42,6 +42,8 @@ function Internal.StartWorkerCompanion(player, worker)
     companionData.returnReason = nil
     companionData.returnTravelHours = nil
     companionData.homeRecoveryLogged = false
+    companionData.travelLastProgressHour = Internal.GetCurrentWorldHours()
+    companionData.travelLastRemainingHours = Internal.GetTravelHours()
     Internal.AssignWorkerCompanionCommander(player, worker, Internal.GetPlayerUsername(player), "started")
 
     worker.presenceState = Config.PresenceStates.CompanionToPlayer
@@ -49,7 +51,14 @@ function Internal.StartWorkerCompanion(player, worker)
     worker.returnReason = nil
     worker.state = Config.States.Working
 
-    Internal.SyncNPCFromWorker(worker, uuid)
+    local syncedSoul = Internal.SyncNPCFromWorker(worker, uuid) == true
+    Internal.SyncCommanderToSoul(worker)
+
+    if not syncedSoul then
+        Internal.Debug("StartWorkerCompanion failed to sync companion soul workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid))
+        Internal.RestoreWorkerAfterFailedStart(worker)
+        return false, "Unable to synchronize companion data."
+    end
 
     if isClient() and not isServer() then
         Internal.Debug("StartWorkerCompanion client optimistic success workerID=" .. tostring(worker.workerID) .. " uuid=" .. tostring(uuid))

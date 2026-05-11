@@ -4,6 +4,45 @@ DC_Colony.Companion = DC_Colony.Companion or {}
 local Internal = DC_Colony.Companion.Internal
 local Config = Internal.Config
 
+local function setTravelProgressMarker(companionData, currentHour, remainingHours)
+    if not companionData then
+        return
+    end
+
+    companionData.travelLastProgressHour = tonumber(currentHour) or companionData.travelLastProgressHour
+    companionData.travelLastRemainingHours = math.max(0, tonumber(remainingHours) or 0)
+end
+
+local function applyTravelProgressFailsafe(worker, companionData, currentHour, deltaHours)
+    local remainingHours = math.max(0, tonumber(worker and worker.travelHoursRemaining) or 0)
+    if remainingHours <= 0 then
+        setTravelProgressMarker(companionData, currentHour, remainingHours)
+        return false
+    end
+
+    local lastProgressHour = tonumber(companionData and companionData.travelLastProgressHour) or nil
+    local lastRemainingHours = tonumber(companionData and companionData.travelLastRemainingHours) or nil
+    if lastProgressHour == nil or lastRemainingHours == nil or remainingHours < (lastRemainingHours - 0.0001) then
+        setTravelProgressMarker(companionData, currentHour, remainingHours)
+        return false
+    end
+
+    local graceHours = math.max(0.25, math.min(1.0, tonumber(Internal.GetTravelHours and Internal.GetTravelHours()) or 1))
+    if (tonumber(currentHour) or 0) - lastProgressHour < graceHours then
+        return false
+    end
+
+    local forcedStep = math.max(0.05, tonumber(deltaHours) or 0)
+    worker.travelHoursRemaining = math.max(0, remainingHours - forcedStep)
+    setTravelProgressMarker(companionData, currentHour, worker.travelHoursRemaining)
+    Internal.Debug(
+        "Companion travel failsafe advanced workerID=" .. tostring(worker and worker.workerID)
+            .. " presenceState=" .. tostring(worker and worker.presenceState)
+            .. " remaining=" .. tostring(worker and worker.travelHoursRemaining)
+    )
+    return true
+end
+
 function Internal.UpdateTravelCompanionWorker(worker, ctx)
     if not worker or not Internal.IsTravelCompanionWorker(worker) then
         return false
@@ -74,14 +113,37 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
             worker.state = Config.States.Working
             return true
         end
+        if worker.state ~= Config.States.Working then
+            worker.state = Config.States.Working
+        end
         if not worker.jobEnabled then
             Internal.BeginWorkerCompanionReturn(nil, worker, Config.ReturnReasons.Manual)
             return true
+        end
+        local uuid = Internal.GetCompanionUUID(worker)
+        if not uuid or not Internal.GetSoul(uuid) then
+            local syncedUUID = uuid
+            if not syncedUUID then
+                syncedUUID = select(1, Internal.CreateCompanionSoul(worker))
+            end
+            if syncedUUID then
+                uuid = syncedUUID
+                companionData.uuid = syncedUUID
+                Internal.SyncNPCFromWorker(worker, syncedUUID)
+                Internal.SyncCommanderToSoul(worker)
+            else
+                Internal.BeginWorkerCompanionReturn(nil, worker, Config.ReturnReasons.Manual)
+                return true
+            end
         end
         worker.travelHoursRemaining = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
         if deltaHours > 0 then
             worker.travelHoursRemaining = math.max(0, worker.travelHoursRemaining - deltaHours)
         end
+        if worker.travelHoursRemaining > 0 then
+            applyTravelProgressFailsafe(worker, companionData, currentHour, deltaHours)
+        end
+        setTravelProgressMarker(companionData, currentHour, worker.travelHoursRemaining)
         if energy and deltaHours > 0 then
             energy.ApplyTravelDrain(worker, deltaHours, profile)
         end
@@ -104,15 +166,37 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
                 and Internal.GetOnlinePlayerByUsername
                 and Internal.GetOnlinePlayerByUsername(commanderName)
                 or nil
-            local ordered = commanderPlayer
-                and Internal.IssueCommanderFollowOrder
-                and Internal.IssueCommanderFollowOrder(worker, commanderPlayer)
-                or false
+            Internal.SyncNPCFromWorker(worker, uuid)
+            Internal.SyncCommanderToSoul(worker)
+            local activated = false
+            local failureReason = nil
+            if commanderPlayer and DTNPCServerCore and DTNPCServerCore.ActivateArrivalByUUID then
+                activated, _, _, failureReason = DTNPCServerCore.ActivateArrivalByUUID(uuid, {
+                    controller = commanderPlayer,
+                    targetPlayer = commanderPlayer,
+                    targetUsername = commanderName,
+                    targetOnlineID = commanderPlayer.getOnlineID and commanderPlayer:getOnlineID() or nil,
+                    spawnPolicy = "nearby_follow",
+                    activationMode = "companion_follow",
+                    state = "Follow",
+                    status = "Working",
+                    returnTime = 0,
+                    returnStatus = nil,
+                    requestedReturnStatus = "Resting",
+                    invalidTargetBehavior = "abort",
+                })
+            elseif commanderPlayer and Internal.IssueCommanderFollowOrder then
+                activated = Internal.IssueCommanderFollowOrder(worker, commanderPlayer)
+            else
+                failureReason = "target_missing"
+            end
 
-            if ordered then
+            if activated == true then
                 Internal.MarkCompanionActive(worker)
                 Internal.AppendLog(worker, "Reached your location and is now traveling with you.", currentHour, "travel")
                 Internal.SaveRegistry()
+            elseif failureReason == "target_missing" then
+                Internal.BeginWorkerCompanionReturn(nil, worker, Config.ReturnReasons.Manual)
             else
                 worker.state = Config.States.Working
                 Internal.Debug(
@@ -132,6 +216,9 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
             worker.state = Config.States.Working
             return true
         end
+        if worker.state ~= Config.States.Incapacitated then
+            worker.state = Config.States.Idle
+        end
         if Internal.GetCompanionUUID(worker)
             and DTNPCServerCore
             and DTNPCServerCore.GetNPCDataByUUID
@@ -143,6 +230,10 @@ function Internal.UpdateTravelCompanionWorker(worker, ctx)
         if deltaHours > 0 then
             worker.travelHoursRemaining = math.max(0, worker.travelHoursRemaining - deltaHours)
         end
+        if worker.travelHoursRemaining > 0 then
+            applyTravelProgressFailsafe(worker, companionData, currentHour, deltaHours)
+        end
+        setTravelProgressMarker(companionData, currentHour, worker.travelHoursRemaining)
         if energy and deltaHours > 0 then
             energy.ApplyTravelDrain(worker, deltaHours, profile)
         end

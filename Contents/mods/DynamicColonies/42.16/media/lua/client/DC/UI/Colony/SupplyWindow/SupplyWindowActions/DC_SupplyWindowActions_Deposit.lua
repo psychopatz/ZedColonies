@@ -72,6 +72,16 @@ function DC_SupplyWindow:beginSupplyTransfer(kind, command, args, entries)
         return nil
     end
 
+    if self.requireCanonicalWorkerDetail == true then
+        if not self:ensureCanonicalWorkerDetail(true, false) then
+            return nil
+        end
+        if not self:isPlayerInventoryReady() then
+            self:updateStatus("Player inventory is still scanning. Please wait a moment.")
+            return nil
+        end
+    end
+
     local requestID = self:createSupplyTransferRequestID(kind)
     local itemIDs = getTransferItemIDs(entries)
     args = args or {}
@@ -108,6 +118,7 @@ function DC_SupplyWindow:onSupplyTransferResult(args)
     local acceptedMap = {}
     local acceptedCount = 0
     local rejectedCount = 0
+    local hasMissingItems = false
 
     for _, itemID in ipairs(args.acceptedItemIDs or {}) do
         acceptedMap[itemID] = true
@@ -117,6 +128,9 @@ function DC_SupplyWindow:onSupplyTransferResult(args)
     end
 
     for _index, _entry in ipairs(args.rejected or {}) do
+        if tostring(_entry and _entry.reason or "") == "missing" then
+            hasMissingItems = true
+        end
         rejectedCount = rejectedCount + 1
     end
 
@@ -146,6 +160,11 @@ function DC_SupplyWindow:onSupplyTransferResult(args)
     end
     if status ~= "" then
         self:updateStatus(status)
+    end
+
+    if hasMissingItems and self.refreshAfterMissingTransfer then
+        self:refreshAfterMissingTransfer()
+        self:updateStatus("Player inventory changed while transferring equipment. Refreshing inventory and companion details...")
     end
 end
 

@@ -47,6 +47,8 @@ function Internal.OnSoulStatusChanged(uuid, status, npcData)
         worker.state = worker.state == Config.States.Incapacitated and Config.States.Incapacitated or Config.States.Idle
         companionData.stage = Internal.Constants.TRAVEL_STAGE_RETURNING
         companionData.awaitingDespawn = false
+        companionData.travelLastProgressHour = Internal.GetCurrentWorldHours()
+        companionData.travelLastRemainingHours = worker.travelHoursRemaining
         Internal.SaveRegistry()
     end
 end

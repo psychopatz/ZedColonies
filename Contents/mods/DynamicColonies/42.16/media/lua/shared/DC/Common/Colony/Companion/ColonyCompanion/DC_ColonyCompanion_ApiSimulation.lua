@@ -5,8 +5,8 @@ local Companion = DC_Colony.Companion
 local Internal = Companion.Internal
 
 Companion.RecordCombatAttack = Internal.RecordCombatAttack
+Companion.UpdateTravelCompanionWorker = Internal.UpdateTravelCompanionWorker
 
 if DC_Colony.Config.JobProfiles and DC_Colony.Config.JobProfiles.TravelCompanion then
-    DC_Colony.Config.JobProfiles.TravelCompanion.processHandler = Companion.UpdateTravelCompanionWorker
+    DC_Colony.Config.JobProfiles.TravelCompanion.processHandler = Internal.UpdateTravelCompanionWorker
 end
-Companion.UpdateTravelCompanionWorker = Internal.UpdateTravelCompanionWorker

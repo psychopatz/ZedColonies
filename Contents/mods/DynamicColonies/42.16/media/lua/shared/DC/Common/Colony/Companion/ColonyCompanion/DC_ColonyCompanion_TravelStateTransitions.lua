@@ -20,6 +20,8 @@ function Internal.FinalizeReturnTravel(worker, currentHour)
     companionData.commanderUsername = nil
     companionData.commanderOnlineID = nil
     companionData.commandInvalidSinceMs = nil
+    companionData.travelLastProgressHour = nil
+    companionData.travelLastRemainingHours = nil
     Internal.AppendLog(worker, "Returned home after companion duty.", currentHour, "travel")
 end
 
@@ -32,6 +34,8 @@ function Internal.MarkCompanionActive(worker)
     companionData.stage = Internal.Constants.TRAVEL_STAGE_ACTIVE
     companionData.awaitingDespawn = false
     companionData.homeRecoveryLogged = false
+    companionData.travelLastProgressHour = nil
+    companionData.travelLastRemainingHours = nil
     worker.presenceState = Config.PresenceStates.CompanionActive
     worker.travelHoursRemaining = 0
     worker.state = Config.States.Working

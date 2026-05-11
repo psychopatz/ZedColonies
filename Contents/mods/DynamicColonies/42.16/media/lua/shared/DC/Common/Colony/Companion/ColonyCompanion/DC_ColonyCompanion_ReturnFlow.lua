@@ -105,6 +105,7 @@ function Internal.BeginWorkerCompanionReturn(player, worker, reason)
     local uuid = Internal.GetCompanionUUID(worker)
     local travelHours = Internal.GetTravelHours()
     local currentHour = Internal.GetCurrentWorldHours()
+    local currentRemaining = math.max(0, tonumber(worker.travelHoursRemaining) or 0)
     companionData.returnReason = reason or Config.ReturnReasons.Manual
     companionData.returnTravelHours = travelHours
     companionData.commandInvalidSinceMs = nil
@@ -122,6 +123,9 @@ function Internal.BeginWorkerCompanionReturn(player, worker, reason)
         local npcData = Internal.GetSoul(uuid)
         if npcData then
             Internal.SetSoulCompanionFlags(worker, npcData, false)
+            if DTNPCServerCore and DTNPCServerCore.ClearPendingArrival then
+                DTNPCServerCore.ClearPendingArrival(npcData)
+            end
             Internal.SaveSoul(uuid, npcData)
         end
         DTNPCServerCore.IssueOrderByUUID(uuid, player or { ownerUsername = worker.ownerUsername }, {
@@ -147,7 +151,14 @@ function Internal.BeginWorkerCompanionReturn(player, worker, reason)
         companionData.commanderUsername = nil
         companionData.commanderOnlineID = nil
         companionData.commandInvalidSinceMs = nil
+        companionData.travelLastProgressHour = nil
+        companionData.travelLastRemainingHours = nil
         return true
+    end
+
+    if worker.presenceState == Config.PresenceStates.CompanionToPlayer and currentRemaining > 0 then
+        travelHours = math.max(0.05, math.min(travelHours, currentRemaining))
+        companionData.returnTravelHours = travelHours
     end
 
     worker.presenceState = Config.PresenceStates.CompanionReturning
@@ -155,6 +166,15 @@ function Internal.BeginWorkerCompanionReturn(player, worker, reason)
     worker.jobEnabled = false
     companionData.stage = Internal.Constants.TRAVEL_STAGE_RETURNING
     companionData.awaitingDespawn = false
+    companionData.travelLastProgressHour = currentHour
+    companionData.travelLastRemainingHours = travelHours
+    if uuid and DTNPCServerCore and DTNPCServerCore.ClearPendingArrival then
+        local npcData = Internal.GetSoul(uuid)
+        if npcData then
+            DTNPCServerCore.ClearPendingArrival(npcData)
+            Internal.SaveSoul(uuid, npcData)
+        end
+    end
     Internal.AppendLog(worker, "Heading home from your location.", currentHour, "travel")
     return true
 end

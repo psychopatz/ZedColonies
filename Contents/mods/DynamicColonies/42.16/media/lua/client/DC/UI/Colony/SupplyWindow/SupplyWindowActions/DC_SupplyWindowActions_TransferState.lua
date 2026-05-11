@@ -30,6 +30,19 @@ function DC_SupplyWindow:canTransferWithWorker(showStatus)
         return false
     end
 
+    if self.requireCanonicalWorkerDetail == true then
+        if not self:ensureCanonicalWorkerDetail(showStatus, false) then
+            return false
+        end
+
+        if not self:isPlayerInventoryReady() then
+            if showStatus ~= false then
+                self:updateStatus("Player inventory is still scanning. Please wait a moment.")
+            end
+            return false
+        end
+    end
+
     if Internal.isWarehouseView and Internal.isWarehouseView(self) then
         return true
     end
