@@ -12,6 +12,7 @@ DC_ZoneData = DC_ZoneData or {}
 -- ---------------------------------------------------------------------------
 
 DC_ZoneTypes = {
+    BASE      = { id = "base",      label = "Base",        color = {0.95, 0.65, 0.18, 0.35} },
     ROAMING   = { id = "roaming",   label = "Roaming",     color = {0.30, 0.70, 1.00, 0.30} },
     FARMING   = { id = "farming",   label = "Farming",     color = {0.20, 0.80, 0.20, 0.30} },
     WOODCUT   = { id = "woodcut",   label = "Woodcutting", color = {0.60, 0.40, 0.10, 0.30} },
@@ -74,6 +75,95 @@ function DC_ZoneData.addRect(zone, x1, y1, x2, y2, z)
     local ry2 = math.max(y1, y2)
 
     table.insert(zone.rects, { rx1, ry1, rx2, ry2, z or 0 })
+end
+
+function DC_ZoneData.cloneZone(zone)
+    if type(zone) ~= "table" then
+        return nil
+    end
+
+    local copy = {
+        id = tostring(zone.id or ""),
+        name = tostring(zone.name or "Zone"),
+        zoneType = tostring(zone.zoneType or "roaming"),
+        colonyId = tostring(zone.colonyId or ""),
+        rects = {},
+        createdAt = zone.createdAt,
+    }
+
+    for _, rect in ipairs(zone.rects or {}) do
+        copy.rects[#copy.rects + 1] = {
+            math.floor(tonumber(rect[1]) or 0),
+            math.floor(tonumber(rect[2]) or 0),
+            math.floor(tonumber(rect[3]) or 0),
+            math.floor(tonumber(rect[4]) or 0),
+            math.floor(tonumber(rect[5]) or 0),
+        }
+    end
+
+    return copy
+end
+
+function DC_ZoneData.getRectWidth(rect)
+    if type(rect) ~= "table" then
+        return 0
+    end
+    return math.abs((tonumber(rect[3]) or 0) - (tonumber(rect[1]) or 0)) + 1
+end
+
+function DC_ZoneData.getRectHeight(rect)
+    if type(rect) ~= "table" then
+        return 0
+    end
+    return math.abs((tonumber(rect[4]) or 0) - (tonumber(rect[2]) or 0)) + 1
+end
+
+function DC_ZoneData.getRectTileCount(rect)
+    return DC_ZoneData.getRectWidth(rect) * DC_ZoneData.getRectHeight(rect)
+end
+
+function DC_ZoneData.nudgeRect(rect, dx, dy)
+    if type(rect) ~= "table" then
+        return
+    end
+    rect[1] = math.floor((tonumber(rect[1]) or 0) + (tonumber(dx) or 0))
+    rect[2] = math.floor((tonumber(rect[2]) or 0) + (tonumber(dy) or 0))
+    rect[3] = math.floor((tonumber(rect[3]) or 0) + (tonumber(dx) or 0))
+    rect[4] = math.floor((tonumber(rect[4]) or 0) + (tonumber(dy) or 0))
+end
+
+function DC_ZoneData.scaleRect(rect, edge, amount)
+    if type(rect) ~= "table" then
+        return
+    end
+
+    local delta = math.floor(tonumber(amount) or 0)
+    local x1 = math.min(tonumber(rect[1]) or 0, tonumber(rect[3]) or 0)
+    local x2 = math.max(tonumber(rect[1]) or 0, tonumber(rect[3]) or 0)
+    local y1 = math.min(tonumber(rect[2]) or 0, tonumber(rect[4]) or 0)
+    local y2 = math.max(tonumber(rect[2]) or 0, tonumber(rect[4]) or 0)
+
+    if edge == "W" then
+        x1 = x1 - delta
+    elseif edge == "E" then
+        x2 = x2 + delta
+    elseif edge == "N" then
+        y1 = y1 - delta
+    elseif edge == "S" then
+        y2 = y2 + delta
+    end
+
+    if x2 <= x1 then
+        x2 = x1 + 1
+    end
+    if y2 <= y1 then
+        y2 = y1 + 1
+    end
+
+    rect[1] = x1
+    rect[2] = y1
+    rect[3] = x2
+    rect[4] = y2
 end
 
 

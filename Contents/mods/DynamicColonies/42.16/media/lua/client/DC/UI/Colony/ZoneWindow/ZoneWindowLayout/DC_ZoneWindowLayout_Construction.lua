@@ -91,12 +91,16 @@ function DC_ZoneWindow:createChildren()
     self:addChild(self.toolbar)
 
     -- Add Zone button
-    self.btnAddZone = ISButton:new(0, 3, 110, 28, "Add Zone", self, DC_ZoneWindow.onAddZone)
+    self.btnAddZone = ISButton:new(0, 3, 100, 28, "Add Zone", self, DC_ZoneWindow.onAddZone)
     self.btnAddZone:initialise()
     self.toolbar:addChild(self.btnAddZone)
 
+    self.btnAddBaseZone = ISButton:new(110, 3, 100, 28, "Add Base", self, DC_ZoneWindow.onAddBaseZone)
+    self.btnAddBaseZone:initialise()
+    self.toolbar:addChild(self.btnAddBaseZone)
+
     -- Delete Zone button
-    self.btnDeleteZone = ISButton:new(120, 3, 110, 28, "Delete Zone", self, DC_ZoneWindow.onDeleteZone)
+    self.btnDeleteZone = ISButton:new(220, 3, 110, 28, "Delete Zone", self, DC_ZoneWindow.onDeleteZone)
     self.btnDeleteZone:initialise()
     self.btnDeleteZone:setEnable(false)
     self.btnDeleteZone.backgroundColor = { r = 0.45, g = 0.08, b = 0.08, a = 1 }
@@ -166,6 +170,7 @@ function DC_ZoneWindow:createChildren()
         if self.selectedZone then
             self.selectedZone.name = self.detailNameEntry:getText()
             self:populateZoneList()
+            self:commitZonesSnapshot()
         end
     end
     self.detailPanel:addChild(self.detailNameEntry)
@@ -182,6 +187,7 @@ function DC_ZoneWindow:createChildren()
             if types[idx] then
                 owner.selectedZone.zoneType = types[idx].id
                 owner:populateZoneList()
+                owner:commitZonesSnapshot()
             end
         end
     end)
@@ -198,8 +204,16 @@ function DC_ZoneWindow:createChildren()
     self.detailInfoLabel:initialise()
     self.detailPanel:addChild(self.detailInfoLabel)
 
+    self.detailBaseStatusLabel = ISLabel:new(L.PANEL_INNER_PAD, L.PANEL_HEADER_HEIGHT + 78, 20, "", 0.9, 0.8, 0.45, 1, UIFont.Small, true)
+    self.detailBaseStatusLabel:initialise()
+    self.detailPanel:addChild(self.detailBaseStatusLabel)
+
+    self.detailBaseCoordsLabel = ISLabel:new(L.PANEL_INNER_PAD, L.PANEL_HEADER_HEIGHT + 96, 20, "", 0.72, 0.72, 0.72, 1, UIFont.Small, true)
+    self.detailBaseCoordsLabel:initialise()
+    self.detailPanel:addChild(self.detailBaseCoordsLabel)
+
     -- Fine-tune Area (Nudge/Scale)
-    local adjY = L.PANEL_HEADER_HEIGHT + 90
+    local adjY = L.PANEL_HEADER_HEIGHT + 116
     self.lblAdjust = ISLabel:new(L.PANEL_INNER_PAD, adjY, 20, "Adjust Area:", 1, 1, 1, 1, UIFont.Medium, true)
     self.lblAdjust:initialise()
     self.detailPanel:addChild(self.lblAdjust)

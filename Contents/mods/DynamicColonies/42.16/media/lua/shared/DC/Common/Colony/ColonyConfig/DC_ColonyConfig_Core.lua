@@ -5,7 +5,7 @@ local Config = DC_Colony.Config
 
 Config.MOD_DATA_KEY = "DColony_Index"
 Config.MOD_DATA_INDEX_KEY = "DColony_Index"
-Config.MOD_DATA_SCHEMA_VERSION = 3
+Config.MOD_DATA_SCHEMA_VERSION = 4
 Config.MOD_DATA_COLONY_PREFIX = "DColony_Colony_"
 Config.MOD_DATA_WORKERS_PREFIX = "DColony_Workers_"
 Config.MOD_DATA_WORKER_PREFIX = "DColony_Worker_"

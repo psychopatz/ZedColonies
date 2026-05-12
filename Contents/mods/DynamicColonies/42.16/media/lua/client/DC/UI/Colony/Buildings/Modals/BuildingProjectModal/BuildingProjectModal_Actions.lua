@@ -1,4 +1,5 @@
 function DC_BuildingProjectModal:onConfirmClicked()
+    local isBlueprintCraft = self.preview and self.preview.actionType == "CraftBlueprint"
     local builder = self:getSelectedBuilder()
     local builderState = DC_BuildingsClientSelectors.GetBuilderRequirementState(builder, {
         allowedProjectID = self.preview and self.preview.projectID or nil
@@ -7,11 +8,12 @@ function DC_BuildingProjectModal:onConfirmClicked()
     if not self.onConfirmCallback then
         return
     end
-    if requireBuilder == true and builderState.ready ~= true then
+    if isBlueprintCraft ~= true and requireBuilder == true and builderState.ready ~= true then
         return
     end
 
     self.onConfirmCallback({
+        actionType = self.preview.actionType,
         workerID = builderState.ready == true and builder and builder.workerID or nil,
         projectID = self.preview.projectID,
         buildingType = self.preview.buildingType,

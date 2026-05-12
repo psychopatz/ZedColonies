@@ -139,6 +139,17 @@ function Buildings.ResolveProjectTarget(ownerUsername, buildingType, mode, plotX
         return nil, "Unknown building."
     end
 
+    local isBlueprintBuild = Buildings.IsBlueprintAction and Buildings.IsBlueprintAction(normalizedBuildingType, normalizedMode)
+
+    if normalizedBuildingType == "Headquarters" then
+        if normalizedMode == "build" and isBlueprintBuild ~= true then
+            return nil, "Place your headquarters structure in the world to establish the base."
+        end
+        if normalizedMode == "upgrade" then
+            return nil, "Headquarters upgrades are not available yet."
+        end
+    end
+
     local x = math.floor(tonumber(plotX) or 0)
     local y = math.floor(tonumber(plotY) or 0)
     local plot, state, instance, activeProject = Buildings.GetPlotWithState(owner, x, y)

@@ -70,6 +70,8 @@ local function buildEmptyColony(colonyID, ownerUsername)
             colony = 1,
             workers = 1,
             sites = 1,
+            base = 1,
+            zones = 1,
             warehouse = 1,
             warehouseItems = 1,
             buildings = 1,
@@ -133,6 +135,8 @@ local function normalizeVersions(versions)
     versions.colony = math.max(1, math.floor(tonumber(versions.colony) or 1))
     versions.workers = math.max(1, math.floor(tonumber(versions.workers) or 1))
     versions.sites = math.max(1, math.floor(tonumber(versions.sites) or 1))
+    versions.base = math.max(1, math.floor(tonumber(versions.base) or 1))
+    versions.zones = math.max(1, math.floor(tonumber(versions.zones) or 1))
     versions.warehouse = math.max(1, math.floor(tonumber(versions.warehouse) or 1))
     versions.warehouseItems = math.max(1, math.floor(tonumber(versions.warehouseItems) or 1))
     versions.buildings = math.max(1, math.floor(tonumber(versions.buildings) or 1))
@@ -159,6 +163,8 @@ local function normalizeColonyData(colonyID, colonyData)
     colonyData.memberUsernames = type(colonyData.memberUsernames) == "table" and colonyData.memberUsernames or {}
     colonyData.permissions = ensureTable(colonyData.permissions)
     colonyData.recruitAttempts = ensureTable(colonyData.recruitAttempts)
+    colonyData.base = type(colonyData.base) == "table" and colonyData.base or {}
+    colonyData.zones = type(colonyData.zones) == "table" and colonyData.zones or {}
     colonyData.versions = normalizeVersions(colonyData.versions)
     colonyData.counters = normalizeCounters(colonyData.counters)
     return colonyData
@@ -329,6 +335,8 @@ local function buildOwnerView(colonyID)
         permissions = colonyData.permissions,
         memberUsernames = colonyData.memberUsernames,
         recruitAttempts = colonyData.recruitAttempts,
+        base = colonyData.base,
+        zones = colonyData.zones,
         workerIDs = workersData.workerIDs,
         workers = workers,
         sites = sitesData.sites
@@ -544,6 +552,28 @@ function Registry.TouchSitesVersion(ownerOrColonyID)
     colonyData.versions.sites = sitesData.version
     syncColonySummary(colonyData.colonyID)
     return sitesData.version
+end
+
+function Registry.TouchBaseVersion(ownerOrColonyID)
+    local colonyData = Registry.GetColonyData(ownerOrColonyID, true)
+    if not colonyData then
+        return 0
+    end
+
+    colonyData.versions.base = math.max(1, math.floor(tonumber(colonyData.versions.base) or 1)) + 1
+    syncColonySummary(colonyData.colonyID)
+    return colonyData.versions.base
+end
+
+function Registry.TouchZonesVersion(ownerOrColonyID)
+    local colonyData = Registry.GetColonyData(ownerOrColonyID, true)
+    if not colonyData then
+        return 0
+    end
+
+    colonyData.versions.zones = math.max(1, math.floor(tonumber(colonyData.versions.zones) or 1)) + 1
+    syncColonySummary(colonyData.colonyID)
+    return colonyData.versions.zones
 end
 
 function Registry.TouchWorkerDetailVersion(worker)

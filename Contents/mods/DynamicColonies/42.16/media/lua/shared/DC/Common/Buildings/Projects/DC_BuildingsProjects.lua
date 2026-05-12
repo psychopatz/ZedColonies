@@ -123,6 +123,13 @@ function Buildings.AssignNextReadyProjectToWorker(worker)
 end
 
 function Buildings.EnsureInitialHeadquartersProject(ownerUsername)
+    if DC_Base and DC_Base.GetBaseState then
+        local baseState = DC_Base.GetBaseState(ownerUsername)
+        if baseState and baseState.baseMode ~= "Settled" then
+            return nil
+        end
+    end
+
     local labourConfig = getColonyConfig()
     local owner = labourConfig.GetOwnerUsername and labourConfig.GetOwnerUsername(ownerUsername) or tostring(ownerUsername or "local")
     if Buildings.OwnerHasHeadquarters and Buildings.OwnerHasHeadquarters(owner) then

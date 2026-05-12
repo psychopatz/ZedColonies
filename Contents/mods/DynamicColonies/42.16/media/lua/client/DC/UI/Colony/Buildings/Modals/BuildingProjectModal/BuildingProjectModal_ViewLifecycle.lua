@@ -7,6 +7,7 @@ function DC_BuildingProjectModal:createChildren()
     ISCollapsableWindow.createChildren(self)
     local th = self:titleBarHeight()
     local hasSupplyAction = self.preview and self.preview.projectID ~= nil
+    local isBlueprintCraft = self.preview and self.preview.actionType == "CraftBlueprint"
     local actionButtonCount = 2
     if hasSupplyAction then
         actionButtonCount = actionButtonCount + 1
@@ -16,7 +17,8 @@ function DC_BuildingProjectModal:createChildren()
     end
     local actionAreaWidth = (actionButtonCount * 90) + ((actionButtonCount - 1) * 10)
 
-    self.textPanel = ISRichTextPanel:new(10, th + 10, self.width - 20, self.height - th - 78)
+    local textBottomOffset = isBlueprintCraft and 48 or 78
+    self.textPanel = ISRichTextPanel:new(10, th + 10, self.width - 20, self.height - th - textBottomOffset)
     self.textPanel:initialise()
     self.textPanel.backgroundColor = { r = 0, g = 0, b = 0, a = 0 }
     self.textPanel.borderColor = { r = 0, g = 0, b = 0, a = 0 }
@@ -25,9 +27,11 @@ function DC_BuildingProjectModal:createChildren()
     self.textPanel:addScrollBars()
     self:addChild(self.textPanel)
 
-    self.builderCombo = ISComboBox:new(10, self.height - 58, self.width - actionAreaWidth - 20, 24, self, self.onBuilderChanged)
-    self.builderCombo:initialise()
-    self:addChild(self.builderCombo)
+    if isBlueprintCraft ~= true then
+        self.builderCombo = ISComboBox:new(10, self.height - 58, self.width - actionAreaWidth - 20, 24, self, self.onBuilderChanged)
+        self.builderCombo:initialise()
+        self:addChild(self.builderCombo)
+    end
 
     local buttonX = self.width - actionAreaWidth - 10
     if self.debugEnabled == true then

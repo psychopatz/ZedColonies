@@ -12,6 +12,9 @@ function DC_ZoneWindow:onZoneSelected(zone)
     self.selectedZone = zone
     self.selectedRect = nil
     self:refreshDetailPanel()
+    if self.mapPanel and self.mapPanel.refreshZones then
+        self.mapPanel:refreshZones(self.zones, self.selectedZone)
+    end
 end
 
 
@@ -36,6 +39,7 @@ function DC_ZoneWindow:onAddArea()
             DC_ZoneData.addRect(zone, x1, y1, x2, y2, z)
             self:refreshDetailPanel()
             self:populateZoneList()
+            self:commitZonesSnapshot()
         end,
         zone.name
     )
@@ -52,6 +56,7 @@ function DC_ZoneWindow:onDeleteArea()
     self.selectedRect = nil
     self:refreshDetailPanel()
     self:populateZoneList()
+    self:commitZonesSnapshot()
 end
 
 
@@ -124,6 +129,7 @@ function DC_ZoneWindow:onEditArea()
             zone.rects[rectIdx] = { rx1, ry1, rx2, ry2, z or 0 }
             self:refreshDetailPanel()
             self:populateZoneList()
+            self:commitZonesSnapshot()
         end,
         zone.name .. " (Edit)"
     )
@@ -140,6 +146,7 @@ function DC_ZoneWindow:onNudgeRect(dx, dy)
 
     DC_ZoneData.nudgeRect(rect, dx, dy)
     self:refreshDetailPanel()
+    self:commitZonesSnapshot()
 end
 
 
@@ -151,5 +158,5 @@ function DC_ZoneWindow:onScaleRect(edge, amount)
 
     DC_ZoneData.scaleRect(rect, edge, amount)
     self:refreshDetailPanel()
+    self:commitZonesSnapshot()
 end
-

@@ -15,6 +15,15 @@ function DC_ZoneWindow:onAddZone()
     modal.entry:focus()
 end
 
+function DC_ZoneWindow:onAddBaseZone()
+    local modal = ISTextBox:new(0, 0, 280, 120, "Base Zone Name:", "Base",
+        self, DC_ZoneWindow.onAddBaseZoneConfirm, nil)
+    modal:initialise()
+    modal:addToUIManager()
+    modal:setVisible(true)
+    modal.entry:focus()
+end
+
 
 --- Callback when user confirms the zone name.
 function DC_ZoneWindow:onAddZoneConfirm(button, _, _)
@@ -35,6 +44,26 @@ function DC_ZoneWindow:onAddZoneConfirm(button, _, _)
     self.selectedRect = nil
     self.zoneList.selected = #self.zones
     self:refreshDetailPanel()
+    self:commitZonesSnapshot()
+end
+
+function DC_ZoneWindow:onAddBaseZoneConfirm(button, _, _)
+    if button.internal ~= "OK" then return end
+
+    local name = button.parent.entry:getText()
+    if not name or name == "" then
+        name = "Base"
+    end
+
+    local zone = DC_ZoneData.createZone(name, "base", self.colonyId)
+    table.insert(self.zones, zone)
+
+    self:populateZoneList()
+    self.selectedZone = zone
+    self.selectedRect = nil
+    self.zoneList.selected = #self.zones
+    self:refreshDetailPanel()
+    self:commitZonesSnapshot()
 end
 
 
@@ -66,4 +95,5 @@ function DC_ZoneWindow:onDeleteZoneConfirm(button)
     self.selectedRect = nil
     self:populateZoneList()
     self:refreshDetailPanel()
+    self:commitZonesSnapshot()
 end

@@ -15,6 +15,8 @@ require "ISUI/ISComboBox"
 require "ISUI/ISModalDialog"
 require "ISUI/ISWorldMap"
 require "DC/Common/Zone/DC_ZoneData"
+require "DC/Common/Base/DC_Base"
+require "DC/UI/Colony/System/DC_System"
 require "DC/UI/Colony/ZoneWindow/DC_ZoneSelector"
 
 DC_ZoneWindow = ISCollapsableWindow:derive("DC_ZoneWindow")

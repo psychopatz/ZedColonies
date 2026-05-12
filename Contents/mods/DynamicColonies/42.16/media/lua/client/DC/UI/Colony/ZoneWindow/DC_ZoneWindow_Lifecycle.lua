@@ -30,6 +30,7 @@ function DC_ZoneWindow.Open(player, colonyId)
     instance:setVisible(true)
 
     DC_ZoneWindow.instance = instance
+    instance:requestBaseSnapshot()
 
     print("[DC_ZoneWindow] Opened zone management for colony: " .. tostring(colonyId))
     return instance

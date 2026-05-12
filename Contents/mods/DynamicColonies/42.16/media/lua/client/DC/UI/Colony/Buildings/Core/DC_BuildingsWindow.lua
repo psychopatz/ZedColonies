@@ -88,7 +88,8 @@ function DC_BuildingsWindow:openProjectModal(preview, title)
         onConfirm = function(payload)
             local ownerWindow = self:getOwnerWindow()
             if ownerWindow and ownerWindow.sendColonyCommand then
-                ownerWindow:sendColonyCommand("StartBuildingProject", payload)
+                local command = payload and payload.actionType == "CraftBlueprint" and "CraftBuildingBlueprint" or "StartBuildingProject"
+                ownerWindow:sendColonyCommand(command, payload)
             end
         end,
         onDebugMaterials = function(payload)

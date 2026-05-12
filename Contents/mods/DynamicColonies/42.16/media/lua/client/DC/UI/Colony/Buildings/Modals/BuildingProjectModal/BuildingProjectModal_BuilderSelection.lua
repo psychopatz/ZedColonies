@@ -1,4 +1,9 @@
 function DC_BuildingProjectModal:refreshBuilderOptions()
+    if not self.builderCombo then
+        self.builderOptions = {}
+        return
+    end
+
     self.builderOptions = DC_BuildingsClientSelectors.GetBuilderOptions()
     self.builderCombo:clear()
     for _, worker in ipairs(self.builderOptions or {}) do

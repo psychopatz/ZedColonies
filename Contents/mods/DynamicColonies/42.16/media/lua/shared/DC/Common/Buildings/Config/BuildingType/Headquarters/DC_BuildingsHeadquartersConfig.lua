@@ -23,12 +23,9 @@ local HQConfig = {
 }
 
 local function buildRecipe(targetLevel)
-    local level = math.max(1, math.floor(tonumber(targetLevel) or 1))
     return {
-        { fullType = "Base.Log", count = 4 + (level * 2) },
-        { fullType = "Base.Nails", count = 12 + (level * 8) },
-        { fullType = "Base.Sheet", count = 2 + math.floor((level + 1) / 2) },
-        { fullType = "Base.Hinge", count = 1 + math.floor(level / 2) }
+        { fullType = "Base.Plank", count = 8 },
+        { fullType = "Base.Nails", count = 4 }
     }
 end
 
@@ -51,8 +48,8 @@ function HQConfig.GetLevelDefinition(targetLevel)
     local previousCap = level > 1 and frontierConfig and frontierConfig.GetMaxActiveBarricades and frontierConfig.GetMaxActiveBarricades(level - 1) or 0
     return {
         enabled = true,
-        workPoints = 30 + (level * 18),
-        xpReward = 150 + (level * 20),
+        workPoints = 0,
+        xpReward = 0,
         recipe = buildRecipe(level),
         effects = {
             maxActiveBarricades = currentCap,

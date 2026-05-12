@@ -136,6 +136,46 @@ local function collectInventoryCountsRecursive(container, counts)
     end
 end
 
+local function collectInventoryItemsRecursive(container, into)
+    if not container or not into then
+        return
+    end
+
+    local items = container:getItems()
+    if not items then
+        return
+    end
+
+    for index = 0, items:size() - 1 do
+        local item = items:get(index)
+        if item then
+            into[#into + 1] = item
+            if instanceof(item, "InventoryContainer") then
+                collectInventoryItemsRecursive(item:getItemContainer(), into)
+            end
+        end
+    end
+end
+
+local function removeInventoryItem(item)
+    if not item then
+        return
+    end
+
+    local container = item:getContainer()
+    if container then
+        container:DoRemoveItem(item)
+    end
+end
+
+local function addInventoryItem(container, fullType, count)
+    if not container or not fullType or count <= 0 then
+        return nil
+    end
+
+    return container:AddItems(fullType, count)
+end
+
 local function canReadInventory(value)
     local valueType = type(value)
     return (valueType == "table" or valueType == "userdata") and value.getInventory ~= nil
@@ -380,10 +420,48 @@ local function consumeRecipe(ownerUsername, recipe)
     return true
 end
 
+local function consumeRecipeFromPlayerInventory(ownerUsername, recipe, sourcePlayer)
+    local owner = getOwnerUsername(ownerUsername)
+    local player = resolveSourcePlayer(owner, sourcePlayer)
+    local inventory = player and player.getInventory and player:getInventory() or nil
+    if not inventory then
+        return false, "No player inventory found."
+    end
+
+    local inventoryCounts = getPlayerInventoryCounts(owner, player)
+    local availability = buildRecipeAvailability(owner, recipe, player, inventoryCounts)
+    if availability.hasAll ~= true then
+        return false, "You need every listed material in your inventory."
+    end
+
+    local neededByType = buildRecipeMap(recipe)
+    local items = {}
+    collectInventoryItemsRecursive(inventory, items)
+
+    for _, item in ipairs(items) do
+        local fullType = item and item.getFullType and item:getFullType() or nil
+        local needed = fullType and neededByType[fullType] or 0
+        if needed and needed > 0 then
+            local available = getInventoryItemQuantity(item)
+            local toTake = math.min(available, needed)
+            local container = item:getContainer()
+            neededByType[fullType] = needed - toTake
+            removeInventoryItem(item)
+            if available > toTake and container then
+                addInventoryItem(container, fullType, available - toTake)
+            end
+        end
+    end
+
+    return true, nil
+end
+
 -- Internal exports
 
 Internal.BuildingsConsumeRecipe = consumeRecipe
 Internal.GetAvailableMaterialCounts = getAvailableMaterialCounts
+Internal.GetPlayerInventoryMaterialCounts = getPlayerInventoryCounts
+Internal.ConsumeRecipeFromPlayerInventory = consumeRecipeFromPlayerInventory
 Internal.BuildRecipeAvailability = buildRecipeAvailability
 
 -- Public API

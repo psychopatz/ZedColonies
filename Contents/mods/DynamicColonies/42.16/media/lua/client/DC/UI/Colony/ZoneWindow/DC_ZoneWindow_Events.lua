@@ -11,10 +11,7 @@ DC_ZoneWindow = DC_ZoneWindow or {}
 --- Refresh all zone data in the window.
 --- Called externally when colony data changes.
 function DC_ZoneWindow:refreshFromColonyData()
-    -- TODO: In the future, pull zones from colony mod data
-    -- For now, zones are stored locally in self.zones
-    self:populateZoneList()
-    self:refreshDetailPanel()
+    self:requestBaseSnapshot()
 end
 
 
@@ -39,3 +36,23 @@ function DC_ZoneWindow.OnFillWorldObjectContextMenu(player, context, worldobject
 end
 
 Events.OnFillWorldObjectContextMenu.Add(DC_ZoneWindow.OnFillWorldObjectContextMenu)
+
+local function onServerCommand(module, command, args)
+    local expectedModule = ((DC_Colony and DC_Colony.Config and DC_Colony.Config.COMMAND_MODULE) or "DColony")
+    if module ~= expectedModule then
+        return
+    end
+
+    if command ~= "SyncBaseSnapshot" then
+        return
+    end
+
+    if DC_ZoneWindow.instance and args and args.snapshot then
+        DC_ZoneWindow.instance:applyBaseSnapshot(args.snapshot, args.version)
+    end
+end
+
+if not DC_ZoneWindow.EventsAdded then
+    Events.OnServerCommand.Add(onServerCommand)
+    DC_ZoneWindow.EventsAdded = true
+end

@@ -145,6 +145,10 @@ function DC_MainWindow:createChildren()
     self.btnBuildings:initialise()
     self:addChild(self.btnBuildings)
 
+    self.btnZones = ISButton:new(600, buttonY, 80, 28, "Base", self, self.onOpenZones)
+    self.btnZones:initialise()
+    self:addChild(self.btnZones)
+
     self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Open Faction", self, self.onOpenFaction)
     self.btnFaction:initialise()
     self:addChild(self.btnFaction)

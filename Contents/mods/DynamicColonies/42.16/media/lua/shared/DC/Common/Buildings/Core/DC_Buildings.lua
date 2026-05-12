@@ -1,4 +1,5 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
+require "DC/Common/Base/DC_Base"
 
 DC_Buildings = DC_Buildings or {}
 DC_Buildings.Config = DC_Buildings.Config or {}
@@ -22,6 +23,7 @@ require "DC/Common/Buildings/Config/BuildingType/WaterTank/DC_BuildingsWaterTank
 require "DC/Common/Buildings/Config/BuildingType/Warehouse/DC_BuildingsWarehouseConfig"
 
 require "DC/Common/Buildings/Config/DC_BuildingsConfig"
+require "DC/Common/Buildings/Blueprints/DC_BuildingsBlueprints"
 require "DC/Common/Buildings/Data/DC_BuildingsMapData"
 require "DC/Common/Buildings/Map/DC_BuildingsMapExpansion"
 require "DC/Common/Buildings/Map/Frontier/DC_BuildingsMapFrontier"

@@ -139,6 +139,13 @@ function Buildings.BuildProjectPreview(ownerUsername, buildingType, mode, plotX,
         return preview
     end
 
+    if Buildings.BuildBlueprintPreview and Buildings.IsBlueprintAction and Buildings.IsBlueprintAction(buildingType, mode) then
+        local blueprintPreview = Buildings.BuildBlueprintPreview(owner, buildingType, mode, plotX, plotY, buildingID, installKey, target, projectDefinition, sourcePlayer)
+        if blueprintPreview then
+            return blueprintPreview
+        end
+    end
+
     preview.available = true
     preview.currentLevel = math.max(0, math.floor(tonumber(target.currentLevel) or 0))
     preview.targetLevel = math.max(1, math.floor(tonumber(target.targetLevel) or 1))

@@ -15,11 +15,16 @@ function DC_ZoneWindow:refreshDetailPanel()
     -- Enable/disable controls based on selection
     local hasZone = zone ~= nil
     local hasRect = hasZone and self.selectedRect ~= nil
+    local isBaseZone = hasZone and tostring(zone.zoneType or "") == "base"
+    local canAddArea = hasZone and (not isBaseZone or #((zone and zone.rects) or {}) < 1)
     if self.btnDeleteZone then self.btnDeleteZone:setEnable(hasZone) end
-    if self.btnAddArea then self.btnAddArea:setEnable(hasZone) end
+    if self.btnAddArea then self.btnAddArea:setEnable(canAddArea) end
     if self.btnDeleteArea then self.btnDeleteArea:setEnable(hasRect) end
     if self.btnShowArea then self.btnShowArea:setEnable(hasRect) end
     if self.btnEditArea then self.btnEditArea:setEnable(hasRect) end
+    if self.btnAddBaseZone then
+        self.btnAddBaseZone:setEnable(not (self.baseState and self.baseState.hasBaseZone))
+    end
 
     -- Nudge/Scale buttons
     if self.btnNudgeW_Main then self.btnNudgeW_Main:setEnable(hasRect) end
@@ -71,6 +76,23 @@ function DC_ZoneWindow:refreshDetailPanel()
             self.detailInfoLabel.name = tostring(count) .. " areas, " .. tostring(totalTiles) .. " total tiles"
         else
             self.detailInfoLabel.name = "No zone selected"
+        end
+    end
+
+    if self.detailBaseStatusLabel then
+        local mode = self.baseState and self.baseState.baseMode or "Nomad"
+        local statusText = self.baseValidation and self.baseValidation.statusText or "No base zone."
+        self.detailBaseStatusLabel.name = "Mode: " .. tostring(mode) .. " | " .. tostring(statusText)
+    end
+
+    if self.detailBaseCoordsLabel then
+        if self.baseState and self.baseState.hqEntityType then
+            self.detailBaseCoordsLabel.name = "HQ: " .. tostring(self.baseState.hqX or 0) .. ", "
+                .. tostring(self.baseState.hqY or 0) .. ", " .. tostring(self.baseState.hqZ or 0)
+        else
+            local maxWidth = self.baseValidation and self.baseValidation.tierMaxWidth or 50
+            local maxHeight = self.baseValidation and self.baseValidation.tierMaxHeight or 50
+            self.detailBaseCoordsLabel.name = "Tier 1 base cap: " .. tostring(maxWidth) .. "x" .. tostring(maxHeight)
         end
     end
 
@@ -127,6 +149,10 @@ function DC_ZoneWindow:onRectListMouseDown(item)
         if self.btnScaleE_Inn_Main then self.btnScaleE_Inn_Main:setEnable(true) end
         if self.btnScaleN_Inn_Main then self.btnScaleN_Inn_Main:setEnable(true) end
         if self.btnScaleS_Inn_Main then self.btnScaleS_Inn_Main:setEnable(true) end
+    end
+
+    if self.mapPanel and self.mapPanel.refreshZones then
+        self.mapPanel:refreshZones(self.zones, self.selectedZone)
     end
 
 end

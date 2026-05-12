@@ -32,6 +32,10 @@ function DC_ZoneWindow:populateZoneList()
             end
         end
     end
+
+    if self.mapPanel and self.mapPanel.refreshZones then
+        self.mapPanel:refreshZones(self.zones, self.selectedZone)
+    end
 end
 
 

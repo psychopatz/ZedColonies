@@ -19,6 +19,16 @@ Network.Handlers.StartBuildingProject = function(player, args)
         return
     end
 
+    if Buildings.IsBlueprintAction and Buildings.IsBlueprintAction(args.buildingType, args.mode) then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "That building now uses a blueprint. Craft it from the Buildings menu first.", "error", true)
+        end
+        if Internal.syncBuildingsSnapshot then
+            Internal.syncBuildingsSnapshot(player, ColonyConfig.GetOwnerUsername(player))
+        end
+        return
+    end
+
     local owner = ColonyConfig.GetOwnerUsername(player)
     local workerID = tostring(args.workerID or "")
     if workerID == "" then

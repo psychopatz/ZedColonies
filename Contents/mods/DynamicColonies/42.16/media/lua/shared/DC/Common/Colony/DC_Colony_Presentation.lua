@@ -1,5 +1,6 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry"
+require "DC/Common/Base/DC_Base"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Presentation = DC_Colony.Presentation or {}
@@ -37,6 +38,24 @@ end
 
 local function isProjectionRuntimeAvailable()
     return DTNPCServerCore and DTNPCServerCore.RespawnNPC and DTNPCServerCore.FindZombieByUUID
+end
+
+local function getProjectionCoords(npcData, worker)
+    if type(npcData) == "table" then
+        local workCoords = type(npcData.workCoords) == "table" and npcData.workCoords or nil
+        local x = tonumber(npcData.anchorX) or tonumber(npcData.lastX) or tonumber(workCoords and workCoords.x)
+        local y = tonumber(npcData.anchorY) or tonumber(npcData.lastY) or tonumber(workCoords and workCoords.y)
+        local z = tonumber(npcData.anchorZ) or tonumber(npcData.lastZ) or tonumber(workCoords and workCoords.z)
+        if x and y then
+            return x, y, z or 0
+        end
+    end
+
+    if worker and worker.workX and worker.workY then
+        return worker.workX, worker.workY, worker.workZ or 0
+    end
+
+    return nil, nil, nil
 end
 
 local function pruneProjectionRegistration(uuid, zombie)
@@ -79,6 +98,13 @@ end
 function Presentation.BuildProjectionData(worker)
     if not worker then return nil end
 
+    if DC_Base and DC_Base.BuildHomeProjectionData then
+        local homeProjection = DC_Base.BuildHomeProjectionData(worker)
+        if homeProjection then
+            return homeProjection
+        end
+    end
+
     return {
         uuid = Config.GetProjectionUUID(worker.workerID),
         name = worker.name,
@@ -118,6 +144,22 @@ function Presentation.RemoveProjection(worker)
 end
 
 local function canProjectWorker(worker)
+    if worker
+        and DC_Base
+        and DC_Base.GetBaseState
+        and DC_Base.GetEligibleVisibleHomeWorkers then
+        local baseState = DC_Base.GetBaseState(worker.ownerUsername)
+        if baseState and baseState.baseMode == "Settled" then
+            local eligible = DC_Base.GetEligibleVisibleHomeWorkers(worker.ownerUsername)
+            local maxVisible = (DC_Base.Constants and DC_Base.Constants.MaxVisibleHomeWorkers) or 4
+            for index = 1, math.min(#eligible, maxVisible) do
+                if eligible[index] and tostring(eligible[index].workerID or "") == tostring(worker.workerID or "") then
+                    return true
+                end
+            end
+        end
+    end
+
     return worker
         and Config.IsOwnerOnline
         and Config.IsOwnerOnline(worker.ownerUsername)
@@ -128,11 +170,24 @@ local function canProjectWorker(worker)
 end
 
 local function isPlayerNearWorker(worker, players)
-    local wz = worker.workZ or 0
+    local projectionData = Presentation.BuildProjectionData(worker)
+    if worker and DC_Base and DC_Base.IsPlayerNearBase then
+        for _, player in ipairs(players or {}) do
+            if player and DC_Base.IsPlayerNearBase(worker.ownerUsername, player) then
+                return true
+            end
+        end
+    end
+
+    local workX, workY, wz = getProjectionCoords(projectionData, worker)
+    if not workX or not workY then
+        return false
+    end
+
     for _, player in ipairs(players or {}) do
         if player then
-            local dx = player:getX() - worker.workX
-            local dy = player:getY() - worker.workY
+            local dx = player:getX() - workX
+            local dy = player:getY() - workY
             local dz = math.abs((player:getZ() or 0) - wz)
             local dist = math.sqrt(dx * dx + dy * dy)
             if dz <= 1 and dist <= Config.PROJECTION_RANGE then
@@ -162,11 +217,16 @@ function Presentation.SyncWorker(worker, players)
     local zombie = DTNPCServerCore.FindZombieByUUID(uuid)
     local npcData = Presentation.BuildProjectionData(worker)
     if not npcData then return end
+    local targetX, targetY, targetZ = getProjectionCoords(npcData, worker)
+    if not targetX or not targetY then
+        Presentation.RemoveProjection(worker)
+        return
+    end
 
     if zombie then
-        zombie:setX(worker.workX)
-        zombie:setY(worker.workY)
-        zombie:setZ(worker.workZ or 0)
+        zombie:setX(targetX)
+        zombie:setY(targetY)
+        zombie:setZ(targetZ or 0)
         npcData.currentOutfitID = zombie:getPersistentOutfitID()
         DTNPC.AttachData(zombie, npcData)
         if DTNPCServerCore.SyncToAllClients then

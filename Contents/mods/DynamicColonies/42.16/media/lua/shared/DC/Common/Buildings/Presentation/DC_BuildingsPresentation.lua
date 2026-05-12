@@ -22,11 +22,39 @@ local function getDisplayName(fullType)
     return internal and internal.GetDisplayNameForFullType and internal.GetDisplayNameForFullType(fullType) or tostring(fullType or "Unknown")
 end
 
+local function injectHeadquartersMirror(ownerUsername, ownerBuildings)
+    if not DC_Base or not DC_Base.GetBaseState then
+        return ownerBuildings
+    end
+
+    local baseState = DC_Base.GetBaseState(ownerUsername)
+    if not baseState or baseState.baseMode ~= "Settled" then
+        return ownerBuildings
+    end
+
+    for _, instance in ipairs(ownerBuildings or {}) do
+        if tostring(instance.buildingType or "") == "Headquarters" then
+            return ownerBuildings
+        end
+    end
+
+    ownerBuildings[#ownerBuildings + 1] = {
+        buildingID = "world_hq",
+        buildingType = "Headquarters",
+        level = math.max(1, math.floor(tonumber(baseState.hqTier) or 1)),
+        plotX = 0,
+        plotY = 0,
+        installs = {}
+    }
+    return ownerBuildings
+end
+
 function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     local owner = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
         and DC_Colony.Config.GetOwnerUsername(ownerUsername)
         or tostring(ownerUsername or "local")
     local ownerData = Buildings.CopyOwnerData(owner)
+    ownerData.buildings = injectHeadquartersMirror(owner, ownerData.buildings or {})
     local warehouseApi = DC_Colony and DC_Colony.Warehouse or nil
     local housing = Buildings.BuildHousingAssignment(owner)
     local medical = Buildings.BuildInfirmaryAssignment and Buildings.BuildInfirmaryAssignment(owner) or nil
