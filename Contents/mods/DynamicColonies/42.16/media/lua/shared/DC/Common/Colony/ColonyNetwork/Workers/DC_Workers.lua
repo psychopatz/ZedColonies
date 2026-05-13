@@ -15,7 +15,7 @@ DC_Colony.Network.Workers = DC_Colony.Network.Workers or {}
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Shared"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Assignment"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Equipment"
-require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Deposit"
+require "DC/Common/Colony/ColonyNetwork/Workers/WorkersDeposit/WorkersDeposit"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Money"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Withdraw"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers_Drop"
