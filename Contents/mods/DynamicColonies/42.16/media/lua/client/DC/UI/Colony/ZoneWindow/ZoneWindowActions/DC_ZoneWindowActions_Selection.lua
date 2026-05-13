@@ -145,7 +145,8 @@ function DC_ZoneWindow:onEditArea()
             self:populateZoneList()
             DC_ZoneWindowState.MarkDirty(self)
         end,
-        selectedZone.name .. " (Edit)"
+        selectedZone.name .. " (Edit)",
+        rect
     )
     selector:initialise()
     selector:addToUIManager()

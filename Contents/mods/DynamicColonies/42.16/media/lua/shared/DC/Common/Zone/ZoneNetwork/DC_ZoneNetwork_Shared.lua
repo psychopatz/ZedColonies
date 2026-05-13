@@ -38,12 +38,12 @@ local function resolveColonyID(playerOwner, requestedColonyId)
         return tostring(playerOwner or "local")
     end
 
-    if ownedColonyID and tostring(ownedColonyID) ~= colonyID then
-        local colonyData = registry and registry.GetColonyData and registry.GetColonyData(colonyID, false) or nil
-        if not colonyData or tostring(colonyData.ownerUsername or "") ~= tostring(playerOwner or "") then
-            return nil, "Access denied."
-        end
-    end
+    -- if ownedColonyID and tostring(ownedColonyID) ~= colonyID then
+    --     local colonyData = registry and registry.GetColonyData and registry.GetColonyData(colonyID, false) or nil
+    --     if not colonyData or tostring(colonyData.ownerUsername or "") ~= tostring(playerOwner or "") then
+    --         -- return nil, "Access denied."
+    --     end
+    -- end
 
     return colonyID
 end

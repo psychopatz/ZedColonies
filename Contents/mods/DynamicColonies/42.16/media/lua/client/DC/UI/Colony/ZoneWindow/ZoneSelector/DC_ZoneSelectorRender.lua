@@ -62,19 +62,12 @@ function Render.Prerender(selector)
         selector.borderColor.a, selector.borderColor.r,
         selector.borderColor.g, selector.borderColor.b)
 
-    local py = UI_BORDER_SPACING + 1
-    local px = UI_BORDER_SPACING + 1
-
-    local title = State.GetTitleText(selector)
-    selector:drawText(title,
-        selector.width / 2 - (getTextManager():MeasureStringX(UIFont.Medium, title) / 2),
-        py, 1, 1, 1, 1, UIFont.Medium)
-    py = py + FONT_HGT_MEDIUM + UI_BORDER_SPACING
-
-    selector:drawText(State.GetInstructionText(selector), px, py, 0.8, 0.8, 0.8, 1, UIFont.NewSmall)
-    py = py + FONT_HGT + UI_BORDER_SPACING
-
-    py = drawSelectionInfo(selector, py)
+    -- The highlight logic for the 3D world stays here
+    local metrics = State.GetSelectionMetrics(selector)
+    if metrics then
+        local color = State.GetHighlightColor(selector)
+        addAreaHighlightForPlayer(selector.playerNum, metrics.x1, metrics.y1, metrics.x2 + 1, metrics.y2 + 1, selector.player:getZ(), color.r, color.g, color.b, color.a)
+    end
 
     local currentState = tostring(selector.selectorState or State.STATE_IDLE)
     if currentState == State.STATE_IDLE or currentState == State.STATE_DRAGGING or currentState == State.STATE_EXPANDING then

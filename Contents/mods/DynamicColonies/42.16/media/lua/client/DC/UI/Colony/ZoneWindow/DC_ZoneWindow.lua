@@ -13,7 +13,6 @@ require "ISUI/ISLabel"
 require "ISUI/ISTextEntryBox"
 require "ISUI/ISComboBox"
 require "ISUI/ISModalDialog"
-require "ISUI/ISWorldMap"
 require "DC/Common/Zone/DC_ZoneData"
 require "DC/UI/Colony/ZoneWindow/DC_ZoneSelector"
 require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
@@ -25,7 +24,6 @@ DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
 
 
 require "DC/UI/Colony/ZoneWindow/ZoneWindowCore/DC_ZoneWindowCore"
-require "DC/UI/Colony/ZoneWindow/ZoneWindowMap/DC_ZoneWindowMap"
 require "DC/UI/Colony/ZoneWindow/DC_ZoneWindow_List"
 require "DC/UI/Colony/ZoneWindow/DC_ZoneWindow_Detail"
 require "DC/UI/Colony/ZoneWindow/ZoneWindowLayout/DC_ZoneWindowLayout"

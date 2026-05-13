@@ -95,9 +95,6 @@ function State.RefreshWindow(window)
     if window.refreshDetailPanel then
         window:refreshDetailPanel()
     end
-    if window.mapPanel and window.mapPanel.refreshZones then
-        window.mapPanel:refreshZones(window.zones, selectedZone, window.selectedRect)
-    end
 end
 
 function State.SelectZone(window, zone)
@@ -127,9 +124,6 @@ function State.SetSelectedRect(window, rectIndex)
     window.selectedRect = rectIndex
     if window.refreshDetailPanel then
         window:refreshDetailPanel()
-    end
-    if window.mapPanel and window.mapPanel.refreshZones then
-        window.mapPanel:refreshZones(State.GetZones(window), State.GetSelectedZone(window), window.selectedRect)
     end
 end
 

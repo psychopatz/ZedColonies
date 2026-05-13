@@ -99,17 +99,6 @@ local function applyWindowLayout(window)
         window.rectToolbar:setHeight(L.TOOLBAR_HEIGHT)
         window.rectToolbar:setVisible(isZonesTab)
     end
-
-    -- ===== MAP TAB PANEL =====
-    local isMapTab = (window.activeTab == "TAB_MAP")
-
-    if window.mapPanel then
-        window.mapPanel:setX(pad)
-        window.mapPanel:setY(contentY)
-        window.mapPanel:setWidth(window.width - pad * 2)
-        window.mapPanel:setHeight(contentH)
-        window.mapPanel:setVisible(isMapTab)
-    end
 end
 
 
@@ -145,22 +134,7 @@ function DC_ZoneWindow:onSwitchTab(button)
     end
 
     if self.btnTabMap then
-        if self.activeTab == "TAB_MAP" then
-            self.btnTabMap.backgroundColor = activeStyle
-            self.btnTabMap.borderColor = activeBorder
-        else
-            self.btnTabMap.backgroundColor = inactiveStyle
-            self.btnTabMap.borderColor = inactiveBorder
-        end
-    end
-
-    -- Re-feed zones to map overlay when switching to map
-    if self.activeTab == "TAB_MAP" and self.mapPanel and self.mapPanel.refreshZones then
-        self.mapPanel:refreshZones(
-            DC_ZoneWindowState.GetZones(self),
-            DC_ZoneWindowState.GetSelectedZone(self),
-            DC_ZoneWindowState.GetSelectedRect(self)
-        )
+        self.btnTabMap:setVisible(false)
     end
 
     applyWindowLayout(self)

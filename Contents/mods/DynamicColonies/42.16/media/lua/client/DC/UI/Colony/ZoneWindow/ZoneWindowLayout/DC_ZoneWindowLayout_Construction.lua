@@ -121,11 +121,6 @@ function DC_ZoneWindow:createChildren()
     self.btnTabZones.borderColor = { r = 0.6, g = 0.8, b = 1.0, a = 0.6 }
     self.tabBar:addChild(self.btnTabZones)
 
-    self.btnTabMap = ISButton:new(110, 0, 100, 26, "Map", self, DC_ZoneWindow.onSwitchTab)
-    self.btnTabMap.internal = "TAB_MAP"
-    self.btnTabMap:initialise()
-    self.tabBar:addChild(self.btnTabMap)
-
     self.activeTab = "TAB_ZONES"
 
 
@@ -207,91 +202,6 @@ function DC_ZoneWindow:createChildren()
     self.detailInfoLabel:initialise()
     self.detailPanel:addChild(self.detailInfoLabel)
 
-    -- Fine-tune Area (Nudge/Scale)
-    local adjY = L.PANEL_HEADER_HEIGHT + 90
-    self.lblAdjust = ISLabel:new(L.PANEL_INNER_PAD, adjY, 20, "Adjust Area:", 1, 1, 1, 1, UIFont.Medium, true)
-    self.lblAdjust:initialise()
-    self.detailPanel:addChild(self.lblAdjust)
-
-    local arrowW = 32
-    local row1Y = adjY + 25
-    local labelW = 50
-
-    -- Nudge
-    self.lblNudgeMain = ISLabel:new(L.PANEL_INNER_PAD, row1Y + 3, 18, "Move:", 0.8, 0.8, 0.8, 1, UIFont.Small, true)
-    self.lblNudgeMain:initialise()
-    self.detailPanel:addChild(self.lblNudgeMain)
-
-    local nx = L.PANEL_INNER_PAD + labelW
-    self.btnNudgeW_Main = ISButton:new(nx, row1Y, arrowW, 22, "<", self, function() self:onNudgeRect(-1, 0) end)
-    self.btnNudgeW_Main:initialise()
-    self.btnNudgeW_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnNudgeW_Main)
-
-    self.btnNudgeE_Main = ISButton:new(nx + arrowW + 4, row1Y, arrowW, 22, ">", self, function() self:onNudgeRect(1, 0) end)
-    self.btnNudgeE_Main:initialise()
-    self.btnNudgeE_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnNudgeE_Main)
-
-    self.btnNudgeN_Main = ISButton:new(nx + (arrowW + 4) * 2, row1Y, arrowW, 22, "^", self, function() self:onNudgeRect(0, -1) end)
-    self.btnNudgeN_Main:initialise()
-    self.btnNudgeN_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnNudgeN_Main)
-
-    self.btnNudgeS_Main = ISButton:new(nx + (arrowW + 4) * 3, row1Y, arrowW, 22, "v", self, function() self:onNudgeRect(0, 1) end)
-    self.btnNudgeS_Main:initialise()
-    self.btnNudgeS_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnNudgeS_Main)
-
-    -- Scale
-    local row2Y = row1Y + 28
-    self.lblScaleMain = ISLabel:new(L.PANEL_INNER_PAD, row2Y + 3, 18, "Resize:", 0.8, 0.8, 0.8, 1, UIFont.Small, true)
-    self.lblScaleMain:initialise()
-    self.detailPanel:addChild(self.lblScaleMain)
-
-    local sx = L.PANEL_INNER_PAD + labelW
-    self.btnScaleW_Main = ISButton:new(sx, row2Y, arrowW, 22, "W", self, function() self:onScaleRect("W", 1) end)
-    self.btnScaleW_Main:initialise()
-    self.btnScaleW_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleW_Main)
-
-    self.btnScaleE_Main = ISButton:new(sx + arrowW + 4, row2Y, arrowW, 22, "E", self, function() self:onScaleRect("E", 1) end)
-    self.btnScaleE_Main:initialise()
-    self.btnScaleE_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleE_Main)
-
-    self.btnScaleN_Main = ISButton:new(sx + (arrowW + 4) * 2, row2Y, arrowW, 22, "N", self, function() self:onScaleRect("N", 1) end)
-    self.btnScaleN_Main:initialise()
-    self.btnScaleN_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleN_Main)
-
-    self.btnScaleS_Main = ISButton:new(sx + (arrowW + 4) * 3, row2Y, arrowW, 22, "S", self, function() self:onScaleRect("S", 1) end)
-    self.btnScaleS_Main:initialise()
-    self.btnScaleS_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleS_Main)
-
-    -- Scale Inner
-    self.btnScaleW_Inn_Main = ISButton:new(sx + arrowW * 4 + 20, row2Y, arrowW, 22, "-W", self, function() self:onScaleRect("W", -1) end)
-    self.btnScaleW_Inn_Main:initialise()
-    self.btnScaleW_Inn_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleW_Inn_Main)
-
-    self.btnScaleE_Inn_Main = ISButton:new(sx + arrowW * 5 + 24, row2Y, arrowW, 22, "-E", self, function() self:onScaleRect("E", -1) end)
-    self.btnScaleE_Inn_Main:initialise()
-    self.btnScaleE_Inn_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleE_Inn_Main)
-
-    self.btnScaleN_Inn_Main = ISButton:new(sx + arrowW * 6 + 28, row2Y, arrowW, 22, "-N", self, function() self:onScaleRect("N", -1) end)
-    self.btnScaleN_Inn_Main:initialise()
-    self.btnScaleN_Inn_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleN_Inn_Main)
-
-    self.btnScaleS_Inn_Main = ISButton:new(sx + arrowW * 7 + 32, row2Y, arrowW, 22, "-S", self, function() self:onScaleRect("S", -1) end)
-    self.btnScaleS_Inn_Main:initialise()
-    self.btnScaleS_Inn_Main:setEnable(false)
-    self.detailPanel:addChild(self.btnScaleS_Inn_Main)
-
-
     -- ===== RECT LIST (right bottom) =====
     self.rectList = ISScrollingListBox:new(rightX, rectListY, rightWidth, rectListH)
     self.rectList:initialise()
@@ -336,15 +246,6 @@ function DC_ZoneWindow:createChildren()
     self.rectToolbar:addChild(self.btnEditArea)
 
 
-    -- ===== MAP PANEL (hidden by default, shown on Map tab) =====
-    self.mapPanel = DC_ZoneWindowMapPanel and DC_ZoneWindowMapPanel:new(pad, contentY, self.width - pad * 2, contentH, self) or nil
-    if self.mapPanel then
-        self.mapPanel:initialise()
-        self.mapPanel:setVisible(false)
-        self.mapPanel:setAnchorRight(true)
-        self.mapPanel:setAnchorBottom(true)
-        self:addChild(self.mapPanel)
-    end
 
 
     -- Apply dynamic layout

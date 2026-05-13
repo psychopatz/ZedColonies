@@ -23,7 +23,7 @@ DC_ZoneSelector = ISPanelJoypad:derive("DC_ZoneSelector")
 -- Constructor
 -- ---------------------------------------------------------------------------
 
-function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callback, zoneName)
+function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callback, zoneName, initialRect)
     local o = ISPanelJoypad.new(self, x, y, width, height)
 
     if x == 0 and y == 0 then
@@ -48,11 +48,25 @@ function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callba
     o.startRenderTile = false
     o.drawTileMouse   = true
 
+    -- Support editing or pre-defined area
+    if initialRect and type(initialRect) == "table" then
+        o.startingX = initialRect[1]
+        o.startingY = initialRect[2]
+        o.endX      = initialRect[3]
+        o.endY      = initialRect[4]
+        o.startingZ = initialRect[5] or 0
+        o.selectorState = DC_ZoneSelectorState.STATE_PREVIEW
+    end
+
     return o
 end
 
 function DC_ZoneSelector:initialise()
     DC_ZoneSelectorUI.Build(self)
+
+    if self.selectorState == DC_ZoneSelectorState.STATE_PREVIEW then
+        self:setPreviewButtonsVisible(true)
+    end
 end
 
 function DC_ZoneSelector:nudge(dx, dy)
