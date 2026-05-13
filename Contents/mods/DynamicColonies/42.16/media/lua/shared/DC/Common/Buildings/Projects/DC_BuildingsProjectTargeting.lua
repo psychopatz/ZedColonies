@@ -1,6 +1,6 @@
 require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Descriptions"
 require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Materials"
-require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Validation"
+require "DC/Common/Buildings/Projects/BuildingsProjectValidation/BuildingsProjectValidation"
 require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Preview"
 
 DC_Buildings = DC_Buildings or {}
