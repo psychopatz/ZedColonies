@@ -64,6 +64,20 @@ local function buildTransferMessage(targetLabel, movedCount, rejectedCount)
     return tostring(rejectedCount) .. " item" .. (rejectedCount == 1 and "" or "s") .. " could not be stored."
 end
 
+local function consumeInventoryItemQuantity(invItem, quantity)
+    local removeInventoryItemUnits = Internal.removeInventoryItemUnits
+    if removeInventoryItemUnits then
+        return removeInventoryItemUnits(invItem, quantity)
+    end
+
+    if Internal.removeInventoryItem then
+        Internal.removeInventoryItem(invItem)
+        return math.max(0, math.floor(tonumber(quantity) or 0))
+    end
+
+    return 0
+end
+
 Network.Handlers.DepositWorkerSupplies = function(player, args)
     if not args or not args.workerID then return end
 
@@ -262,18 +276,7 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
                     local availableQty = math.max(1, tonumber(outputEntry and outputEntry.qty) or getInventoryItemQuantity(invItem))
                     local movedQty = Warehouse.DepositOutputEntry(owner, outputEntry)
                     if movedQty > 0 then
-                        local container = invItem:getContainer()
-                        Internal.removeInventoryItem(invItem)
-                        if availableQty > movedQty and container then
-                            local customData = Registry.Internal.BuildOutputAddItemCustomData
-                                and Registry.Internal.BuildOutputAddItemCustomData(outputEntry)
-                                or nil
-                            if Internal.addInventoryItem then
-                                Internal.addInventoryItem(container, fullType, availableQty - movedQty, customData)
-                            else
-                                container:AddItems(fullType, availableQty - movedQty)
-                            end
-                        end
+                        consumeInventoryItemQuantity(invItem, movedQty)
                         movedCount = movedCount + movedQty
                         acceptedItemIDs[#acceptedItemIDs + 1] = itemID
                     else

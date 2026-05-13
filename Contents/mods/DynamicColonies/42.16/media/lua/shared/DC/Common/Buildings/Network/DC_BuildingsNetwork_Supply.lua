@@ -69,7 +69,7 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
 
     local movedCount = 0
     local removeInventoryItem = Internal.removeInventoryItem
-    local addInventoryItem = Internal.addInventoryItem
+    local removeInventoryItemUnits = Internal.removeInventoryItemUnits
     local getInventoryItemQuantity = Internal.getInventoryItemQuantity
 
     for _, item in ipairs(items) do
@@ -78,16 +78,14 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
         if needed and needed > 0 then
             local available = getInventoryItemQuantity and getInventoryItemQuantity(item) or 1
             local movedUnits = math.min(available, needed)
-            local container = item:getContainer()
             project.materialCounts = type(project.materialCounts) == "table" and project.materialCounts or {}
             project.materialCounts[fullType] = math.max(0, tonumber(project.materialCounts[fullType]) or 0) + movedUnits
             neededByType[fullType] = needed - movedUnits
             movedCount = movedCount + movedUnits
-            if removeInventoryItem then
+            if available > movedUnits and removeInventoryItemUnits then
+                removeInventoryItemUnits(item, movedUnits)
+            elseif removeInventoryItem then
                 removeInventoryItem(item)
-            end
-            if available > movedUnits and container and addInventoryItem then
-                addInventoryItem(container, fullType, available - movedUnits)
             end
         end
     end

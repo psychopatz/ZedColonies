@@ -19,6 +19,69 @@ local function removeInventoryItem(item)
     end
 end
 
+local function getInventoryItemQuantity(item)
+    if not item then
+        return 0
+    end
+
+    local count = item.getCount and item:getCount() or nil
+    count = math.floor(tonumber(count) or 0)
+    if count > 0 then
+        return count
+    end
+
+    return 1
+end
+
+local function syncExistingInventoryItem(item)
+    if not item then
+        return
+    end
+
+    if isServer() and item.syncItemFields then
+        item:syncItemFields()
+    end
+end
+
+local function removeInventoryItemUnits(item, count)
+    local quantity = math.max(0, math.floor(tonumber(count) or 0))
+    if quantity <= 0 or not item then
+        return 0
+    end
+
+    local available = getInventoryItemQuantity(item)
+    if available <= 0 then
+        return 0
+    end
+
+    local removed = math.min(available, quantity)
+    if removed >= available then
+        removeInventoryItem(item)
+        return removed
+    end
+
+    if item.setCount then
+        item:setCount(available - removed)
+        syncExistingInventoryItem(item)
+        return removed
+    end
+
+    local remaining = removed
+    while remaining > 0 and item and item:getContainer() do
+        if item.Use then
+            item:Use()
+            remaining = remaining - 1
+        else
+            break
+        end
+    end
+
+    if item and item:getContainer() then
+        syncExistingInventoryItem(item)
+    end
+    return removed - remaining
+end
+
 local function addInventoryItem(container, fullType, count, customData)
     if DynamicTrading and DynamicTrading.ServerHelpers then
         if customData and DynamicTrading.ServerHelpers.AddItemWithCondition then
@@ -182,9 +245,11 @@ local function getInventoryItemByID(player, itemID)
 end
 
 Internal.removeInventoryItem = removeInventoryItem
+Internal.removeInventoryItemUnits = removeInventoryItemUnits
 Internal.addInventoryItem = addInventoryItem
 Internal.removePlayerMoney = removePlayerMoney
 Internal.addPlayerMoney = addPlayerMoney
 Internal.getInventoryItemByID = getInventoryItemByID
+Internal.getInventoryItemQuantity = getInventoryItemQuantity
 
 return Network

@@ -188,23 +188,27 @@ function Internal.syncWorkerList(player)
     })
 end
 
-function Internal.removeInventoryItem(item)
-    if not item then
-        return
-    end
+if not Internal.removeInventoryItem then
+    function Internal.removeInventoryItem(item)
+        if not item then
+            return
+        end
 
-    local container = item:getContainer()
-    if container then
-        container:DoRemoveItem(item)
+        local container = item:getContainer()
+        if container then
+            container:DoRemoveItem(item)
+        end
     end
 end
 
-function Internal.addInventoryItem(container, fullType, count)
-    if not container or not fullType then
-        return nil
-    end
+if not Internal.addInventoryItem then
+    function Internal.addInventoryItem(container, fullType, count)
+        if not container or not fullType then
+            return nil
+        end
 
-    return container:AddItems(fullType, count or 1)
+        return container:AddItems(fullType, count or 1)
+    end
 end
 
 function Internal.getInventoryItemQuantity(item)
