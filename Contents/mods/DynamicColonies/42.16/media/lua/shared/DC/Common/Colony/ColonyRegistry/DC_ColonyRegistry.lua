@@ -9,7 +9,7 @@ DC_Colony.Registry.Internal = DC_Colony.Registry.Internal or {}
 
 -- Keep explicit load order so registry foundations are available before higher-level APIs.
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_Internal"
-require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_Data"
+require "DC/Common/Colony/ColonyRegistry/ColonyRegData/DC_ColonyRegData"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_WorkerState"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_Workers"
 require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry_Recruitment"
