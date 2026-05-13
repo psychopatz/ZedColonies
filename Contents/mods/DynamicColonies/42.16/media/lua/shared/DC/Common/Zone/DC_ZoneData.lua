@@ -27,6 +27,46 @@ for key, def in pairs(DC_ZoneTypes) do
 end
 
 
+local function copyDeep(value)
+    if type(value) ~= "table" then
+        return value
+    end
+
+    local copy = {}
+    for key, entry in pairs(value) do
+        copy[key] = copyDeep(entry)
+    end
+    return copy
+end
+
+local function normalizeNumber(value, fallback)
+    return math.floor(tonumber(value) or fallback or 0)
+end
+
+local function normalizeRect(rect)
+    if type(rect) ~= "table" then
+        return nil
+    end
+
+    local x1 = tonumber(rect[1] or rect.x1)
+    local y1 = tonumber(rect[2] or rect.y1)
+    local x2 = tonumber(rect[3] or rect.x2)
+    local y2 = tonumber(rect[4] or rect.y2)
+    if x1 == nil or y1 == nil or x2 == nil or y2 == nil then
+        return nil
+    end
+
+    local z = tonumber(rect[5] or rect.z or 0) or 0
+    return {
+        normalizeNumber(math.min(x1, x2), 0),
+        normalizeNumber(math.min(y1, y2), 0),
+        normalizeNumber(math.max(x1, x2), 0),
+        normalizeNumber(math.max(y1, y2), 0),
+        normalizeNumber(z, 0)
+    }
+end
+
+
 -- ---------------------------------------------------------------------------
 -- Zone Instance Factory
 -- ---------------------------------------------------------------------------
@@ -50,6 +90,91 @@ function DC_ZoneData.createZone(name, zoneTypeId, colonyId)
         rects      = {},   -- { {x1,y1,x2,y2,z}, ... }
         createdAt  = getTimestamp and getTimestamp() or os.time(),
     }
+end
+
+
+--- Check whether a zone type id is known.
+function DC_ZoneData.isValidZoneType(zoneTypeId)
+    return DC_ZoneData._typeById[tostring(zoneTypeId or "")] ~= nil
+end
+
+
+--- Return a normalized copy of a zone table.
+function DC_ZoneData.normalizeZone(zone, colonyId, fallbackIndex, usedIds)
+    if type(zone) ~= "table" then
+        return nil
+    end
+
+    local normalized = copyDeep(zone)
+    local zoneID = tostring(normalized.id or normalized.zoneID or "")
+    if zoneID == "" or (usedIds and usedIds[zoneID]) then
+        local timestamp = tostring(normalized.createdAt or (getTimestamp and getTimestamp() or os.time()))
+        zoneID = "dczone_" .. tostring(colonyId or normalized.colonyId or "local") .. "_" .. tostring(fallbackIndex or 1) .. "_" .. timestamp
+        while usedIds and usedIds[zoneID] do
+            timestamp = tostring(tonumber(timestamp) or os.time())
+            zoneID = zoneID .. "_" .. timestamp
+        end
+    end
+    normalized.id = zoneID
+    if usedIds then
+        usedIds[zoneID] = true
+    end
+
+    normalized.name = tostring(normalized.name or ("Zone " .. tostring(fallbackIndex or 1)))
+    normalized.zoneType = tostring(normalized.zoneType or "roaming")
+    if not DC_ZoneData.isValidZoneType(normalized.zoneType) then
+        normalized.zoneType = "roaming"
+    end
+    normalized.colonyId = tostring(colonyId or normalized.colonyId or "")
+    normalized.createdAt = normalizeNumber(normalized.createdAt or (getTimestamp and getTimestamp() or os.time()), os.time())
+
+    local rects = {}
+    local sourceRects = type(normalized.rects) == "table" and normalized.rects or {}
+    for _, rect in ipairs(sourceRects) do
+        local normalizedRect = normalizeRect(rect)
+        if normalizedRect then
+            rects[#rects + 1] = normalizedRect
+        end
+    end
+    normalized.rects = rects
+
+    return normalized
+end
+
+
+--- Return a normalized array of zone tables.
+function DC_ZoneData.normalizeZones(zones, colonyId)
+    local normalizedZones = {}
+    local usedIds = {}
+    local sourceZones = type(zones) == "table" and zones or {}
+
+    for index, zone in ipairs(sourceZones) do
+        local normalizedZone = DC_ZoneData.normalizeZone(zone, colonyId, index, usedIds)
+        if normalizedZone then
+            normalizedZones[#normalizedZones + 1] = normalizedZone
+        end
+    end
+
+    return normalizedZones
+end
+
+
+--- Deep copy helper for zone tables.
+function DC_ZoneData.copyZone(zone)
+    return copyDeep(zone)
+end
+
+
+--- Deep copy helper for zone arrays.
+function DC_ZoneData.copyZones(zones)
+    local copy = {}
+    local sourceZones = type(zones) == "table" and zones or {}
+
+    for index, zone in ipairs(sourceZones) do
+        copy[index] = copyDeep(zone)
+    end
+
+    return copy
 end
 
 

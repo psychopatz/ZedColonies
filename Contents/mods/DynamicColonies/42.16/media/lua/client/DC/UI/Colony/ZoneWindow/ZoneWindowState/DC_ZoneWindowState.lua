@@ -3,6 +3,7 @@ require "DC/Common/Zone/DC_ZoneDataStore"
 DC_ZoneWindowState = DC_ZoneWindowState or {}
 
 local State = DC_ZoneWindowState
+local DIRTY_SAVE_DELAY_TICKS = 20
 
 local function resolveSelectedZone(window)
     if not window then
@@ -132,6 +133,41 @@ function State.SetSelectedRect(window, rectIndex)
     end
 end
 
+function State.QueueDirty(window, delayTicks)
+    if not window then
+        return
+    end
+
+    window._dirtySaveQueued = true
+    window._dirtySaveTicks = math.max(1, math.floor(tonumber(delayTicks) or DIRTY_SAVE_DELAY_TICKS))
+end
+
+function State.TickDirtySave(window)
+    if not window or not window._dirtySaveQueued then
+        return
+    end
+
+    window._dirtySaveTicks = math.max(0, (tonumber(window._dirtySaveTicks) or 0) - 1)
+    if window._dirtySaveTicks > 0 then
+        return
+    end
+
+    window._dirtySaveQueued = false
+    window._dirtySaveTicks = nil
+    State.MarkDirty(window)
+end
+
+function State.FlushDirty(window)
+    if not window or not window._dirtySaveQueued then
+        return false
+    end
+
+    window._dirtySaveQueued = false
+    window._dirtySaveTicks = nil
+    State.MarkDirty(window)
+    return true
+end
+
 function State.AddZone(window, zone)
     if not window or not zone then
         return
@@ -175,6 +211,13 @@ end
 
 function State.MarkDirty(window)
     if not window then
+        return
+    end
+
+    window._dirtySaveQueued = false
+    window._dirtySaveTicks = nil
+
+    if DC_ZoneWindowSync and DC_ZoneWindowSync.SaveSnapshot and DC_ZoneWindowSync.SaveSnapshot(window) then
         return
     end
 

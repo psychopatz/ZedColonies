@@ -42,10 +42,14 @@ function DC_ZoneWindow:refreshDetailPanel()
     -- Name entry
     if self.detailNameEntry then
         if hasZone then
+            self._suppressZoneNameChange = true
             self.detailNameEntry:setText(zone.name or "")
+            self._suppressZoneNameChange = false
             self.detailNameEntry:setEditable(true)
         else
+            self._suppressZoneNameChange = true
             self.detailNameEntry:setText("")
+            self._suppressZoneNameChange = false
             self.detailNameEntry:setEditable(false)
         end
     end

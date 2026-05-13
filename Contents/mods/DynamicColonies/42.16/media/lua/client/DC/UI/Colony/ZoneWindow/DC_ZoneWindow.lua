@@ -17,6 +17,7 @@ require "ISUI/ISWorldMap"
 require "DC/Common/Zone/DC_ZoneData"
 require "DC/UI/Colony/ZoneWindow/DC_ZoneSelector"
 require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
+require "DC/UI/Colony/ZoneWindow/ZoneWindowSync/DC_ZoneWindowSync"
 
 DC_ZoneWindow = ISCollapsableWindow:derive("DC_ZoneWindow")
 DC_ZoneWindow.instance = nil

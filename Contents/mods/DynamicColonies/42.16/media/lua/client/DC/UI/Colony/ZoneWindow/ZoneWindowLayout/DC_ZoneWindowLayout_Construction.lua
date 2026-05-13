@@ -164,11 +164,15 @@ function DC_ZoneWindow:createChildren()
     self.detailNameEntry = ISTextEntryBox:new("", 60, L.PANEL_HEADER_HEIGHT + 2, 200, 22)
     self.detailNameEntry:initialise()
     self.detailNameEntry.onTextChange = function()
+        if self._suppressZoneNameChange then
+            return
+        end
+
         local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
         if selectedZone then
             selectedZone.name = self.detailNameEntry:getText()
             self:populateZoneList()
-            DC_ZoneWindowState.MarkDirty(self)
+            DC_ZoneWindowState.QueueDirty(self)
         end
     end
     self.detailPanel:addChild(self.detailNameEntry)

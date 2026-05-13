@@ -40,5 +40,9 @@ function DC_ZoneWindow:prerender()
     if self.tickShowArea then
         self:tickShowArea()
     end
+
+    if DC_ZoneWindowState and DC_ZoneWindowState.TickDirtySave then
+        DC_ZoneWindowState.TickDirtySave(self)
+    end
 end
 

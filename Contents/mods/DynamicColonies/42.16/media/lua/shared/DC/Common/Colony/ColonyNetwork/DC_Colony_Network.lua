@@ -19,6 +19,7 @@ require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_StarterWorkers"
 require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_QueryHandlers"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork"
+require "DC/Common/Zone/ZoneNetwork/DC_ZoneNetwork"
 require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_Debug"
 
 if isServer() and not DC_Colony.Network.ServerHookAdded then

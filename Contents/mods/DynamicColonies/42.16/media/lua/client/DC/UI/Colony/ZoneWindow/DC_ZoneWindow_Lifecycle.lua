@@ -38,6 +38,10 @@ end
 
 --- Close the window.
 function DC_ZoneWindow:close()
+    if DC_ZoneWindowState and DC_ZoneWindowState.FlushDirty then
+        DC_ZoneWindowState.FlushDirty(self)
+    end
+
     self:setVisible(false)
     self:removeFromUIManager()
 

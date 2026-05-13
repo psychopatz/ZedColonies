@@ -1,3 +1,5 @@
+require "DC/Common/Zone/DC_ZoneData"
+
 DC_ZoneDataStore = DC_ZoneDataStore or {}
 
 local Store = DC_ZoneDataStore
@@ -85,8 +87,53 @@ end
 
 function Store.ReplaceZones(colonyId, zones)
     local record = Store.GetColonyRecord(colonyId)
-    record.zones = type(zones) == "table" and zones or {}
+    record.zones = DC_ZoneData.normalizeZones(zones, record.colonyId)
     return record.zones
+end
+
+function Store.GetColonyVersion(colonyId)
+    return Store.GetColonyRecord(colonyId).version
+end
+
+function Store.SetColonyVersion(colonyId, version)
+    local record = Store.GetColonyRecord(colonyId)
+    record.version = math.max(1, math.floor(tonumber(version) or 1))
+    return record.version
+end
+
+function Store.BuildSnapshot(colonyId)
+    local record = Store.GetColonyRecord(colonyId)
+    return {
+        schemaVersion = record.schemaVersion or 1,
+        colonyId = record.colonyId,
+        version = record.version,
+        zones = DC_ZoneData.normalizeZones(record.zones, record.colonyId)
+    }
+end
+
+function Store.ApplySnapshot(colonyId, snapshot)
+    local record = Store.GetColonyRecord(colonyId)
+    local source = type(snapshot) == "table" and snapshot or {}
+    local normalizedZones = DC_ZoneData.normalizeZones(source.zones or {}, record.colonyId)
+
+    record.schemaVersion = math.max(1, math.floor(tonumber(source.schemaVersion) or record.schemaVersion or 1))
+    record.colonyId = tostring(source.colonyId or record.colonyId or colonyId or "local")
+    record.version = math.max(1, math.floor(tonumber(source.version) or record.version or 1))
+    record.zones = normalizedZones
+
+    return record
+end
+
+function Store.SaveSnapshot(colonyId, zones, knownVersion)
+    local record = Store.GetColonyRecord(colonyId)
+    local currentVersion = math.max(1, math.floor(tonumber(record.version) or 1))
+    if knownVersion ~= nil and tostring(knownVersion) ~= tostring(currentVersion) then
+        return false, "conflict", Store.BuildSnapshot(colonyId)
+    end
+
+    Store.ReplaceZones(colonyId, zones)
+    Store.Commit(colonyId)
+    return true, nil, Store.BuildSnapshot(colonyId)
 end
 
 function Store.Commit(colonyId)
