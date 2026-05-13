@@ -11,8 +11,14 @@ local function autoRefreshWindow(window)
 
     if isClient() and not isServer() then
         window.syncStatusMutedFrames = 120
-        window:sendColonyCommand("RequestPlayerWorkers", {
-            knownVersion = DC_MainWindow.cachedWorkersVersion
+        window:sendColonyCommand("RequestColonyBootstrap", {
+            knownVersions = {
+                building = DC_BuildingsWindow and DC_BuildingsWindow.cachedVersion or nil,
+                workerList = DC_MainWindow.cachedWorkersVersion,
+                warehouseSummary = DC_MainWindow.cachedWarehouseSummaryVersion,
+                resources = DC_MainWindow.cachedResourcesSummaryVersion,
+                factionStatus = DC_MainWindow.cachedFactionStatusVersion,
+            }
         })
         if window.selectedWorkerSummary and window.selectedWorkerSummary.workerID then
             local supplyWindow = DC_SupplyWindow and DC_SupplyWindow.instance or nil
@@ -57,9 +63,7 @@ function DC_MainWindow:prerender()
         self.ownedFactionRefreshFrames = (tonumber(self.ownedFactionRefreshFrames) or 0) + 1
         if self.ownedFactionRefreshFrames >= (MainWindowLayout.OWNED_FACTION_REFRESH_FRAMES or 300) then
             self.ownedFactionRefreshFrames = 0
-            if DC_System and DC_System.RequestOwnedFactionStatus then
-                DC_System.RequestOwnedFactionStatus()
-            end
+            autoRefreshWindow(self)
         end
     end
 

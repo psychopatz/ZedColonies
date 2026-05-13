@@ -6,8 +6,8 @@ Internal.MainWindowLayout = Internal.MainWindowLayout or {}
 
 local MainWindowLayout = Internal.MainWindowLayout
 
-MainWindowLayout.AUTO_REFRESH_FRAMES = 60
-MainWindowLayout.OWNED_FACTION_REFRESH_FRAMES = 300
+MainWindowLayout.AUTO_REFRESH_FRAMES = 900
+MainWindowLayout.OWNED_FACTION_REFRESH_FRAMES = 1800
 MainWindowLayout.DETAIL_PANEL_MIN_HEIGHT = 120
 MainWindowLayout.ACTIVITY_PANEL_MIN_HEIGHT = 150
 MainWindowLayout.PANEL_INNER_PAD = 6

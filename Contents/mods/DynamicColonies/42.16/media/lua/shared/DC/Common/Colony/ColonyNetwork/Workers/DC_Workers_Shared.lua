@@ -146,16 +146,12 @@ end
 function Shared.saveAndRefreshProcessed(player, worker, syncProjection)
     local Registry = getRegistry()
     local Sim = getSim()
-    local Presentation = getPresentation()
 
     if Registry and Registry.Save then
         Registry.Save()
     end
     if Sim and Sim.ProcessWorker then
         Sim.ProcessWorker(worker, Shared.getCurrentWorldHours())
-    end
-    if Presentation and Presentation.SyncWorker then
-        Presentation.SyncWorker(worker, { player })
     end
     syncCompanionWorker(player, worker)
     Internal.syncWorkerDetail(player, worker.workerID, nil, true)
@@ -168,16 +164,12 @@ end
 function Shared.saveAndRefreshSupplyTransfer(player, worker, syncProjection)
     local Registry = getRegistry()
     local Sim = getSim()
-    local Presentation = getPresentation()
 
     if Registry and Registry.Save then
         Registry.Save()
     end
     if Sim and Sim.ProcessWorker then
         Sim.ProcessWorker(worker, Shared.getCurrentWorldHours())
-    end
-    if Presentation and Presentation.SyncWorker then
-        Presentation.SyncWorker(worker, { player })
     end
     syncCompanionWorker(player, worker)
     Internal.syncWorkerDetail(player, worker.workerID, nil, true)

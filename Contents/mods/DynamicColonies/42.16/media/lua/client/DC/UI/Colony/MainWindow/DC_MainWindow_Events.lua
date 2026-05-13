@@ -125,6 +125,22 @@ end
 
 DC_MainWindow.MergeWorkerDetail = mergeWorkerDetail
 
+local function replaceCachedWorkerSummary(summary)
+    if type(summary) ~= "table" or not summary.workerID then
+        return
+    end
+
+    DC_MainWindow.cachedWorkers = DC_MainWindow.cachedWorkers or {}
+    for index, worker in ipairs(DC_MainWindow.cachedWorkers) do
+        if worker and worker.workerID == summary.workerID then
+            DC_MainWindow.cachedWorkers[index] = summary
+            return
+        end
+    end
+
+    DC_MainWindow.cachedWorkers[#DC_MainWindow.cachedWorkers + 1] = summary
+end
+
 local function onServerCommand(module, command, args)
     local expectedModule = ((DC_Colony and DC_Colony.Config and DC_Colony.Config.COMMAND_MODULE) or "DColony")
     local isFactionCommand = command == "SyncOwnedFactionStatus" or command == "OwnedFactionActionResult"
@@ -221,6 +237,93 @@ local function onServerCommand(module, command, args)
         end
     elseif command == "SyncOwnedFactionStatus" then
         DC_MainWindow.cachedOwnedFactionStatus = args and args.status or nil
+        if DC_System then
+            DC_System.ownedFactionStatusCache = DC_MainWindow.cachedOwnedFactionStatus
+        end
+        if DC_MainWindow.instance and DC_MainWindow.instance.updateFactionButton then
+            DC_MainWindow.instance:updateFactionButton()
+        end
+    elseif command == "ColonyBootstrap" then
+        local versions = args and args.versions or {}
+        if args and args.workers then
+            DC_MainWindow.cachedWorkers = args.workers
+        end
+        if args and args.warehouse then
+            DC_MainWindow.cachedWarehouseSummary = args.warehouse
+        end
+        if args and args.resourcesSummary then
+            DC_MainWindow.cachedResourcesSummary = args.resourcesSummary
+        end
+        if args and args.factionStatus then
+            DC_MainWindow.cachedOwnedFactionStatus = args.factionStatus
+            if DC_System then
+                DC_System.ownedFactionStatusCache = args.factionStatus
+            end
+        end
+        DC_MainWindow.cachedWorkersVersion = versions.workerList or DC_MainWindow.cachedWorkersVersion
+        DC_MainWindow.cachedWarehouseSummaryVersion = versions.warehouseSummary or DC_MainWindow.cachedWarehouseSummaryVersion
+        DC_MainWindow.cachedResourcesSummaryVersion = versions.resources or DC_MainWindow.cachedResourcesSummaryVersion
+        DC_MainWindow.cachedFactionStatusVersion = versions.factionStatus or DC_MainWindow.cachedFactionStatusVersion
+        if args and args.buildingsSnapshot and DC_BuildingsWindow then
+            DC_BuildingsWindow.cachedSnapshot = args.buildingsSnapshot
+            DC_BuildingsWindow.cachedVersion = versions.building or args.version or DC_BuildingsWindow.cachedVersion
+            if DC_BuildingsWindow.instance and DC_BuildingsWindow.instance.getIsVisible and DC_BuildingsWindow.instance:getIsVisible() then
+                DC_BuildingsWindow.instance:refreshFromSnapshot()
+            end
+        end
+        if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() then
+            DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers or {})
+            if DC_MainWindow.instance.updateFactionButton then
+                DC_MainWindow.instance:updateFactionButton()
+            end
+            if (tonumber(DC_MainWindow.instance.syncStatusMutedFrames) or 0) <= 0 then
+                DC_MainWindow.instance:updateStatus("Colony state synced.")
+            end
+        end
+    elseif command == "WorkerListUpdated" then
+        DC_MainWindow.cachedWorkers = args and args.workers or {}
+        DC_MainWindow.cachedWorkersVersion = args and args.version or nil
+        if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() then
+            DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers)
+            if (tonumber(DC_MainWindow.instance.syncStatusMutedFrames) or 0) <= 0 then
+                DC_MainWindow.instance:updateStatus("Worker list updated.")
+            end
+        end
+    elseif command == "WorkerUpdated" then
+        DC_MainWindow.cachedDetails = DC_MainWindow.cachedDetails or {}
+        DC_MainWindow.cachedDetailVersions = DC_MainWindow.cachedDetailVersions or {}
+        if args and args.listVersion then
+            DC_MainWindow.cachedWorkersVersion = args.listVersion
+        end
+        if args and args.workerSummary then
+            replaceCachedWorkerSummary(args.workerSummary)
+        end
+        if args and args.worker and args.worker.workerID then
+            local workerID = args.worker.workerID
+            DC_MainWindow.cachedDetails[workerID] = mergeWorkerDetail(DC_MainWindow.cachedDetails[workerID], args.worker)
+            DC_MainWindow.cachedDetailVersions[workerID] = args.version or nil
+            if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() then
+                DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers or {})
+                if DC_MainWindow.instance.selectedWorkerSummary and DC_MainWindow.instance.selectedWorkerSummary.workerID == workerID then
+                    DC_MainWindow.instance:updateWorkerDetail(DC_MainWindow.cachedDetails[workerID])
+                end
+            end
+            if DC_ColonyCharacterWindow
+                and DC_ColonyCharacterWindow.instance
+                and DC_ColonyCharacterWindow.instance:getIsVisible()
+                and DC_ColonyCharacterWindow.instance.workerID == workerID then
+                DC_ColonyCharacterWindow.instance:setWorkerData(DC_MainWindow.cachedDetails[workerID])
+            end
+        end
+    elseif command == "WarehouseSummaryUpdated" then
+        DC_MainWindow.cachedWarehouseSummary = args and args.warehouse or nil
+        DC_MainWindow.cachedWarehouseSummaryVersion = args and args.version or nil
+    elseif command == "ResourcesSummaryUpdated" then
+        DC_MainWindow.cachedResourcesSummary = args and args.snapshot or nil
+        DC_MainWindow.cachedResourcesSummaryVersion = args and args.version or nil
+    elseif command == "FactionStatusSummary" then
+        DC_MainWindow.cachedOwnedFactionStatus = args and args.status or nil
+        DC_MainWindow.cachedFactionStatusVersion = args and args.version or nil
         if DC_System then
             DC_System.ownedFactionStatusCache = DC_MainWindow.cachedOwnedFactionStatus
         end

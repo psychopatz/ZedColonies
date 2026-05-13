@@ -87,7 +87,7 @@ function Buildings.ProcessWorkerProject(worker, currentHour, workableHours, spee
 
     if project.progressWorkPoints + 0.0001 >= math.max(1, tonumber(project.requiredWorkPoints) or 1) then
         result.completed = true
-        result.instance = Buildings.CompleteProject(project)
+        result.instance, result.transition = Buildings.CompleteProject(project)
         result.nextProject = Buildings.AssignNextReadyProjectToWorker(worker)
 
         local skills = Projects.GetSkills()

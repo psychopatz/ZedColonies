@@ -24,17 +24,16 @@ Network.Handlers.DestroyBuilding = function(player, args)
         if Internal.syncNotice then
             Internal.syncNotice(player, reason or "Unable to destroy building.", "error", true)
         end
-        if Internal.syncBuildingsSnapshot then
-            Internal.syncBuildingsSnapshot(player, owner)
+        if Internal.syncBuildingState and args.plotX ~= nil and args.plotY ~= nil then
+            Internal.syncBuildingState(player, owner, args.plotX, args.plotY, {
+                sourcePlayer = player,
+            })
         end
         return
     end
 
     if Internal.syncWorkerList then
         Internal.syncWorkerList(player)
-    end
-    if Internal.syncOwnedFactionStatus then
-        Internal.syncOwnedFactionStatus(player)
     end
     if Internal.syncNotice then
         Internal.syncNotice(
@@ -44,8 +43,10 @@ Network.Handlers.DestroyBuilding = function(player, args)
             false
         )
     end
-    if Internal.syncBuildingsSnapshot then
-        Internal.syncBuildingsSnapshot(player, owner)
+    if Internal.syncBuildingState then
+        Internal.syncBuildingState(player, owner, args.plotX, args.plotY, {
+            sourcePlayer = player,
+        })
     end
 end
 

@@ -97,8 +97,10 @@ Network.Handlers.DebugCompleteBuildingProject = function(player, args)
         if Internal.syncNotice then
             Internal.syncNotice(player, "That project is no longer active.", "error", true)
         end
-        if Internal.syncBuildingsSnapshot then
-            Internal.syncBuildingsSnapshot(player, owner)
+        if Internal.syncBuildingState and args.plotX ~= nil and args.plotY ~= nil then
+            Internal.syncBuildingState(player, owner, args.plotX, args.plotY, {
+                sourcePlayer = player,
+            })
         end
         return
     end
@@ -114,13 +116,15 @@ Network.Handlers.DebugCompleteBuildingProject = function(player, args)
         activityLabel = activityLabel .. " level " .. tostring(project.targetLevel or 1)
     end
 
-    Buildings.CompleteProject(project)
+    local _, transition = Buildings.CompleteProject(project)
     if tostring(project.status or "") ~= "Completed" then
         if Internal.syncNotice then
             Internal.syncNotice(player, project.failureReason or "Unable to complete that project.", "error", true)
         end
-        if Internal.syncBuildingsSnapshot then
-            Internal.syncBuildingsSnapshot(player, owner)
+        if Internal.syncBuildingState then
+            Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
+                sourcePlayer = player,
+            })
         end
         return
     end
@@ -139,14 +143,16 @@ Network.Handlers.DebugCompleteBuildingProject = function(player, args)
         end
     end
 
-    if Internal.syncOwnedFactionStatus then
-        Internal.syncOwnedFactionStatus(player)
-    end
     if Internal.syncNotice then
         Internal.syncNotice(player, "Debug completed " .. activityLabel .. ".", "info", false)
     end
-    if Internal.syncBuildingsSnapshot then
-        Internal.syncBuildingsSnapshot(player, owner)
+    if Internal.syncBuildingState then
+        Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
+            sourcePlayer = player,
+        })
+    end
+    if transition and transition.safetyChanged == true and Internal.syncPlotSafety then
+        Internal.syncPlotSafety(player, owner, transition)
     end
 end
 

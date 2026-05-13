@@ -106,6 +106,34 @@ function Sim.ProcessBuilderJob(worker, ctx)
                     "buildings"
                 )
             end
+
+            local networkInternal = DC_Colony and DC_Colony.Network and DC_Colony.Network.Internal or nil
+            if networkInternal and networkInternal.pushOwnerBuildingMutation then
+                local additionalPlots = nil
+                if buildResult.nextProject and buildResult.nextProject.plotX ~= nil and buildResult.nextProject.plotY ~= nil then
+                    additionalPlots = {
+                        {
+                            x = buildResult.nextProject.plotX,
+                            y = buildResult.nextProject.plotY,
+                        }
+                    }
+                end
+                networkInternal.pushOwnerBuildingMutation(worker.ownerUsername, {
+                    workerID = worker.workerID,
+                    plotX = buildResult.project.plotX,
+                    plotY = buildResult.project.plotY,
+                    additionalPlots = additionalPlots,
+                    transition = buildResult.transition,
+                    notice = {
+                        message = tostring(buildResult.project.buildingType or "Building")
+                            .. " reached level "
+                            .. tostring(buildResult.project.targetLevel or 1)
+                            .. ".",
+                        severity = "info",
+                        popup = false,
+                    }
+                })
+            end
         end
     end
 

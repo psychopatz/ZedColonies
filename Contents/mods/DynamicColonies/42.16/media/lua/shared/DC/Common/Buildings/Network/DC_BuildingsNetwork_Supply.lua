@@ -24,8 +24,10 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
         if Internal.syncNotice then
             Internal.syncNotice(player, "That project is no longer active.", "error", true)
         end
-        if Internal.syncBuildingsSnapshot then
-            Internal.syncBuildingsSnapshot(player, owner)
+        if Internal.syncBuildingState and args.plotX ~= nil and args.plotY ~= nil then
+            Internal.syncBuildingState(player, owner, args.plotX, args.plotY, {
+                sourcePlayer = player,
+            })
         end
         return
     end
@@ -35,8 +37,10 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
         if Internal.syncNotice then
             Internal.syncNotice(player, "That project already has all required materials.", "info", false)
         end
-        if Internal.syncBuildingsSnapshot then
-            Internal.syncBuildingsSnapshot(player, owner)
+        if Internal.syncBuildingState then
+            Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
+                sourcePlayer = player,
+            })
         end
         return
     end
@@ -119,8 +123,10 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
         end
     end
 
-    if Internal.syncBuildingsSnapshot then
-        Internal.syncBuildingsSnapshot(player, owner)
+    if Internal.syncBuildingState then
+        Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
+            sourcePlayer = player,
+        })
     end
 end
 

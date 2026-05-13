@@ -14,13 +14,28 @@ function Buildings.CompleteProject(project)
 
     local labourConfig = Projects.GetColonyConfig()
     local owner = labourConfig.GetOwnerUsername and labourConfig.GetOwnerUsername(project.ownerUsername) or tostring(project.ownerUsername or "local")
+    local beforeTerritory = Buildings.GetTerritorySummary and Buildings.GetTerritorySummary(owner) or nil
     local instance = project.buildingID and Buildings.FindBuildingForOwner(owner, project.buildingID) or nil
+    local transition = {
+        ownerUsername = owner,
+        plotX = math.floor(tonumber(project.plotX) or 0),
+        plotY = math.floor(tonumber(project.plotY) or 0),
+        buildingType = project.buildingType,
+        targetLevel = project.targetLevel,
+        beforeTerritory = beforeTerritory,
+        affectedCoords = {
+            {
+                x = math.floor(tonumber(project.plotX) or 0),
+                y = math.floor(tonumber(project.plotY) or 0),
+            }
+        }
+    }
     if tostring(project.mode or "") == "install" then
         if not instance then
             project.status = "Failed"
             project.failureReason = "The target building no longer exists."
             Buildings.Save()
-            return nil
+            return nil, transition
         end
 
         local installKey = tostring(project.installKey or "")
@@ -39,18 +54,40 @@ function Buildings.CompleteProject(project)
         if tostring(project.buildingType or "") == "Headquarters"
             and Buildings.ExpandMapForHeadquartersUpgrade then
             Buildings.ExpandMapForHeadquartersUpgrade(owner)
+            local activeRing = Buildings.GetActiveFrontierRing and Buildings.GetActiveFrontierRing(owner) or 0
+            if Buildings.GetRingCoordinates and activeRing > 0 then
+                transition.affectedCoords = Buildings.GetRingCoordinates(activeRing)
+            end
         end
 
         if tostring(project.buildingType or "") == "Barricade"
             and Buildings.TryFinalizeBarricadeRing
             and Buildings.GetPlotRing then
-            Buildings.TryFinalizeBarricadeRing(owner, Buildings.GetPlotRing(instance.plotX, instance.plotY))
+            local ring = Buildings.GetPlotRing(instance.plotX, instance.plotY)
+            local finalized = Buildings.TryFinalizeBarricadeRing(owner, ring)
+            if finalized then
+                transition.safetyChanged = true
+                transition.securedRingAfter = ring
+                if Buildings.GetRingCoordinates then
+                    transition.affectedCoords = Buildings.GetRingCoordinates(ring)
+                end
+            end
         end
     end
 
     project.status = "Completed"
     Buildings.Save()
-    return instance
+    transition.afterTerritory = Buildings.GetTerritorySummary and Buildings.GetTerritorySummary(owner) or nil
+    if not transition.safetyChanged and transition.beforeTerritory and transition.afterTerritory then
+        transition.safetyChanged = tonumber(transition.beforeTerritory.securedPerimeterRing) ~= tonumber(transition.afterTerritory.securedPerimeterRing)
+            or tonumber(transition.beforeTerritory.unlockedPlotCount) ~= tonumber(transition.afterTerritory.unlockedPlotCount)
+            or tonumber(transition.beforeTerritory.activeBarricadeCount) ~= tonumber(transition.afterTerritory.activeBarricadeCount)
+            or tonumber(transition.beforeTerritory.headquartersLevel) ~= tonumber(transition.afterTerritory.headquartersLevel)
+    end
+    if transition.safetyChanged == true and not transition.securedRingAfter and transition.afterTerritory then
+        transition.securedRingAfter = tonumber(transition.afterTerritory.securedPerimeterRing) or 0
+    end
+    return instance, transition
 end
 
 function Buildings.FailProject(project, reason)

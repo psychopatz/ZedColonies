@@ -40,6 +40,16 @@ local function onServerCommand(module, command, args)
             return
         end
 
+        if command == "FactionStatusSummary" then
+            System.ownedFactionStatusCache = args and args.status or nil
+
+            local ui = getConversationUI()
+            if ui then
+                ui:updateOptions(ui.baseOptions or {})
+            end
+            return
+        end
+
         if command == "OwnedFactionActionResult" then
             if args and args.success and args.discoverTrader and args.traderID
                 and DynamicTrading and DynamicTrading.Manager and DynamicTrading.Manager.DiscoverTrader then

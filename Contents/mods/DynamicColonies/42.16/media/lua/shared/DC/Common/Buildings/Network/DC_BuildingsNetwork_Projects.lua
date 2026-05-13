@@ -58,8 +58,10 @@ Network.Handlers.StartBuildingProject = function(player, args)
         if worker and Shared.saveAndRefreshBasic then
             Shared.saveAndRefreshBasic(player, worker, false)
         end
-        if Internal.syncBuildingsSnapshot then
-            Internal.syncBuildingsSnapshot(player, owner)
+        if Internal.syncBuildingState and args.plotX ~= nil and args.plotY ~= nil then
+            Internal.syncBuildingState(player, owner, args.plotX, args.plotY, {
+                sourcePlayer = player,
+            })
         end
         return
     end
@@ -68,9 +70,6 @@ Network.Handlers.StartBuildingProject = function(player, args)
         Shared.saveAndRefreshProcessed(player, worker, false)
     elseif worker and Shared.saveAndRefreshBasic then
         Shared.saveAndRefreshBasic(player, worker, false)
-    end
-    if Internal.syncOwnedFactionStatus then
-        Internal.syncOwnedFactionStatus(player)
     end
     if Internal.syncNotice then
         local activityLabel = tostring(project.buildingType or "building")
@@ -99,8 +98,10 @@ Network.Handlers.StartBuildingProject = function(player, args)
             false
         )
     end
-    if Internal.syncBuildingsSnapshot then
-        Internal.syncBuildingsSnapshot(player, owner)
+    if Internal.syncBuildingState then
+        Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
+            sourcePlayer = player,
+        })
     end
 end
 
@@ -120,8 +121,10 @@ Network.Handlers.ReassignBuildingProject = function(player, args)
         if Internal.syncNotice then
             Internal.syncNotice(player, reason or "Unable to reassign the builder for that project.", "error", true)
         end
-        if Internal.syncBuildingsSnapshot then
-            Internal.syncBuildingsSnapshot(player, owner)
+        if Internal.syncBuildingState and project and project.plotX ~= nil and project.plotY ~= nil then
+            Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
+                sourcePlayer = player,
+            })
         end
         return
     end
@@ -140,9 +143,6 @@ Network.Handlers.ReassignBuildingProject = function(player, args)
         Internal.syncWorkerList(player)
     end
 
-    if Internal.syncOwnedFactionStatus then
-        Internal.syncOwnedFactionStatus(player)
-    end
     if Internal.syncNotice then
         if currentWorker and tostring(currentWorker.workerID or "") == tostring(nextWorker and nextWorker.workerID or "") then
             Internal.syncNotice(
@@ -160,8 +160,10 @@ Network.Handlers.ReassignBuildingProject = function(player, args)
             )
         end
     end
-    if Internal.syncBuildingsSnapshot then
-        Internal.syncBuildingsSnapshot(player, owner)
+    if Internal.syncBuildingState then
+        Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
+            sourcePlayer = player,
+        })
     end
 end
 

@@ -37,6 +37,7 @@ function Lifecycle.Open(windowClass, ownerWindow)
     window:addToUIManager()
     window:bringToTop()
     windowClass.instance = window
+    window:requestSnapshot()
     return window
 end
 
