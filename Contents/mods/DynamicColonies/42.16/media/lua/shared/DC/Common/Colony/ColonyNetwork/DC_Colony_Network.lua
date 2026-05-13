@@ -12,7 +12,7 @@ DC_Colony.Network = DC_Colony.Network or {}
 DC_Colony.Network.Internal = DC_Colony.Network.Internal or {}
 
 require "DC/Common/Colony/ColonyNetwork/ColonyNetTransport/DC_ColonyNetTransport"
-require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_Shared"
+require "DC/Common/Colony/ColonyNetwork/ColonyNetShared/DC_ColonyNetShared"
 require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_Inventory"
 require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_Reputation"
 require "DC/Common/Colony/ColonyNetwork/ColonyNetRecruitment/DC_ColonyNetRecruitment"

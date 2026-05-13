@@ -1,5 +1,5 @@
 require "DC/Common/Zone/DC_ZoneDataStore"
-require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_Shared"
+require "DC/Common/Colony/ColonyNetwork/ColonyNetShared/DC_ColonyNetShared"
 require "DC/Common/Zone/ZoneNetwork/DC_ZoneNetwork_Shared"
 require "DC/Common/Zone/ZoneNetwork/DC_ZoneNetwork_Query"
 
