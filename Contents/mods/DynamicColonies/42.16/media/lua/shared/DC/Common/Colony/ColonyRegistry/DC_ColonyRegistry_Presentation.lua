@@ -61,8 +61,19 @@ function Registry.GetWorkerSummary(worker)
         or 0
     local baseWorkSpeedMultiplier = Config.GetBaseWorkSpeedMultiplier and Config.GetBaseWorkSpeedMultiplier(worker, profile) or 1.0
     local jobSkillEffects = Skills and Skills.GetWorkerJobEffects and Skills.GetWorkerJobEffects(worker, profile) or nil
+    local skillSnapshot = Skills and Skills.BuildClientSkillSnapshotForWorker and Skills.BuildClientSkillSnapshotForWorker(worker) or nil
     local Warehouse = DC_Colony and DC_Colony.Warehouse or nil
     local warehouseSummary = Warehouse and Warehouse.GetClientSummary and Warehouse.GetClientSummary(worker.ownerUsername) or nil
+    local resolvedJobSkillID = (jobSkillEffects and jobSkillEffects.skillID) or worker.jobSkillID
+    local resolvedJobSkillLabel = (jobSkillEffects and jobSkillEffects.skillLabel) or worker.jobSkillLabel
+    local resolvedJobSkillLevel = tonumber(jobSkillEffects and jobSkillEffects.level)
+    if resolvedJobSkillLevel == nil then
+        resolvedJobSkillLevel = tonumber(worker.jobSkillLevel)
+    end
+    local resolvedJobSkillSpeedMultiplier = tonumber(jobSkillEffects and jobSkillEffects.speedMultiplier)
+    if resolvedJobSkillSpeedMultiplier == nil then
+        resolvedJobSkillSpeedMultiplier = tonumber(worker.jobSkillSpeedMultiplier)
+    end
     return {
         ownerUsername = worker.ownerUsername,
         workerID = worker.workerID,
@@ -182,11 +193,13 @@ function Registry.GetWorkerSummary(worker)
         warehouseUsedWeight = warehouseSummary and warehouseSummary.usedWeight or 0,
         warehouseMaxWeight = warehouseSummary and warehouseSummary.maxWeight or 0,
         warehouseRemainingWeight = warehouseSummary and warehouseSummary.remainingWeight or 0,
+        skills = skillSnapshot,
+        skillModelVersion = worker.skillModelVersion,
         primarySkillID = Skills and Skills.GetPrimarySkillID and Skills.GetPrimarySkillID(worker) or nil,
-        jobSkillID = worker.jobSkillID or (jobSkillEffects and jobSkillEffects.skillID or nil),
-        jobSkillLabel = worker.jobSkillLabel or (jobSkillEffects and jobSkillEffects.skillLabel or nil),
-        jobSkillLevel = worker.jobSkillLevel or (jobSkillEffects and jobSkillEffects.level or 0),
-        jobSkillSpeedMultiplier = worker.jobSkillSpeedMultiplier or (jobSkillEffects and jobSkillEffects.speedMultiplier or 1),
+        jobSkillID = resolvedJobSkillID,
+        jobSkillLabel = resolvedJobSkillLabel,
+        jobSkillLevel = math.max(0, math.floor(resolvedJobSkillLevel or 0)),
+        jobSkillSpeedMultiplier = resolvedJobSkillSpeedMultiplier or 1,
         housingState = worker.housingState,
         housingBuildingID = worker.housingBuildingID,
         housingBuildingType = worker.housingBuildingType,

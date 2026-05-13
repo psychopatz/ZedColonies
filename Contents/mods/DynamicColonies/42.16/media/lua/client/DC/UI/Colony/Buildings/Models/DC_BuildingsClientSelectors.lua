@@ -22,11 +22,49 @@ function DC_BuildingsClientSelectors.GetDefaultPlotKey(snapshot)
     return firstPlot and firstPlot.key or nil
 end
 
-function DC_BuildingsClientSelectors.GetBuilderConstructionLevel(builder)
-    local level = tonumber(builder and builder.jobSkillLevel)
-    if level == nil and type(builder and builder.skills) == "table" and type(builder.skills.Construction) == "table" then
-        level = tonumber(builder.skills.Construction.level)
+local function getWorkerDetail(worker)
+    local workerID = worker and worker.workerID or nil
+    local cachedDetails = DC_MainWindow and DC_MainWindow.cachedDetails or nil
+    if workerID and type(cachedDetails) == "table" then
+        return cachedDetails[workerID]
     end
+    return nil
+end
+
+local function getConstructionLevelFromSnapshot(source)
+    if type(source) == "table"
+        and type(source.skills) == "table"
+        and type(source.skills.Construction) == "table" then
+        local level = tonumber(source.skills.Construction.level)
+        if level ~= nil then
+            return math.max(0, math.floor(level))
+        end
+    end
+    return nil
+end
+
+function DC_BuildingsClientSelectors.GetBuilderConstructionLevel(builder)
+    local detail = getWorkerDetail(builder)
+    local level = getConstructionLevelFromSnapshot(detail)
+    if level == nil then
+        level = getConstructionLevelFromSnapshot(builder)
+    end
+
+    if level == nil then
+        local skills = DC_Colony and DC_Colony.Skills or nil
+        local source = detail or builder
+        local entry = skills and skills.GetSkillEntry and skills.GetSkillEntry(source, "Construction") or nil
+        level = tonumber(entry and entry.level)
+    end
+
+    if level == nil then
+        local source = detail or builder
+        local jobSkillID = tostring(source and source.jobSkillID or "")
+        if jobSkillID == "Construction" then
+            level = tonumber(source and source.jobSkillLevel)
+        end
+    end
+
     return math.max(0, math.floor(level or 0))
 end
 

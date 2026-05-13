@@ -125,11 +125,79 @@ end
 
 DC_MainWindow.MergeWorkerDetail = mergeWorkerDetail
 
+local function mergeWorkerSummaryWithDetail(summary, detail)
+    if type(summary) ~= "table" then
+        return summary
+    end
+    if type(detail) ~= "table" then
+        return summary
+    end
+
+    local merged = copyTable(summary) or {}
+    if detail.skills ~= nil then
+        merged.skills = detail.skills
+    end
+    if detail.skillModelVersion ~= nil then
+        merged.skillModelVersion = detail.skillModelVersion
+    end
+    if detail.primarySkillID ~= nil then
+        merged.primarySkillID = detail.primarySkillID
+    end
+    if detail.jobSkillID ~= nil then
+        merged.jobSkillID = detail.jobSkillID
+    end
+    if detail.jobSkillLabel ~= nil then
+        merged.jobSkillLabel = detail.jobSkillLabel
+    end
+    if detail.jobSkillLevel ~= nil then
+        merged.jobSkillLevel = detail.jobSkillLevel
+    end
+    if detail.jobSkillSpeedMultiplier ~= nil then
+        merged.jobSkillSpeedMultiplier = detail.jobSkillSpeedMultiplier
+    end
+    return merged
+end
+
+local function syncCachedWorkerSummaryFromDetails(workerID)
+    if not workerID or type(DC_MainWindow.cachedWorkers) ~= "table" then
+        return
+    end
+
+    local detail = DC_MainWindow.cachedDetails and DC_MainWindow.cachedDetails[workerID] or nil
+    if type(detail) ~= "table" then
+        return
+    end
+
+    for index, worker in ipairs(DC_MainWindow.cachedWorkers) do
+        if worker and worker.workerID == workerID then
+            DC_MainWindow.cachedWorkers[index] = mergeWorkerSummaryWithDetail(worker, detail)
+            return
+        end
+    end
+end
+
+local function hydrateWorkerSummariesFromDetails(workers)
+    if type(workers) ~= "table" then
+        return workers
+    end
+
+    for index, worker in ipairs(workers) do
+        local workerID = worker and worker.workerID or nil
+        local detail = workerID and DC_MainWindow.cachedDetails and DC_MainWindow.cachedDetails[workerID] or nil
+        if type(detail) == "table" then
+            workers[index] = mergeWorkerSummaryWithDetail(worker, detail)
+        end
+    end
+
+    return workers
+end
+
 local function replaceCachedWorkerSummary(summary)
     if type(summary) ~= "table" or not summary.workerID then
         return
     end
 
+    summary = mergeWorkerSummaryWithDetail(summary, DC_MainWindow.cachedDetails and DC_MainWindow.cachedDetails[summary.workerID] or nil)
     DC_MainWindow.cachedWorkers = DC_MainWindow.cachedWorkers or {}
     for index, worker in ipairs(DC_MainWindow.cachedWorkers) do
         if worker and worker.workerID == summary.workerID then
@@ -154,7 +222,7 @@ local function onServerCommand(module, command, args)
         if args and args.unchanged == true then
             return
         end
-        DC_MainWindow.cachedWorkers = args and args.workers or {}
+        DC_MainWindow.cachedWorkers = hydrateWorkerSummariesFromDetails(args and args.workers or {})
         DC_MainWindow.cachedWorkersVersion = args and args.version or nil
         if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() then
             DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers)
@@ -173,10 +241,12 @@ local function onServerCommand(module, command, args)
             local mergedWorker = mergeWorkerDetail(DC_MainWindow.cachedDetails[workerID], args.worker)
             DC_MainWindow.cachedDetails[workerID] = mergedWorker
             DC_MainWindow.cachedDetailVersions[workerID] = args.version or nil
+            syncCachedWorkerSummaryFromDetails(workerID)
             if DC_MainWindow.instance
                 and DC_MainWindow.instance:getIsVisible()
                 and DC_MainWindow.instance.selectedWorkerSummary
                 and DC_MainWindow.instance.selectedWorkerSummary.workerID == workerID then
+                DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers or {})
                 DC_MainWindow.instance:updateWorkerDetail(mergedWorker)
                 if (tonumber(DC_MainWindow.instance.syncStatusMutedFrames) or 0) <= 0 then
                     DC_MainWindow.instance:updateStatus("Worker details synced.")
@@ -246,7 +316,7 @@ local function onServerCommand(module, command, args)
     elseif command == "ColonyBootstrap" then
         local versions = args and args.versions or {}
         if args and args.workers then
-            DC_MainWindow.cachedWorkers = args.workers
+            DC_MainWindow.cachedWorkers = hydrateWorkerSummariesFromDetails(args.workers)
         end
         if args and args.warehouse then
             DC_MainWindow.cachedWarehouseSummary = args.warehouse
@@ -281,7 +351,7 @@ local function onServerCommand(module, command, args)
             end
         end
     elseif command == "WorkerListUpdated" then
-        DC_MainWindow.cachedWorkers = args and args.workers or {}
+        DC_MainWindow.cachedWorkers = hydrateWorkerSummariesFromDetails(args and args.workers or {})
         DC_MainWindow.cachedWorkersVersion = args and args.version or nil
         if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() then
             DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers)
@@ -302,6 +372,7 @@ local function onServerCommand(module, command, args)
             local workerID = args.worker.workerID
             DC_MainWindow.cachedDetails[workerID] = mergeWorkerDetail(DC_MainWindow.cachedDetails[workerID], args.worker)
             DC_MainWindow.cachedDetailVersions[workerID] = args.version or nil
+            syncCachedWorkerSummaryFromDetails(workerID)
             if DC_MainWindow.instance and DC_MainWindow.instance:getIsVisible() then
                 DC_MainWindow.instance:populateWorkerList(DC_MainWindow.cachedWorkers or {})
                 if DC_MainWindow.instance.selectedWorkerSummary and DC_MainWindow.instance.selectedWorkerSummary.workerID == workerID then
