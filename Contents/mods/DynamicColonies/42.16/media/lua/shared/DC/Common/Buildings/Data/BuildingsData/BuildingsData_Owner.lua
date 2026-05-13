@@ -92,11 +92,6 @@ function Internal.GetExistingOwnerData(ownerUsername)
         return Internal.NormalizeOwnerData(normalizeOwner or ownerUsername, data)
     end
 
-    ownerData = tryShard(buildShardKeyFromSuffix(inputKey), ownerUsername)
-    if ownerData then
-        return ownerData
-    end
-
     local registry = Internal.GetRegistry and Internal.GetRegistry() or nil
     local colonyID = registry and registry.GetColonyIDForOwner and registry.GetColonyIDForOwner(ownerUsername, false) or nil
     if colonyID ~= nil then
@@ -106,7 +101,16 @@ function Internal.GetExistingOwnerData(ownerUsername)
         end
     end
 
-    return tryShard(buildShardKeyFromSuffix(authorityOwner), authorityOwner)
+    ownerData = tryShard(buildShardKeyFromSuffix(authorityOwner), authorityOwner)
+    if ownerData then
+        return ownerData
+    end
+
+    if colonyID == nil then
+        return tryShard(buildShardKeyFromSuffix(inputKey), ownerUsername)
+    end
+
+    return nil
 end
 
 function Buildings.GetData()
