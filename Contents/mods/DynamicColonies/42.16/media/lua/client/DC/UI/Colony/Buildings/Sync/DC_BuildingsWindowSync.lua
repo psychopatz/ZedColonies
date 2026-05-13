@@ -101,6 +101,31 @@ local function setSyncState(windowClass, state, extra)
     sync.framesSinceActivity = 0
 end
 
+local function buildGapRequestSignature(plotKeys)
+    local normalized = {}
+    for _, key in ipairs(plotKeys or {}) do
+        local plotKey = tostring(key or "")
+        if plotKey ~= "" then
+            normalized[#normalized + 1] = plotKey
+        end
+    end
+    table.sort(normalized)
+    return table.concat(normalized, "|")
+end
+
+local function clearGapRequest(sync, resolvedMapRevision)
+    if type(sync) ~= "table" then
+        return
+    end
+
+    local targetRevision = tonumber(sync.pendingGapMapRevision) or 0
+    local resolvedRevision = math.max(0, math.floor(tonumber(resolvedMapRevision) or 0))
+    if resolvedMapRevision == nil or targetRevision <= 0 or resolvedRevision >= targetRevision then
+        sync.pendingGapMapRevision = nil
+        sync.pendingGapSignature = nil
+    end
+end
+
 local function resetChunkTracking(windowClass)
     windowClass.receivedChunkIndexes = {}
 end
@@ -127,6 +152,7 @@ function Sync.RequestSnapshot(window, windowClass, forceRetry)
     if isClient() and not isServer() then
         local snapshot = ensureSnapshot(windowClass)
         local sync = snapshot.sync
+        clearGapRequest(sync, nil)
         local knownMapRevision = sync.state == "ready" and math.max(0, math.floor(tonumber(sync.mapRevision) or 0)) or 0
         local knownTopologyRevision = sync.state == "ready" and math.max(0, math.floor(tonumber(sync.topologyRevision) or 0)) or 0
         local command = forceRetry == true and "RequestBuildingMapRetry" or "RequestBuildingMapOpen"
@@ -275,6 +301,7 @@ function Sync.HandleMapReady(windowClass, args)
         message = nil,
         retryHint = false,
     })
+    clearGapRequest(ensureSnapshot(windowClass).sync, args.mapRevision)
     refreshVisibleWindow(windowClass)
 end
 
@@ -287,8 +314,16 @@ local function handleRevisionGap(windowClass, args, plotKeys)
     local sync = snapshot.sync
     local incomingMapRevision = math.max(0, math.floor(tonumber(args.mapRevision) or 0))
     local currentMapRevision = math.max(0, math.floor(tonumber(sync.mapRevision) or 0))
+    local gapSignature = buildGapRequestSignature(plotKeys)
 
     if currentMapRevision > 0 and incomingMapRevision > (currentMapRevision + 1) and windowClass.instance and windowClass.instance.getOwnerWindow then
+        if tonumber(sync.pendingGapMapRevision) == incomingMapRevision and tostring(sync.pendingGapSignature or "") == gapSignature then
+            return
+        end
+
+        sync.pendingGapMapRevision = incomingMapRevision
+        sync.pendingGapSignature = gapSignature
+
         local ownerWindow = windowClass.instance:getOwnerWindow()
         if ownerWindow and ownerWindow.sendColonyCommand then
             ownerWindow:sendColonyCommand("RequestBuildingPlots", {
@@ -318,6 +353,7 @@ function Sync.HandlePlotUpdated(windowClass, args)
         topologyRevision = math.max(0, math.floor(tonumber(args.topologyRevision) or 0)),
         message = nil,
     })
+    clearGapRequest(ensureSnapshot(windowClass).sync, args.mapRevision)
     refreshVisibleWindow(windowClass)
 end
 
@@ -338,6 +374,7 @@ function Sync.HandlePlotsUpdated(windowClass, args)
         topologyRevision = math.max(0, math.floor(tonumber(args.topologyRevision) or 0)),
         message = nil,
     })
+    clearGapRequest(ensureSnapshot(windowClass).sync, args.mapRevision)
     refreshVisibleWindow(windowClass)
 end
 
@@ -355,6 +392,7 @@ function Sync.HandleSnapshotResponse(windowClass, args)
                 mapRevision = tonumber(windowClass.cachedVersion) or 1,
                 topologyRevision = tonumber(windowClass.cachedVersion) or 1,
             }
+            clearGapRequest(windowClass.cachedSnapshot.sync, windowClass.cachedVersion)
         end
         refreshVisibleWindow(windowClass)
     end

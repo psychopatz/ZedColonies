@@ -98,19 +98,25 @@ function Internal.UnlockPlotInMap(mapData, x, y, kind)
     return plot
 end
 
-function Buildings.GetMapDataForOwner(ownerUsername)
-    local ownerData = Internal.GetOwnerDataIfNormalizing and Internal.GetOwnerDataIfNormalizing(ownerUsername)
-        or Buildings.EnsureOwner(ownerUsername)
+function Buildings.GetMapDataForOwner(ownerUsername, createIfMissing)
+    local ownerData = Internal.GetExistingOwnerData and Internal.GetExistingOwnerData(ownerUsername)
+        or createIfMissing ~= false and Buildings.EnsureOwner(ownerUsername)
+        or nil
+    if type(ownerData) ~= "table" then
+        ownerData = {
+            map = nil,
+        }
+    end
     return Buildings.EnsureMapData(ownerData)
 end
 
 function Buildings.GetStoredPlotForOwner(ownerUsername, x, y)
-    local mapData = Buildings.GetMapDataForOwner(ownerUsername)
+    local mapData = Buildings.GetMapDataForOwner(ownerUsername, false)
     return mapData.plots[Buildings.GetPlotKey(x, y)]
 end
 
 function Buildings.GetOrCreatePlotForOwner(ownerUsername, x, y, kind)
-    local mapData = Buildings.GetMapDataForOwner(ownerUsername)
+    local mapData = Buildings.GetMapDataForOwner(ownerUsername, true)
     return Internal.GetOrCreatePlotInMap(mapData, x, y, kind)
 end
 

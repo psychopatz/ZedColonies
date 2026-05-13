@@ -35,7 +35,7 @@ function Buildings.FindBuildingForOwner(ownerUsername, buildingID)
 end
 
 function Buildings.FindBuildingAtPlot(ownerUsername, plotX, plotY)
-    local ownerData = Internal.GetOwnerDataIfNormalizing and Internal.GetOwnerDataIfNormalizing(ownerUsername)
+    local ownerData = Internal.GetExistingOwnerData and Internal.GetExistingOwnerData(ownerUsername)
         or Buildings.EnsureOwner(ownerUsername)
     local wantedKey = Buildings.GetPlotKey(plotX, plotY)
     local plotMap = Runtime.plotToBuildingID[ownerData.colonyID]

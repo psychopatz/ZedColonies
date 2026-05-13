@@ -12,6 +12,10 @@ Runtime.ownerNormalizationContextByColonyID = Runtime.ownerNormalizationContextB
 Runtime.ownerNormalizationContextByAuthorityOwner = Runtime.ownerNormalizationContextByAuthorityOwner or {}
 Internal.Runtime = Runtime
 
+local function buildShardKeyFromSuffix(value)
+    return tostring((Buildings.Config and Buildings.Config.MOD_DATA_PREFIX) or "DColony_Buildings_") .. tostring(value or "")
+end
+
 local function beginOwnerNormalizationContext(ownerUsername, ownerData)
     local inputKey = tostring(ownerUsername or "local")
     local shardKey = Internal.GetShardKey(ownerUsername)
@@ -58,6 +62,51 @@ function Internal.GetOwnerDataIfNormalizing(ownerUsername)
     end
 
     return Runtime.ownerNormalizationContextByColonyID[inputKey]
+end
+
+function Internal.GetExistingOwnerData(ownerUsername)
+    local ownerData = Internal.GetOwnerDataIfNormalizing(ownerUsername)
+    if ownerData then
+        return ownerData
+    end
+
+    local authorityOwner = tostring(Internal.GetAuthorityOwner(ownerUsername))
+    local inputKey = tostring(ownerUsername or "local")
+    local triedShardKeys = {}
+
+    local function tryShard(shardKey, normalizeOwner)
+        if shardKey == nil or triedShardKeys[shardKey] then
+            return nil
+        end
+        triedShardKeys[shardKey] = true
+
+        if not ModData or not ModData.exists or not ModData.exists(shardKey) then
+            return nil
+        end
+
+        local data = ModData.get(shardKey)
+        if type(data) ~= "table" then
+            return nil
+        end
+
+        return Internal.NormalizeOwnerData(normalizeOwner or ownerUsername, data)
+    end
+
+    ownerData = tryShard(buildShardKeyFromSuffix(inputKey), ownerUsername)
+    if ownerData then
+        return ownerData
+    end
+
+    local registry = Internal.GetRegistry and Internal.GetRegistry() or nil
+    local colonyID = registry and registry.GetColonyIDForOwner and registry.GetColonyIDForOwner(ownerUsername, false) or nil
+    if colonyID ~= nil then
+        ownerData = tryShard(Internal.GetShardKeyForColonyID(colonyID), authorityOwner)
+        if ownerData then
+            return ownerData
+        end
+    end
+
+    return tryShard(buildShardKeyFromSuffix(authorityOwner), authorityOwner)
 end
 
 function Buildings.GetData()
@@ -107,12 +156,12 @@ function Buildings.EnsureOwner(ownerUsername)
 end
 
 function Buildings.GetBuildingsForOwner(ownerUsername)
-    local ownerData = Internal.GetOwnerDataIfNormalizing(ownerUsername) or Buildings.EnsureOwner(ownerUsername)
+    local ownerData = Internal.GetExistingOwnerData(ownerUsername) or Buildings.EnsureOwner(ownerUsername)
     return ownerData.buildings
 end
 
 function Buildings.GetProjectsForOwner(ownerUsername)
-    local ownerData = Internal.GetOwnerDataIfNormalizing(ownerUsername) or Buildings.EnsureOwner(ownerUsername)
+    local ownerData = Internal.GetExistingOwnerData(ownerUsername) or Buildings.EnsureOwner(ownerUsername)
     return ownerData.projects
 end
 
