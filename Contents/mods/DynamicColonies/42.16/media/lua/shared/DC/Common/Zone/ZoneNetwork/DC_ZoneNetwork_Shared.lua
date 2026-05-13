@@ -1,6 +1,4 @@
 require "DC/Common/Zone/DC_ZoneDataStore"
-require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
-require "DC/Common/Colony/ColonyRegistry/DC_ColonyRegistry"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Network = DC_Colony.Network or {}
@@ -8,17 +6,30 @@ DC_Colony.Network.Internal = DC_Colony.Network.Internal or {}
 
 local Network = DC_Colony.Network
 local Internal = Network.Internal
-local ColonyConfig = DC_Colony.Config
-local Registry = DC_Colony.Registry
 local Store = DC_ZoneDataStore
 
+local function getConfig()
+    return DC_Colony and DC_Colony.Config or nil
+end
+
+local function getRegistry()
+    return DC_Colony and DC_Colony.Registry or nil
+end
+
+local function getCommandModule()
+    local config = getConfig()
+    return config and config.COMMAND_MODULE or "DColony"
+end
+
 local function getOwnerUsername(player)
-    return ColonyConfig and ColonyConfig.GetOwnerUsername and ColonyConfig.GetOwnerUsername(player) or tostring(player or "local")
+    local config = getConfig()
+    return config and config.GetOwnerUsername and config.GetOwnerUsername(player) or tostring(player or "local")
 end
 
 local function resolveColonyID(playerOwner, requestedColonyId)
     local colonyID = tostring(requestedColonyId or "")
-    local ownedColonyID = Registry and Registry.GetColonyIDForOwner and Registry.GetColonyIDForOwner(playerOwner, false) or nil
+    local registry = getRegistry()
+    local ownedColonyID = registry and registry.GetColonyIDForOwner and registry.GetColonyIDForOwner(playerOwner, false) or nil
 
     if colonyID == "" then
         if ownedColonyID then
@@ -28,7 +39,7 @@ local function resolveColonyID(playerOwner, requestedColonyId)
     end
 
     if ownedColonyID and tostring(ownedColonyID) ~= colonyID then
-        local colonyData = Registry and Registry.GetColonyData and Registry.GetColonyData(colonyID, false) or nil
+        local colonyData = registry and registry.GetColonyData and registry.GetColonyData(colonyID, false) or nil
         if not colonyData or tostring(colonyData.ownerUsername or "") ~= tostring(playerOwner or "") then
             return nil, "Access denied."
         end
@@ -43,7 +54,7 @@ local function sendSnapshot(player, colonyId, snapshot, options)
         return
     end
 
-    Internal.sendResponse(player, ColonyConfig.COMMAND_MODULE, "SyncZonesSnapshot", {
+    Internal.sendResponse(player, getCommandModule(), "SyncZonesSnapshot", {
         colonyId = colonyId,
         version = snapshot and snapshot.version or nil,
         unchanged = options.unchanged == true,

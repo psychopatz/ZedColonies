@@ -176,6 +176,9 @@ function Buildings.TryFinalizeBarricadeRing(ownerUsername, ring)
     if mapData then
         mapData.securedRing = safeRing
     end
+    if Buildings.UnlockRingFully then
+        Buildings.UnlockRingFully(safeOwner, safeRing)
+    end
     Buildings.Save()
     return true, removed
 end
@@ -184,6 +187,10 @@ function Buildings.GetUnlockedPlotEntries(ownerUsername)
     local owner = getOwnerUsername(ownerUsername)
     local mapData = Buildings.GetMapDataForOwner(owner)
     local plots = {}
+
+    if Buildings.NormalizeFrontierUnlocks and Buildings.NormalizeFrontierUnlocks(owner) then
+        Buildings.Save()
+    end
 
     for _, plot in pairs(mapData and mapData.plots or {}) do
         if plot and plot.unlocked == true then

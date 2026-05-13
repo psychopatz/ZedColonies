@@ -2,6 +2,56 @@ DC_Buildings = DC_Buildings or {}
 
 local Buildings = DC_Buildings
 local Constants = Buildings.MapConstants
+local CARDINAL_DIRECTIONS = {
+    { x = -1, y = 0 },
+    { x = 1, y = 0 },
+    { x = 0, y = -1 },
+    { x = 0, y = 1 }
+}
+
+local function isCardinalSeed(ring, x, y)
+    local safeRing = math.max(1, math.floor(tonumber(ring) or 1))
+    local plotX = math.floor(tonumber(x) or 0)
+    local plotY = math.floor(tonumber(y) or 0)
+    return (math.abs(plotX) == safeRing and plotY == 0)
+        or (math.abs(plotY) == safeRing and plotX == 0)
+end
+
+local function hasCompletedBarricadeAt(ownerUsername, plotX, plotY)
+    local instance = Buildings.FindBuildingAtPlot and Buildings.FindBuildingAtPlot(ownerUsername, plotX, plotY) or nil
+    return instance
+        and tostring(instance.buildingType or "") == "Barricade"
+        and math.floor(tonumber(instance.level) or 0) > 0
+        or false
+end
+
+local function hasCompletedFrontierNeighbor(ownerUsername, ring, plotX, plotY)
+    local safeRing = math.max(1, math.floor(tonumber(ring) or 1))
+    local x = math.floor(tonumber(plotX) or 0)
+    local y = math.floor(tonumber(plotY) or 0)
+
+    for _, direction in ipairs(CARDINAL_DIRECTIONS) do
+        local neighborX = x + direction.x
+        local neighborY = y + direction.y
+        if Buildings.GetPlotRing
+            and Buildings.GetPlotRing(neighborX, neighborY) == safeRing
+            and hasCompletedBarricadeAt(ownerUsername, neighborX, neighborY) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function addDesiredPlot(desiredPlots, x, y, kind)
+    local plotX = math.floor(tonumber(x) or 0)
+    local plotY = math.floor(tonumber(y) or 0)
+    desiredPlots[Buildings.GetPlotKey(plotX, plotY)] = {
+        x = plotX,
+        y = plotY,
+        kind = kind or Constants.PlotKinds.Standard
+    }
+end
 
 local function buildEdge(ring, direction)
     local coords = {}
@@ -56,32 +106,93 @@ function Buildings.UnlockRingFully(ownerUsername, ring)
     end
 end
 
-function Buildings.ExpandMapForHeadquartersUpgrade(ownerUsername)
+function Buildings.NormalizeFrontierUnlocks(ownerUsername)
     local mapData = Buildings.GetMapDataForOwner(ownerUsername)
-    local ring = math.max(1, math.floor(tonumber(mapData.currentRing) or 1))
-    local direction = Buildings.NormalizeDirection(mapData.nextUnlockDirection)
+    local desiredPlots = {}
+    local securedRing = Buildings.GetSecuredPerimeterRing and Buildings.GetSecuredPerimeterRing(ownerUsername) or 0
+    local activeRing = Buildings.GetActiveFrontierRing and Buildings.GetActiveFrontierRing(ownerUsername) or 0
+    local changed = false
+
+    addDesiredPlot(desiredPlots, 0, 0, Constants.PlotKinds.HQOnly)
+
+    for ring = 1, math.max(0, securedRing) do
+        for _, cell in ipairs(Buildings.GetRingCoordinates and Buildings.GetRingCoordinates(ring) or {}) do
+            addDesiredPlot(desiredPlots, cell.x, cell.y, Constants.PlotKinds.Standard)
+        end
+    end
+
+    for _, instance in ipairs(Buildings.GetBuildingsForOwner and Buildings.GetBuildingsForOwner(ownerUsername) or {}) do
+        if math.floor(tonumber(instance and instance.level) or 0) > 0 then
+            addDesiredPlot(
+                desiredPlots,
+                instance.plotX,
+                instance.plotY,
+                math.floor(tonumber(instance.plotX) or 0) == 0 and math.floor(tonumber(instance.plotY) or 0) == 0
+                    and Constants.PlotKinds.HQOnly
+                    or Constants.PlotKinds.Standard
+            )
+        end
+    end
+
+    if activeRing > 0 then
+        for _, cell in ipairs(Buildings.GetRingCoordinates and Buildings.GetRingCoordinates(activeRing) or {}) do
+            if isCardinalSeed(activeRing, cell.x, cell.y)
+                or hasCompletedFrontierNeighbor(ownerUsername, activeRing, cell.x, cell.y)
+                or hasCompletedBarricadeAt(ownerUsername, cell.x, cell.y) then
+                addDesiredPlot(desiredPlots, cell.x, cell.y, Constants.PlotKinds.Standard)
+            end
+        end
+    end
+
+    for key, desired in pairs(desiredPlots) do
+        local plot = Buildings.GetOrCreatePlotForOwner(ownerUsername, desired.x, desired.y, desired.kind)
+        if plot.unlocked ~= true then
+            plot.unlocked = true
+            changed = true
+        end
+        if tostring(plot.kind or "") ~= tostring(desired.kind or plot.kind or Constants.PlotKinds.Standard) then
+            plot.kind = desired.kind
+            changed = true
+        end
+    end
+
+    for key, plot in pairs(mapData and mapData.plots or {}) do
+        local desired = desiredPlots[key]
+        local shouldUnlock = desired ~= nil
+        if plot.unlocked ~= shouldUnlock then
+            plot.unlocked = shouldUnlock
+            changed = true
+        end
+        if desired and tostring(plot.kind or "") ~= tostring(desired.kind or plot.kind or Constants.PlotKinds.Standard) then
+            plot.kind = desired.kind
+            changed = true
+        end
+    end
+
+    return changed
+end
+
+function Buildings.ExpandMapForHeadquartersUpgrade(ownerUsername)
+    local ring = Buildings.GetActiveFrontierRing and Buildings.GetActiveFrontierRing(ownerUsername) or 0
     local unlockedPlots = {}
 
-    for _, cell in ipairs(Buildings.GetEdgeCoordinates(ring, direction)) do
-        unlockedPlots[#unlockedPlots + 1] = Buildings.UnlockPlotForOwner(ownerUsername, cell.x, cell.y, Constants.PlotKinds.Standard)
+    if Buildings.NormalizeFrontierUnlocks then
+        Buildings.NormalizeFrontierUnlocks(ownerUsername)
     end
 
-    local nextDirection = "Left"
-    if direction == "Left" then
-        nextDirection = "Top"
-    elseif direction == "Top" then
-        nextDirection = "Right"
-    elseif direction == "Right" then
-        nextDirection = "Bottom"
-    else
-        nextDirection = "Left"
-        mapData.currentRing = ring + 1
+    if ring > 0 then
+        for _, cell in ipairs(Buildings.GetRingCoordinates and Buildings.GetRingCoordinates(ring) or {}) do
+            if isCardinalSeed(ring, cell.x, cell.y) then
+                local plot = Buildings.GetStoredPlotForOwner and Buildings.GetStoredPlotForOwner(ownerUsername, cell.x, cell.y) or nil
+                if plot and plot.unlocked == true then
+                    unlockedPlots[#unlockedPlots + 1] = Buildings.BuildVirtualPlot(plot.x, plot.y, true, plot.kind)
+                end
+            end
+        end
     end
 
-    mapData.nextUnlockDirection = nextDirection
     return {
         ring = ring,
-        direction = direction,
         plots = unlockedPlots
     }
 end

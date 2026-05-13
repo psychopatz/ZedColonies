@@ -58,12 +58,18 @@ local function drawTile(panel, rect, selected, presentation)
     end
 end
 
-function Renderer.Draw(panel, snapshot, viewportState, selectedPlotKey)
-    local plots = snapshot and snapshot.map and snapshot.map.plots or {}
-    local territory = snapshot and snapshot.map or {}
+function Renderer.DrawHeader(panel, territory)
+    territory = territory or {}
 
     panel:drawText(tostring(DC_BuildingsMapFormatter.GetHeaderText()), 10, 8, 1, 1, 1, 1, UIFont.Medium)
     panel:drawText(DC_BuildingsMapFormatter.GetStatusText(territory), 150, 10, 0.76, 0.76, 0.76, 1, UIFont.Small)
+end
+
+function Renderer.DrawTiles(panel, snapshot, viewportState, selectedPlotKey)
+    local plots = snapshot and snapshot.map and snapshot.map.plots or {}
+
+    panel:drawRect(0, 0, panel.width, panel.height, 0.1, 1, 1, 1)
+    panel:drawRectBorder(0, 0, panel.width, panel.height, 0.08, 1, 1, 1)
 
     for _, plot in ipairs(plots) do
         local rect = DC_BuildingsMapViewport.GetPlotRect(plot, viewportState, panel.width, panel.height)
@@ -72,6 +78,13 @@ function Renderer.Draw(panel, snapshot, viewportState, selectedPlotKey)
             drawTile(panel, rect, tostring(plot.key or "") == tostring(selectedPlotKey or ""), presentation)
         end
     end
+end
+
+function Renderer.Draw(panel, snapshot, viewportState, selectedPlotKey)
+    local territory = snapshot and snapshot.map or {}
+
+    Renderer.DrawHeader(panel, territory)
+    Renderer.DrawTiles(panel, snapshot, viewportState, selectedPlotKey)
 end
 
 return Renderer

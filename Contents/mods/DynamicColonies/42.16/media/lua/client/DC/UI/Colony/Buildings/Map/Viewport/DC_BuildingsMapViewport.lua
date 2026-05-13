@@ -5,6 +5,7 @@ local Viewport = DC_BuildingsMapViewport
 Viewport.DEFAULT_TILE_SIZE = 96
 Viewport.DEFAULT_GAP = 10
 Viewport.DEFAULT_BOUNDS_PADDING = 2
+Viewport.DEFAULT_TOP_INSET = 28
 
 local function getSnapshotBounds(snapshot)
     return snapshot and snapshot.map and snapshot.map.bounds or snapshot and snapshot.bounds or {
@@ -31,6 +32,7 @@ function Viewport.EnsureState(state, snapshot)
     state = type(state) == "table" and state or {}
     state.tileSize = math.max(64, math.floor(tonumber(state.tileSize) or Viewport.DEFAULT_TILE_SIZE))
     state.gap = math.max(4, math.floor(tonumber(state.gap) or Viewport.DEFAULT_GAP))
+    state.topInset = math.max(0, math.floor(tonumber(state.topInset) or Viewport.DEFAULT_TOP_INSET))
 
     if state.centerX == nil or state.centerY == nil then
         state.centerX, state.centerY = getDefaultCenter(snapshot)
@@ -56,12 +58,13 @@ end
 function Viewport.GetLayout(width, height, state)
     local tile = math.max(64, math.floor(tonumber(state and state.tileSize) or Viewport.DEFAULT_TILE_SIZE))
     local gap = math.max(4, math.floor(tonumber(state and state.gap) or Viewport.DEFAULT_GAP))
+    local topInset = math.max(0, math.floor(tonumber(state and state.topInset) or Viewport.DEFAULT_TOP_INSET))
     return {
         tile = tile,
         gap = gap,
         step = tile + gap,
         centerX = math.floor((tonumber(width) or 0) / 2),
-        centerY = math.floor(((tonumber(height) or 0) + 28) / 2)
+        centerY = math.floor(((tonumber(height) or 0) + topInset) / 2)
     }
 end
 

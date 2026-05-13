@@ -282,6 +282,11 @@ function Buildings.CompleteProject(project)
         instance.plotY = math.floor(tonumber(project.plotY) or 0)
         Buildings.UnlockPlotForOwner(owner, instance.plotX, instance.plotY, instance.plotX == 0 and instance.plotY == 0 and Buildings.MapConstants.PlotKinds.HQOnly or Buildings.MapConstants.PlotKinds.Standard)
 
+        if tostring(project.buildingType or "") == "Headquarters"
+            and Buildings.ExpandMapForHeadquartersUpgrade then
+            Buildings.ExpandMapForHeadquartersUpgrade(owner)
+        end
+
         if tostring(project.buildingType or "") == "Barricade"
             and Buildings.TryFinalizeBarricadeRing
             and Buildings.GetPlotRing then
