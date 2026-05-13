@@ -4,6 +4,7 @@
 
 DC_ZoneWindow = DC_ZoneWindow or {}
 DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
+require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 
 local ZoneWindowLayout = DC_ZoneWindow.Internal.ZoneWindowLayout or {}
 
@@ -163,9 +164,11 @@ function DC_ZoneWindow:createChildren()
     self.detailNameEntry = ISTextEntryBox:new("", 60, L.PANEL_HEADER_HEIGHT + 2, 200, 22)
     self.detailNameEntry:initialise()
     self.detailNameEntry.onTextChange = function()
-        if self.selectedZone then
-            self.selectedZone.name = self.detailNameEntry:getText()
+        local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+        if selectedZone then
+            selectedZone.name = self.detailNameEntry:getText()
             self:populateZoneList()
+            DC_ZoneWindowState.MarkDirty(self)
         end
     end
     self.detailPanel:addChild(self.detailNameEntry)
@@ -176,12 +179,14 @@ function DC_ZoneWindow:createChildren()
     self.detailPanel:addChild(self.detailTypeLabel)
 
     self.detailTypeCombo = ISComboBox:new(60, L.PANEL_HEADER_HEIGHT + 30, 200, 22, self, function(owner)
-        if owner.selectedZone then
+        local selectedZone = DC_ZoneWindowState.GetSelectedZone(owner)
+        if selectedZone then
             local types = DC_ZoneData.getTypeList()
             local idx = owner.detailTypeCombo.selected
             if types[idx] then
-                owner.selectedZone.zoneType = types[idx].id
+                selectedZone.zoneType = types[idx].id
                 owner:populateZoneList()
+                DC_ZoneWindowState.MarkDirty(owner)
             end
         end
     end)
@@ -341,6 +346,6 @@ function DC_ZoneWindow:createChildren()
     -- Apply dynamic layout
     ZoneWindowLayout.applyWindowLayout(self)
 
-    -- Initial empty state
-    self:refreshDetailPanel()
+    -- Initial state from the persisted zone store
+    self:refreshFromColonyData()
 end

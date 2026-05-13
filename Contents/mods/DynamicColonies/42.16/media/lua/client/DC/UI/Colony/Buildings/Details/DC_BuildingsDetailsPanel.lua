@@ -2,6 +2,7 @@ require "ISUI/ISPanel"
 require "ISUI/ISRichTextPanel"
 require "ISUI/ISButton"
 require "DC/UI/Colony/Buildings/Details/DC_BuildingsDetailsFormatter"
+require "DC/UI/Colony/Buildings/Models/DC_BuildingsClientSelectors"
 
 DC_BuildingsDetailsPanel = ISPanel:derive("DC_BuildingsDetailsPanel")
 
@@ -152,74 +153,77 @@ function DC_BuildingsDetailsPanel:setPlot(plot)
         self.textPanel:paginate()
     end
     if self.btnUpgrade then
-        local canUpgrade = plot and plot.building and plot.building.upgradePreview and plot.building.upgradePreview.available == true
-        self.btnUpgrade:setEnable(canUpgrade == true)
+        self.btnUpgrade:setEnable(DC_BuildingsClientSelectors.CanUpgradePlot(plot) == true)
     end
     if self.btnInstall then
-        local canInstall = plot and plot.building and plot.building.installOptions and #plot.building.installOptions > 0
-        self.btnInstall:setEnable(canInstall == true)
+        self.btnInstall:setEnable(DC_BuildingsClientSelectors.CanInstallPlot(plot) == true)
     end
     if self.btnSwap then
-        local isGreenhouse = plot and plot.building and tostring(plot.building.buildingType or "") == "Greenhouse"
-        local canSwap = plot and plot.project and tostring(plot.project.status or "") == "Active"
-        self.btnSwap:setTitle(canSwap and "Manage" or (isGreenhouse and "Garden" or "Manage"))
-        self.btnSwap:setEnable(canSwap == true or isGreenhouse == true)
+        local manageState = DC_BuildingsClientSelectors.GetManagePlotState(plot)
+        self.btnSwap:setTitle(manageState.title)
+        self.btnSwap:setEnable(manageState.enabled == true)
     end
     if self.btnDestroy then
-        local canDestroy = plot and plot.building and plot.building.canDestroy == true
-        self.btnDestroy:setEnable(canDestroy == true)
+        self.btnDestroy:setEnable(DC_BuildingsClientSelectors.CanDestroyPlot(plot) == true)
     end
     if self.btnDebugComplete then
-        local canDebugComplete = plot and plot.project and tostring(plot.project.status or "") == "Active"
-        self.btnDebugComplete:setEnable(canDebugComplete == true)
+        self.btnDebugComplete:setEnable(DC_BuildingsClientSelectors.CanDebugCompleteProject(plot) == true)
     end
 end
 
+function DC_BuildingsDetailsPanel:dispatchAction(actionName)
+    if self.actionDispatcher and self.actionDispatcher.Dispatch and self.ownerWindow then
+        return self.actionDispatcher.Dispatch(actionName, self.ownerWindow, self.plot)
+    end
+    return nil
+end
+
 function DC_BuildingsDetailsPanel:onUpgradeClicked()
-    if self.onUpgradeCallback and self.plot and self.plot.building then
-        self.onUpgradeCallback(self.plot)
+    if self.plot and self.plot.building then
+        self:dispatchAction("upgrade")
     end
 end
 
 function DC_BuildingsDetailsPanel:onInstallClicked()
-    if self.onInstallCallback and self.plot and self.plot.building then
-        self.onInstallCallback(self.plot)
+    if self.plot and self.plot.building then
+        self:dispatchAction("install")
     end
 end
 
 function DC_BuildingsDetailsPanel:onSwapClicked()
-    if self.plot and self.plot.project and self.onSwapCallback then
-        self.onSwapCallback(self.plot)
-    elseif self.plot and self.plot.building and tostring(self.plot.building.buildingType or "") == "Greenhouse" and self.onGreenhouseCallback then
-        self.onGreenhouseCallback(self.plot)
+    if not self.plot then
+        return
+    end
+
+    local manageState = DC_BuildingsClientSelectors.GetManagePlotState(self.plot)
+    if manageState.canSwap == true then
+        self:dispatchAction("swapProjectBuilder")
+    elseif manageState.isGreenhouse == true then
+        self:dispatchAction("manageGreenhouse")
     end
 end
 
 function DC_BuildingsDetailsPanel:onDestroyClicked()
-    if self.onDestroyCallback and self.plot and self.plot.building then
-        self.onDestroyCallback(self.plot)
+    if self.plot and self.plot.building then
+        self:dispatchAction("destroy")
     end
 end
 
 function DC_BuildingsDetailsPanel:onDebugCompleteClicked()
-    if self.onDebugCompleteCallback and self.plot and self.plot.project then
-        self.onDebugCompleteCallback(self.plot)
+    if self.plot and self.plot.project then
+        self:dispatchAction("debugComplete")
     end
 end
 
-function DC_BuildingsDetailsPanel:new(x, y, width, height, onUpgradeCallback, onInstallCallback, onSwapCallback, onGreenhouseCallback, onDestroyCallback, onDebugCompleteCallback)
+function DC_BuildingsDetailsPanel:new(x, y, width, height, ownerWindow, actionDispatcher)
     local o = ISPanel:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
     o.backgroundColor = { r = 0, g = 0, b = 0, a = 0.2 }
     o.borderColor = { r = 1, g = 1, b = 1, a = 0.08 }
     o.debugEnabled = canUseDebug()
-    o.onUpgradeCallback = onUpgradeCallback
-    o.onInstallCallback = onInstallCallback
-    o.onSwapCallback = onSwapCallback
-    o.onGreenhouseCallback = onGreenhouseCallback
-    o.onDestroyCallback = onDestroyCallback
-    o.onDebugCompleteCallback = onDebugCompleteCallback
+    o.ownerWindow = ownerWindow
+    o.actionDispatcher = actionDispatcher
     return o
 end
 

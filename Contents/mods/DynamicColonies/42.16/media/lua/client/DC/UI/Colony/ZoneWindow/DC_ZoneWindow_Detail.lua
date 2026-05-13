@@ -4,17 +4,18 @@
 
 DC_ZoneWindow = DC_ZoneWindow or {}
 DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
+require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 
 local Formatters = DC_ZoneWindow.Internal.Formatters
 
 
 --- Refresh the detail panel to reflect the currently selected zone.
 function DC_ZoneWindow:refreshDetailPanel()
-    local zone = self.selectedZone
+    local zone = DC_ZoneWindowState.GetSelectedZone(self)
 
     -- Enable/disable controls based on selection
     local hasZone = zone ~= nil
-    local hasRect = hasZone and self.selectedRect ~= nil
+    local hasRect = hasZone and DC_ZoneWindowState.GetSelectedRect(self) ~= nil
     if self.btnDeleteZone then self.btnDeleteZone:setEnable(hasZone) end
     if self.btnAddArea then self.btnAddArea:setEnable(hasZone) end
     if self.btnDeleteArea then self.btnDeleteArea:setEnable(hasRect) end
@@ -85,7 +86,7 @@ function DC_ZoneWindow:populateRectList()
 
     self.rectList:clear()
 
-    local zone = self.selectedZone
+    local zone = DC_ZoneWindowState.GetSelectedZone(self)
     if not zone or not zone.rects then return end
 
     for i, rect in ipairs(zone.rects) do
@@ -108,25 +109,7 @@ function DC_ZoneWindow:onRectListMouseDown(item)
     end
 
     if data and data.index then
-        self.selectedRect = data.index
-        if self.btnDeleteArea then self.btnDeleteArea:setEnable(true) end
-        if self.btnShowArea then self.btnShowArea:setEnable(true) end
-        if self.btnEditArea then self.btnEditArea:setEnable(true) end
-
-        if self.btnNudgeW_Main then self.btnNudgeW_Main:setEnable(true) end
-        if self.btnNudgeE_Main then self.btnNudgeE_Main:setEnable(true) end
-        if self.btnNudgeN_Main then self.btnNudgeN_Main:setEnable(true) end
-        if self.btnNudgeS_Main then self.btnNudgeS_Main:setEnable(true) end
-
-        if self.btnScaleW_Main then self.btnScaleW_Main:setEnable(true) end
-        if self.btnScaleE_Main then self.btnScaleE_Main:setEnable(true) end
-        if self.btnScaleN_Main then self.btnScaleN_Main:setEnable(true) end
-        if self.btnScaleS_Main then self.btnScaleS_Main:setEnable(true) end
-
-        if self.btnScaleW_Inn_Main then self.btnScaleW_Inn_Main:setEnable(true) end
-        if self.btnScaleE_Inn_Main then self.btnScaleE_Inn_Main:setEnable(true) end
-        if self.btnScaleN_Inn_Main then self.btnScaleN_Inn_Main:setEnable(true) end
-        if self.btnScaleS_Inn_Main then self.btnScaleS_Inn_Main:setEnable(true) end
+        DC_ZoneWindowState.SetSelectedRect(self, data.index)
     end
 
 end

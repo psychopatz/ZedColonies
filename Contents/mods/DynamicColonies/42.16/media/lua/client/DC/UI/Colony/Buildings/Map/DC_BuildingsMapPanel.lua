@@ -1,5 +1,6 @@
 require "ISUI/ISPanel"
 require "DC/UI/Colony/Buildings/Map/Viewport/DC_BuildingsMapViewport"
+require "DC/UI/Colony/Buildings/Map/Input/DC_BuildingsMapInput"
 require "DC/UI/Colony/Buildings/Map/Render/DC_BuildingsMapRenderer"
 
 DC_BuildingsMapPanel = ISPanel:derive("DC_BuildingsMapPanel")
@@ -20,26 +21,12 @@ function DC_BuildingsMapPanel:prerender()
 end
 
 function DC_BuildingsMapPanel:onMouseDown(x, y)
-    self.dragActive = true
-    self.dragMoved = false
-    self.dragDistance = 0
+    DC_BuildingsMapInput.BeginDrag(self)
     return true
 end
 
 function DC_BuildingsMapPanel:onMouseMove(dx, dy)
-    if not self.dragActive then
-        return false
-    end
-
-    self.dragDistance = (tonumber(self.dragDistance) or 0) + math.abs(tonumber(dx) or 0) + math.abs(tonumber(dy) or 0)
-    if self.dragDistance > 6 then
-        self.dragMoved = true
-    end
-
-    if self.dragMoved then
-        self.viewportState = DC_BuildingsMapViewport.PanByPixels(self.viewportState or {}, self.snapshot, dx, dy)
-    end
-    return true
+    return DC_BuildingsMapInput.UpdateDrag(self, self.snapshot, dx, dy)
 end
 
 function DC_BuildingsMapPanel:onMouseMoveOutside(dx, dy)
@@ -47,20 +34,15 @@ function DC_BuildingsMapPanel:onMouseMoveOutside(dx, dy)
 end
 
 function DC_BuildingsMapPanel:onMouseUp(x, y)
-    local shouldSelect = self.dragActive == true and self.dragMoved ~= true
-    self.dragActive = false
-
-    if shouldSelect and self.onPlotSelectedCallback then
-        local plot = DC_BuildingsMapViewport.PickPlot(self.snapshot or { map = { plots = {} } }, self.viewportState or {}, self.width, self.height, x, y)
-        if plot then
-            self.onPlotSelectedCallback(plot)
-        end
+    local plot = DC_BuildingsMapInput.EndDrag(self, self.snapshot, self.viewportState or {}, self.width, self.height, x, y)
+    if plot and self.onPlotSelectedCallback then
+        self.onPlotSelectedCallback(plot)
     end
     return true
 end
 
 function DC_BuildingsMapPanel:onMouseUpOutside(x, y)
-    self.dragActive = false
+    DC_BuildingsMapInput.CancelDrag(self)
     return true
 end
 

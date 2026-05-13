@@ -1,18 +1,19 @@
 require "DC/UI/Colony/Buildings/Utils/DC_BuildingsUIUtils"
 require "DC/UI/Colony/Buildings/Map/Viewport/DC_BuildingsMapViewport"
+require "DC/UI/Colony/Buildings/Map/Format/DC_BuildingsMapFormatter"
 
 DC_BuildingsMapRenderer = DC_BuildingsMapRenderer or {}
 
 local Renderer = DC_BuildingsMapRenderer
 
-local function drawTile(panel, plot, rect, selected)
-    local color = DC_BuildingsUIUtils.GetPlotColor(plot)
+local function drawTile(panel, rect, selected, presentation)
+    local color = presentation.color or DC_BuildingsUIUtils.Colors.empty
     local border = selected == true and DC_BuildingsUIUtils.Colors.selectedBorder or DC_BuildingsUIUtils.Colors.defaultBorder
 
     panel:drawRect(rect.x, rect.y, rect.width, rect.height, color.a, color.r, color.g, color.b)
     panel:drawRectBorder(rect.x, rect.y, rect.width, rect.height, border.a, border.r, border.g, border.b)
 
-    local title = tostring(DC_BuildingsUIUtils.GetPlotTitle(plot) or "")
+    local title = tostring(presentation.title or "")
     if title ~= "" then
         panel:drawTextCentre(title, rect.x + (rect.width / 2), rect.y + 4, 1, 1, 1, 1, UIFont.Small)
     end
@@ -21,17 +22,16 @@ local function drawTile(panel, plot, rect, selected)
     local imageY = rect.y + 20
     local imageW = rect.width - 20
     local imageH = rect.height - 42
-    local texturePath = DC_BuildingsUIUtils.GetPlotTexturePath(plot)
-    local texture = DC_BuildingsUIUtils.GetTexture(texturePath)
+    local texture = DC_BuildingsUIUtils.GetTexture(presentation.texturePath)
     if texture then
         panel:drawTextureScaledAspect(texture, imageX, imageY, imageW, imageH, 0.85, 1, 1, 1)
     end
 
-    if plot.project and tostring(plot.project.materialState or "") == "Stalled" then
+    if presentation.projectOverlay and presentation.projectOverlay.mode == "stalled" then
         panel:drawRect(imageX, imageY, imageW, imageH, 0.42, 0.95, 0.78, 0.18)
         panel:drawRect(imageX, imageY + imageH - 12, imageW, 12, 0.58, 0.95, 0.72, 0.12)
-    elseif plot.project then
-        local ratio = math.max(0, math.min(1, tonumber(plot.project.progressRatio) or 0))
+    elseif presentation.projectOverlay and presentation.projectOverlay.mode == "progress" then
+        local ratio = math.max(0, math.min(1, tonumber(presentation.projectOverlay.ratio) or 0))
         local fillHeight = math.floor(imageH * ratio)
         if fillHeight > 0 then
             local fillY = imageY + imageH - fillHeight
@@ -43,66 +43,33 @@ local function drawTile(panel, plot, rect, selected)
         end
     end
 
-    if not texture and plot.kind == "HQOnly" and not plot.building and not plot.project then
-        panel:drawTextCentre("HQ Lot", rect.x + (rect.width / 2), rect.y + (rect.height / 2) - 8, 1, 0.92, 0.55, 1, UIFont.Small)
-    elseif not texture and plot.frontierCandidate == true then
-        panel:drawTextCentre("Claim", rect.x + (rect.width / 2), rect.y + (rect.height / 2) - 8, 0.92, 0.78, 0.62, 1, UIFont.Small)
-    elseif not texture and plot.state == "Locked" then
-        panel:drawTextCentre("Locked", rect.x + (rect.width / 2), rect.y + (rect.height / 2) - 8, 0.45, 0.45, 0.45, 1, UIFont.Small)
+    if not texture and presentation.fallbackLabel then
+        local fallbackColor = presentation.fallbackLabel == "Locked"
+            and { 0.45, 0.45, 0.45, 1 }
+            or { 0.92, 0.78, 0.62, 1 }
+        panel:drawTextCentre(presentation.fallbackLabel, rect.x + (rect.width / 2), rect.y + (rect.height / 2) - 8, fallbackColor[1], fallbackColor[2], fallbackColor[3], fallbackColor[4], UIFont.Small)
     end
 
-    if plot.project then
-        if tostring(plot.project.materialState or "") == "Stalled" then
-            panel:drawTextCentre("Stalled", rect.x + (rect.width / 2), rect.y + rect.height - 22, 0.26, 0.18, 0.05, 1, UIFont.Small)
-        else
-            local ratio = math.max(0, math.min(1, tonumber(plot.project.progressRatio) or 0))
-            local percent = math.floor((ratio * 100) + 0.5)
-            panel:drawTextCentre(tostring(percent) .. "%", rect.x + (rect.width / 2), rect.y + rect.height - 22, 0.2, 0.12, 0.05, 1, UIFont.Small)
-        end
-    elseif plot.building and plot.building.level then
-        panel:drawTextCentre("Lv " .. tostring(plot.building.level), rect.x + (rect.width / 2), rect.y + rect.height - 22, 1, 1, 1, 1, UIFont.Small)
+    if presentation.footerLabel then
+        local footerColor = presentation.footerLabel == "Stalled"
+            and { 0.26, 0.18, 0.05, 1 }
+            or (string.find(presentation.footerLabel, "^Lv ", 1) and { 1, 1, 1, 1 } or { 0.2, 0.12, 0.05, 1 })
+        panel:drawTextCentre(presentation.footerLabel, rect.x + (rect.width / 2), rect.y + rect.height - 22, footerColor[1], footerColor[2], footerColor[3], footerColor[4], UIFont.Small)
     end
 end
 
 function Renderer.Draw(panel, snapshot, viewportState, selectedPlotKey)
     local plots = snapshot and snapshot.map and snapshot.map.plots or {}
     local territory = snapshot and snapshot.map or {}
-    local statusText = ""
 
-    if territory.frontierExpansionAvailable == true then
-        statusText = "Unlocked "
-            .. tostring(territory.unlockedPlotCount or 0)
-            .. " | Ring "
-            .. tostring(territory.currentFrontierRing or 1)
-            .. " Barricades "
-            .. tostring(territory.activeBarricadeCount or 0)
-            .. "/"
-            .. tostring(territory.maxActiveBarricades or 0)
-    else
-        statusText = "Unlocked "
-            .. tostring(territory.unlockedPlotCount or 0)
-            .. " | Next Ring "
-            .. tostring(territory.nextFrontierRing or territory.currentFrontierRing or 1)
-            .. " requires HQ Lv "
-            .. tostring(territory.frontierRequiredHQLevel or territory.nextFrontierRing or territory.currentFrontierRing or 1)
-    end
-
-    panel:drawText(tostring(DC_BuildingsUIUtils.GetColonyDisplayName()), 10, 8, 1, 1, 1, 1, UIFont.Medium)
-    panel:drawText(
-        statusText,
-        150,
-        10,
-        0.76,
-        0.76,
-        0.76,
-        1,
-        UIFont.Small
-    )
+    panel:drawText(tostring(DC_BuildingsMapFormatter.GetHeaderText()), 10, 8, 1, 1, 1, 1, UIFont.Medium)
+    panel:drawText(DC_BuildingsMapFormatter.GetStatusText(territory), 150, 10, 0.76, 0.76, 0.76, 1, UIFont.Small)
 
     for _, plot in ipairs(plots) do
         local rect = DC_BuildingsMapViewport.GetPlotRect(plot, viewportState, panel.width, panel.height)
         if DC_BuildingsMapViewport.IsRectVisible(rect, panel.width, panel.height) then
-            drawTile(panel, plot, rect, tostring(plot.key or "") == tostring(selectedPlotKey or ""))
+            local presentation = DC_BuildingsMapFormatter.BuildPlotPresentation(plot)
+            drawTile(panel, rect, tostring(plot.key or "") == tostring(selectedPlotKey or ""), presentation)
         end
     end
 end

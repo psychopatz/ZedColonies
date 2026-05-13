@@ -4,6 +4,7 @@
 
 DC_ZoneWindow = DC_ZoneWindow or {}
 DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
+require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 
 local Formatters = DC_ZoneWindow.Internal.Formatters
 
@@ -14,7 +15,7 @@ function DC_ZoneWindow:populateZoneList()
 
     self.zoneList:clear()
 
-    for i, zone in ipairs(self.zones) do
+    for i, zone in ipairs(DC_ZoneWindowState.GetZones(self)) do
         local label = Formatters and Formatters.formatZoneLabel
             and Formatters.formatZoneLabel(zone)
             or (zone.name or "Zone " .. tostring(i))
@@ -23,10 +24,11 @@ function DC_ZoneWindow:populateZoneList()
     end
 
     -- Re-select current zone if still present
-    if self.selectedZone then
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    if selectedZone then
         for i = 1, self.zoneList:size() do
             local item = self.zoneList.items[i]
-            if item and item.item and item.item.id == self.selectedZone.id then
+            if item and item.item and item.item.id == selectedZone.id then
                 self.zoneList.selected = i
                 return
             end

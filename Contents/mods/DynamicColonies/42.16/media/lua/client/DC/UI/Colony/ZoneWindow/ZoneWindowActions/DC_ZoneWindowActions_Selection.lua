@@ -3,24 +3,38 @@
 -- ============================================================================
 
 DC_ZoneWindow = DC_ZoneWindow or {}
+require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 
 
 --- Handle zone selection from the list.
 function DC_ZoneWindow:onZoneSelected(zone)
     if not zone then return end
 
-    self.selectedZone = zone
-    self.selectedRect = nil
-    self:refreshDetailPanel()
+    DC_ZoneWindowState.SelectZone(self, zone)
+end
+
+
+--- Handle mouse-down on the rect list.
+function DC_ZoneWindow:onRectListMouseDown(item)
+    if not item then return end
+
+    local data = item
+    if type(item) == "table" and item.item then
+        data = item.item
+    end
+
+    if data and data.index then
+        DC_ZoneWindowState.SetSelectedRect(self, data.index)
+    end
 end
 
 
 --- Open the 3D area selector to add a new rect to the selected zone.
 function DC_ZoneWindow:onAddArea()
-    if not self.selectedZone then return end
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    if not selectedZone then return end
 
-    local zone = self.selectedZone
-    local color = DC_ZoneData.getColor(zone)
+    local color = DC_ZoneData.getColor(selectedZone)
     local highlightColor = {
         r = color.r or 0.2,
         g = color.g or 0.8,
@@ -33,11 +47,12 @@ function DC_ZoneWindow:onAddArea()
         self.player,
         highlightColor,
         function(x1, y1, x2, y2, z)
-            DC_ZoneData.addRect(zone, x1, y1, x2, y2, z)
+            DC_ZoneData.addRect(selectedZone, x1, y1, x2, y2, z)
             self:refreshDetailPanel()
             self:populateZoneList()
+            DC_ZoneWindowState.MarkDirty(self)
         end,
-        zone.name
+        selectedZone.name
     )
     selector:initialise()
     selector:addToUIManager()
@@ -46,24 +61,28 @@ end
 
 --- Delete the currently selected rect from the selected zone.
 function DC_ZoneWindow:onDeleteArea()
-    if not self.selectedZone or not self.selectedRect then return end
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
+    if not selectedZone or not selectedRect then return end
 
-    DC_ZoneData.removeRect(self.selectedZone, self.selectedRect)
-    self.selectedRect = nil
+    DC_ZoneData.removeRect(selectedZone, selectedRect)
+    DC_ZoneWindowState.SetSelectedRect(self, nil)
     self:refreshDetailPanel()
     self:populateZoneList()
+    DC_ZoneWindowState.MarkDirty(self)
 end
 
 
 --- Show the selected rect highlighted in the 3D world for a few seconds.
 function DC_ZoneWindow:onShowArea()
-    if not self.selectedZone or not self.selectedRect then return end
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
+    if not selectedZone or not selectedRect then return end
 
-    local zone = self.selectedZone
-    local rect = zone.rects and zone.rects[self.selectedRect]
+    local rect = selectedZone.rects and selectedZone.rects[selectedRect]
     if not rect then return end
 
-    local color = DC_ZoneData.getColor(zone)
+    local color = DC_ZoneData.getColor(selectedZone)
     local x1 = math.min(rect[1], rect[3])
     local y1 = math.min(rect[2], rect[4])
     local x2 = math.max(rect[1], rect[3])
@@ -96,14 +115,14 @@ end
 
 --- Edit the selected rect: opens selector pre-loaded, then replaces the rect.
 function DC_ZoneWindow:onEditArea()
-    if not self.selectedZone or not self.selectedRect then return end
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
+    if not selectedZone or not selectedRect then return end
 
-    local zone = self.selectedZone
-    local rectIdx = self.selectedRect
-    local rect = zone.rects and zone.rects[rectIdx]
+    local rect = selectedZone.rects and selectedZone.rects[selectedRect]
     if not rect then return end
 
-    local color = DC_ZoneData.getColor(zone)
+    local color = DC_ZoneData.getColor(selectedZone)
     local highlightColor = {
         r = color.r or 0.2,
         g = color.g or 0.8,
@@ -121,11 +140,12 @@ function DC_ZoneWindow:onEditArea()
             local ry1 = math.min(y1, y2)
             local rx2 = math.max(x1, x2)
             local ry2 = math.max(y1, y2)
-            zone.rects[rectIdx] = { rx1, ry1, rx2, ry2, z or 0 }
+            selectedZone.rects[selectedRect] = { rx1, ry1, rx2, ry2, z or 0 }
             self:refreshDetailPanel()
             self:populateZoneList()
+            DC_ZoneWindowState.MarkDirty(self)
         end,
-        zone.name .. " (Edit)"
+        selectedZone.name .. " (Edit)"
     )
     selector:initialise()
     selector:addToUIManager()
@@ -134,22 +154,29 @@ end
 
 --- Nudge the selected rect.
 function DC_ZoneWindow:onNudgeRect(dx, dy)
-    if not self.selectedZone or not self.selectedRect then return end
-    local rect = self.selectedZone.rects[self.selectedRect]
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
+    if not selectedZone or not selectedRect then return end
+
+    local rect = selectedZone.rects[selectedRect]
     if not rect then return end
 
     DC_ZoneData.nudgeRect(rect, dx, dy)
     self:refreshDetailPanel()
+    DC_ZoneWindowState.MarkDirty(self)
 end
 
 
 --- Scale the selected rect.
 function DC_ZoneWindow:onScaleRect(edge, amount)
-    if not self.selectedZone or not self.selectedRect then return end
-    local rect = self.selectedZone.rects[self.selectedRect]
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
+    if not selectedZone or not selectedRect then return end
+
+    local rect = selectedZone.rects[selectedRect]
     if not rect then return end
 
     DC_ZoneData.scaleRect(rect, edge, amount)
     self:refreshDetailPanel()
+    DC_ZoneWindowState.MarkDirty(self)
 end
-

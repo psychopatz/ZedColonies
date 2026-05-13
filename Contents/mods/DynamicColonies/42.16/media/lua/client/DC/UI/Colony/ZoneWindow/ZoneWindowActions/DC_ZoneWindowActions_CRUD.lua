@@ -3,6 +3,7 @@
 -- ============================================================================
 
 DC_ZoneWindow = DC_ZoneWindow or {}
+require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 
 
 --- Add a new zone. Prompts for name via a modal dialog.
@@ -22,28 +23,21 @@ function DC_ZoneWindow:onAddZoneConfirm(button, _, _)
 
     local name = button.parent.entry:getText()
     if not name or name == "" then
-        name = "Zone " .. tostring(#self.zones + 1)
+        name = "Zone " .. tostring(#DC_ZoneWindowState.GetZones(self) + 1)
     end
 
     local zone = DC_ZoneData.createZone(name, "roaming", self.colonyId)
-    table.insert(self.zones, zone)
-
-    self:populateZoneList()
-
-    -- Auto-select the new zone
-    self.selectedZone = zone
-    self.selectedRect = nil
-    self.zoneList.selected = #self.zones
-    self:refreshDetailPanel()
+    DC_ZoneWindowState.AddZone(self, zone)
 end
 
 
 --- Delete the currently selected zone.
 function DC_ZoneWindow:onDeleteZone()
-    if not self.selectedZone then return end
+    local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
+    if not selectedZone then return end
 
     local modal = ISModalDialog:new(0, 0, 300, 120,
-        "Delete zone '" .. tostring(self.selectedZone.name) .. "'?",
+        "Delete zone '" .. tostring(selectedZone.name) .. "'?",
         true, self, DC_ZoneWindow.onDeleteZoneConfirm)
     modal:initialise()
     modal:addToUIManager()
@@ -54,16 +48,5 @@ end
 function DC_ZoneWindow:onDeleteZoneConfirm(button)
     if button.internal ~= "YES" then return end
 
-    -- Find and remove
-    for i, zone in ipairs(self.zones) do
-        if zone.id == self.selectedZone.id then
-            table.remove(self.zones, i)
-            break
-        end
-    end
-
-    self.selectedZone = nil
-    self.selectedRect = nil
-    self:populateZoneList()
-    self:refreshDetailPanel()
+    DC_ZoneWindowState.RemoveZone(self, DC_ZoneWindowState.GetSelectedZone(self))
 end

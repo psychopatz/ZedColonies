@@ -51,12 +51,12 @@ end
 
 
 --- Refresh zone data on the overlay.
-function DC_ZoneWindowMapPanel:refreshZones(zones, selectedZone)
+function DC_ZoneWindowMapPanel:refreshZones(zones, selectedZone, selectedRectIdx)
     if not self.overlay then return end
 
     self.overlay:setZones(zones or {})
     if selectedZone then
-        self.overlay:setSelected(selectedZone.id, nil)
+        self.overlay:setSelected(selectedZone.id, selectedRectIdx)
     else
         self.overlay:setSelected(nil, nil)
     end

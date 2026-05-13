@@ -21,6 +21,7 @@ function DC_ZoneWindow:new(x, y, width, height, player, colonyId)
     -- State
     o.zones         = {}     -- ordered array of zone tables
     o.selectedZone  = nil    -- currently selected zone table
+    o.selectedZoneId = nil   -- stable zone id for refreshes
     o.selectedRect  = nil    -- 1-based index into selectedZone.rects
 
     -- Minimum window size

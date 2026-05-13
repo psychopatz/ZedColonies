@@ -93,6 +93,34 @@ function DC_BuildingsClientSelectors.BuildBuilderLabel(worker, options)
     return label
 end
 
+function DC_BuildingsClientSelectors.CanUpgradePlot(plot)
+    return plot and plot.building and plot.building.upgradePreview and plot.building.upgradePreview.available == true
+end
+
+function DC_BuildingsClientSelectors.CanInstallPlot(plot)
+    return plot and plot.building and plot.building.installOptions and #plot.building.installOptions > 0
+end
+
+function DC_BuildingsClientSelectors.CanDestroyPlot(plot)
+    return plot and plot.building and plot.building.canDestroy == true
+end
+
+function DC_BuildingsClientSelectors.GetManagePlotState(plot)
+    local isGreenhouse = plot and plot.building and tostring(plot.building.buildingType or "") == "Greenhouse"
+    local canSwap = plot and plot.project and tostring(plot.project.status or "") == "Active"
+
+    return {
+        title = canSwap and "Manage" or (isGreenhouse and "Garden" or "Manage"),
+        enabled = canSwap == true or isGreenhouse == true,
+        isGreenhouse = isGreenhouse == true,
+        canSwap = canSwap == true
+    }
+end
+
+function DC_BuildingsClientSelectors.CanDebugCompleteProject(plot)
+    return plot and plot.project and tostring(plot.project.status or "") == "Active"
+end
+
 function DC_BuildingsClientSelectors.GetBuilderRequirementState(builder, options)
     options = type(options) == "table" and options or {}
     local allowedProjectID = tostring(options.allowedProjectID or "")

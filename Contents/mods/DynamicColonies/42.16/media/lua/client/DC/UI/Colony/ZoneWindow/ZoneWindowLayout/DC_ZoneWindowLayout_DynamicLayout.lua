@@ -4,6 +4,7 @@
 
 DC_ZoneWindow = DC_ZoneWindow or {}
 DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
+require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 
 local ZoneWindowLayout = DC_ZoneWindow.Internal.ZoneWindowLayout or {}
 DC_ZoneWindow.Internal.ZoneWindowLayout = ZoneWindowLayout
@@ -155,7 +156,11 @@ function DC_ZoneWindow:onSwitchTab(button)
 
     -- Re-feed zones to map overlay when switching to map
     if self.activeTab == "TAB_MAP" and self.mapPanel and self.mapPanel.refreshZones then
-        self.mapPanel:refreshZones(self.zones, self.selectedZone)
+        self.mapPanel:refreshZones(
+            DC_ZoneWindowState.GetZones(self),
+            DC_ZoneWindowState.GetSelectedZone(self),
+            DC_ZoneWindowState.GetSelectedRect(self)
+        )
     end
 
     applyWindowLayout(self)
