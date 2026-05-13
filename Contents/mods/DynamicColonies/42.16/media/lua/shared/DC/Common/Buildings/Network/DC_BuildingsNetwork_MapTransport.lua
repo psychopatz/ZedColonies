@@ -120,7 +120,11 @@ local function normalizeCoord(plotX, plotY)
 end
 
 local function ensureRevisionState(ownerUsername)
-    local ownerData = Buildings.EnsureOwner and Buildings.EnsureOwner(ownerUsername) or nil
+    local ownerData = Buildings.Internal
+        and Buildings.Internal.GetOwnerDataIfNormalizing
+        and Buildings.Internal.GetOwnerDataIfNormalizing(ownerUsername)
+        or Buildings.EnsureOwner and Buildings.EnsureOwner(ownerUsername)
+        or nil
     if not ownerData then
         return {
             buildingMapRevision = 1,
@@ -286,12 +290,6 @@ end
 local function buildVisiblePlots(ownerUsername, sourcePlayer)
     if Buildings.EnsureInitialHeadquartersProject then
         Buildings.EnsureInitialHeadquartersProject(ownerUsername)
-    end
-    if Buildings.GetUnlockedPlotEntries then
-        Buildings.GetUnlockedPlotEntries(ownerUsername)
-    end
-    if Buildings.GetFrontierCandidatePlots then
-        Buildings.GetFrontierCandidatePlots(ownerUsername)
     end
 
     local snapshot = Buildings.BuildMapSnapshot and Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer) or {

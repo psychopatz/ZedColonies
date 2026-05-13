@@ -5,6 +5,10 @@ local Buildings = DC_Buildings
 local Config = Buildings.Config
 local Internal = Buildings.Internal
 
+local function ensureOwnerMapData(ownerData)
+    Buildings.EnsureMapData(ownerData)
+end
+
 local function ensureModDataTable(key, defaults)
     if not ModData.exists(key) then
         ModData.add(key, defaults or {})
@@ -82,12 +86,12 @@ local function normalizeOwnerData(ownerUsername, ownerData)
     ownerData.counters = type(ownerData.counters) == "table" and ownerData.counters or {}
     ownerData.counters.nextBuildingID = math.max(1, math.floor(tonumber(ownerData.counters.nextBuildingID) or 1))
     ownerData.counters.nextProjectID = math.max(1, math.floor(tonumber(ownerData.counters.nextProjectID) or 1))
+    ensureOwnerMapData(ownerData)
     ownerData.buildings = Internal.EnsureArray(ownerData.buildings)
     for _, instance in ipairs(ownerData.buildings) do
         normalizeBuildingInstance(instance)
     end
     ownerData.projects = type(ownerData.projects) == "table" and ownerData.projects or {}
-    Buildings.EnsureMapData(ownerData)
     return ownerData
 end
 

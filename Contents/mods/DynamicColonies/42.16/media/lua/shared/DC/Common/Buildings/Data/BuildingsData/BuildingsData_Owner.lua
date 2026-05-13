@@ -3,6 +3,62 @@ DC_Buildings.Internal = DC_Buildings.Internal or {}
 
 local Buildings = DC_Buildings
 local Internal = Buildings.Internal
+local Runtime = Internal.Runtime or {}
+
+Runtime.ownerNormalizationGuards = Runtime.ownerNormalizationGuards or {}
+Runtime.ownerNormalizationContextByInput = Runtime.ownerNormalizationContextByInput or {}
+Runtime.ownerNormalizationContextByShard = Runtime.ownerNormalizationContextByShard or {}
+Runtime.ownerNormalizationContextByColonyID = Runtime.ownerNormalizationContextByColonyID or {}
+Runtime.ownerNormalizationContextByAuthorityOwner = Runtime.ownerNormalizationContextByAuthorityOwner or {}
+Internal.Runtime = Runtime
+
+local function beginOwnerNormalizationContext(ownerUsername, ownerData)
+    local inputKey = tostring(ownerUsername or "local")
+    local shardKey = Internal.GetShardKey(ownerUsername)
+    local colonyID = tostring(ownerData and ownerData.colonyID or Internal.GetOwnerKey(ownerUsername))
+    local authorityOwner = tostring(ownerData and ownerData.ownerUsername or Internal.GetAuthorityOwner(ownerUsername))
+
+    Runtime.ownerNormalizationGuards[shardKey] = ownerData
+    Runtime.ownerNormalizationContextByInput[inputKey] = ownerData
+    Runtime.ownerNormalizationContextByShard[shardKey] = ownerData
+    Runtime.ownerNormalizationContextByColonyID[colonyID] = ownerData
+    Runtime.ownerNormalizationContextByAuthorityOwner[authorityOwner] = ownerData
+
+    return {
+        inputKey = inputKey,
+        shardKey = shardKey,
+        colonyID = colonyID,
+        authorityOwner = authorityOwner,
+    }
+end
+
+local function endOwnerNormalizationContext(context)
+    if not context then
+        return
+    end
+
+    Runtime.ownerNormalizationGuards[context.shardKey] = nil
+    Runtime.ownerNormalizationContextByInput[context.inputKey] = nil
+    Runtime.ownerNormalizationContextByShard[context.shardKey] = nil
+    Runtime.ownerNormalizationContextByColonyID[context.colonyID] = nil
+    Runtime.ownerNormalizationContextByAuthorityOwner[context.authorityOwner] = nil
+end
+
+function Internal.GetOwnerDataIfNormalizing(ownerUsername)
+    local inputKey = tostring(ownerUsername or "local")
+    local ownerData = Runtime.ownerNormalizationContextByInput[inputKey]
+    if ownerData then
+        return ownerData
+    end
+
+    local authorityOwner = tostring(Internal.GetAuthorityOwner(ownerUsername))
+    ownerData = Runtime.ownerNormalizationContextByAuthorityOwner[authorityOwner]
+    if ownerData then
+        return ownerData
+    end
+
+    return Runtime.ownerNormalizationContextByColonyID[inputKey]
+end
 
 function Buildings.GetData()
     local data = Internal.EnsureModDataTable(Internal.GetIndexKey(), Internal.BuildEmptyIndex())
@@ -34,15 +90,30 @@ end
 function Buildings.EnsureOwner(ownerUsername)
     local shardKey = Internal.GetShardKey(ownerUsername)
     local ownerData = Internal.EnsureModDataTable(shardKey, Internal.BuildEmptyOwnerShard(ownerUsername))
-    return Internal.NormalizeOwnerData(ownerUsername, ownerData)
+    if Runtime.ownerNormalizationGuards[shardKey] == ownerData then
+        return ownerData
+    end
+
+    local context = beginOwnerNormalizationContext(ownerUsername, ownerData)
+
+    local ok, normalizedOrError = pcall(Internal.NormalizeOwnerData, ownerUsername, ownerData)
+    endOwnerNormalizationContext(context)
+
+    if not ok then
+        error(normalizedOrError)
+    end
+
+    return normalizedOrError
 end
 
 function Buildings.GetBuildingsForOwner(ownerUsername)
-    return Buildings.EnsureOwner(ownerUsername).buildings
+    local ownerData = Internal.GetOwnerDataIfNormalizing(ownerUsername) or Buildings.EnsureOwner(ownerUsername)
+    return ownerData.buildings
 end
 
 function Buildings.GetProjectsForOwner(ownerUsername)
-    return Buildings.EnsureOwner(ownerUsername).projects
+    local ownerData = Internal.GetOwnerDataIfNormalizing(ownerUsername) or Buildings.EnsureOwner(ownerUsername)
+    return ownerData.projects
 end
 
 function Buildings.CopyOwnerData(ownerUsername)

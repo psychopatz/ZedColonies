@@ -99,7 +99,9 @@ function Internal.UnlockPlotInMap(mapData, x, y, kind)
 end
 
 function Buildings.GetMapDataForOwner(ownerUsername)
-    return Buildings.EnsureMapData(Buildings.EnsureOwner(ownerUsername))
+    local ownerData = Internal.GetOwnerDataIfNormalizing and Internal.GetOwnerDataIfNormalizing(ownerUsername)
+        or Buildings.EnsureOwner(ownerUsername)
+    return Buildings.EnsureMapData(ownerData)
 end
 
 function Buildings.GetStoredPlotForOwner(ownerUsername, x, y)

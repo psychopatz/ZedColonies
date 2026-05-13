@@ -26,8 +26,21 @@ function Buildings.GetUnlockedPlotEntries(ownerUsername)
 end
 
 function Buildings.GetHeadquartersLevel(ownerUsername)
-    local headquarters = Buildings.GetHeadquartersInstance and Buildings.GetHeadquartersInstance(ownerUsername) or nil
-    return math.max(0, math.floor(tonumber(headquarters and headquarters.level) or 0))
+    local owner = Frontier.GetOwnerUsername(ownerUsername)
+    local ownerData = Buildings.Internal
+        and Buildings.Internal.GetOwnerDataIfNormalizing
+        and Buildings.Internal.GetOwnerDataIfNormalizing(owner)
+        or Buildings.EnsureOwner and Buildings.EnsureOwner(owner)
+        or nil
+    local highestLevel = 0
+
+    for _, instance in ipairs(ownerData and ownerData.buildings or {}) do
+        if tostring(instance and instance.buildingType or "") == "Headquarters" then
+            highestLevel = math.max(highestLevel, math.floor(tonumber(instance and instance.level) or 0))
+        end
+    end
+
+    return highestLevel
 end
 
 function Buildings.GetMaxActiveBarricades(ownerUsername)

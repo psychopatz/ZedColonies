@@ -31,6 +31,6 @@ require "DC/UI/Colony/MainWindow/MainWindowLayout/DC_MainWindowLayout"
 require "DC/UI/Colony/MainWindow/MainWindowDetail/DC_MainWindowDetail"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions"
 require "DC/UI/Colony/MainWindow/DC_MainWindow_Lifecycle"
-require "DC/UI/Colony/MainWindow/DC_MainWindow_Events"
+require "DC/UI/Colony/MainWindow/MainWindowEvents/DC_MainWindowEvents"
 
 return DC_MainWindow

@@ -1,6 +1,7 @@
 DC_Buildings = DC_Buildings or {}
 
 local Buildings = DC_Buildings
+local Internal = Buildings.Internal or {}
 local Constants = Buildings.MapConstants
 local CARDINAL_DIRECTIONS = {
     { x = -1, y = 0 },
@@ -17,15 +18,35 @@ local function isCardinalSeed(ring, x, y)
         or (math.abs(plotY) == safeRing and plotX == 0)
 end
 
-local function hasCompletedBarricadeAt(ownerUsername, plotX, plotY)
-    local instance = Buildings.FindBuildingAtPlot and Buildings.FindBuildingAtPlot(ownerUsername, plotX, plotY) or nil
-    return instance
-        and tostring(instance.buildingType or "") == "Barricade"
-        and math.floor(tonumber(instance.level) or 0) > 0
-        or false
+local function getOwnerDataForFrontier(ownerUsername)
+    if Internal.GetOwnerDataIfNormalizing then
+        local ownerData = Internal.GetOwnerDataIfNormalizing(ownerUsername)
+        if ownerData then
+            return ownerData
+        end
+    end
+
+    return Buildings.EnsureOwner and Buildings.EnsureOwner(ownerUsername) or nil
 end
 
-local function hasCompletedFrontierNeighbor(ownerUsername, ring, plotX, plotY)
+local function buildCompletedBarricadePlotMap(ownerData)
+    local completedBarricades = {}
+
+    for _, instance in ipairs(ownerData and ownerData.buildings or {}) do
+        if tostring(instance and instance.buildingType or "") == "Barricade"
+            and math.floor(tonumber(instance and instance.level) or 0) > 0 then
+            completedBarricades[Buildings.GetPlotKey(instance.plotX, instance.plotY)] = true
+        end
+    end
+
+    return completedBarricades
+end
+
+local function hasCompletedBarricadeAt(completedBarricades, plotX, plotY)
+    return completedBarricades[Buildings.GetPlotKey(plotX, plotY)] == true
+end
+
+local function hasCompletedFrontierNeighbor(completedBarricades, ring, plotX, plotY)
     local safeRing = math.max(1, math.floor(tonumber(ring) or 1))
     local x = math.floor(tonumber(plotX) or 0)
     local y = math.floor(tonumber(plotY) or 0)
@@ -35,7 +56,7 @@ local function hasCompletedFrontierNeighbor(ownerUsername, ring, plotX, plotY)
         local neighborY = y + direction.y
         if Buildings.GetPlotRing
             and Buildings.GetPlotRing(neighborX, neighborY) == safeRing
-            and hasCompletedBarricadeAt(ownerUsername, neighborX, neighborY) then
+            and hasCompletedBarricadeAt(completedBarricades, neighborX, neighborY) then
             return true
         end
     end
@@ -108,6 +129,8 @@ end
 
 function Buildings.NormalizeFrontierUnlocks(ownerUsername)
     local mapData = Buildings.GetMapDataForOwner(ownerUsername)
+    local ownerData = getOwnerDataForFrontier(ownerUsername)
+    local completedBarricades = buildCompletedBarricadePlotMap(ownerData)
     local desiredPlots = {}
     local securedRing = Buildings.GetSecuredPerimeterRing and Buildings.GetSecuredPerimeterRing(ownerUsername) or 0
     local activeRing = Buildings.GetActiveFrontierRing and Buildings.GetActiveFrontierRing(ownerUsername) or 0
@@ -121,7 +144,7 @@ function Buildings.NormalizeFrontierUnlocks(ownerUsername)
         end
     end
 
-    for _, instance in ipairs(Buildings.GetBuildingsForOwner and Buildings.GetBuildingsForOwner(ownerUsername) or {}) do
+    for _, instance in ipairs(ownerData and ownerData.buildings or {}) do
         if math.floor(tonumber(instance and instance.level) or 0) > 0 then
             addDesiredPlot(
                 desiredPlots,
@@ -137,8 +160,8 @@ function Buildings.NormalizeFrontierUnlocks(ownerUsername)
     if activeRing > 0 then
         for _, cell in ipairs(Buildings.GetRingCoordinates and Buildings.GetRingCoordinates(activeRing) or {}) do
             if isCardinalSeed(activeRing, cell.x, cell.y)
-                or hasCompletedFrontierNeighbor(ownerUsername, activeRing, cell.x, cell.y)
-                or hasCompletedBarricadeAt(ownerUsername, cell.x, cell.y) then
+                or hasCompletedFrontierNeighbor(completedBarricades, activeRing, cell.x, cell.y)
+                or hasCompletedBarricadeAt(completedBarricades, cell.x, cell.y) then
                 addDesiredPlot(desiredPlots, cell.x, cell.y, Constants.PlotKinds.Standard)
             end
         end

@@ -2,6 +2,7 @@ DC_Buildings = DC_Buildings or {}
 
 local Buildings = DC_Buildings
 Buildings.Internal = Buildings.Internal or {}
+local Internal = Buildings.Internal
 
 local Frontier = Buildings.Internal.Frontier or {}
 Buildings.Internal.Frontier = Frontier
@@ -34,11 +35,20 @@ end
 function Frontier.HasCompletedBarricadeAt(ownerUsername, plotX, plotY)
     local x = math.floor(tonumber(plotX) or 0)
     local y = math.floor(tonumber(plotY) or 0)
-    local instance = Buildings.FindBuildingAtPlot and Buildings.FindBuildingAtPlot(ownerUsername, x, y) or nil
-    return instance
-        and tostring(instance.buildingType or "") == "Barricade"
-        and math.floor(tonumber(instance.level) or 0) > 0
-        or false
+    local ownerData = Internal.GetOwnerDataIfNormalizing and Internal.GetOwnerDataIfNormalizing(ownerUsername)
+        or Buildings.EnsureOwner and Buildings.EnsureOwner(ownerUsername)
+        or nil
+
+    for _, instance in ipairs(ownerData and ownerData.buildings or {}) do
+        if tostring(instance and instance.buildingType or "") == "Barricade"
+            and math.floor(tonumber(instance and instance.level) or 0) > 0
+            and math.floor(tonumber(instance and instance.plotX) or 0) == x
+            and math.floor(tonumber(instance and instance.plotY) or 0) == y then
+            return true
+        end
+    end
+
+    return false
 end
 
 function Frontier.HasUnlockedSupportingNeighbor(ownerUsername, plotX, plotY)

@@ -10,6 +10,16 @@ Config.DEFAULT_UNHOUSED_RECOVERY_MULTIPLIER = 1.00
 
 Config.Definitions = Config.Definitions or {}
 Config.InstallDefinitions = Config.InstallDefinitions or {}
+Config.DefinitionListCache = Config.DefinitionListCache or nil
+Config.InstallDefinitionListCache = Config.InstallDefinitionListCache or {}
+
+local function countEntries(source)
+    local count = 0
+    for _, _ in pairs(source or {}) do
+        count = count + 1
+    end
+    return count
+end
 
 function Config.GetDefinition(buildingType)
     local normalized = tostring(buildingType or "")
@@ -23,6 +33,11 @@ function Config.GetDefinition(buildingType)
 end
 
 function Config.GetDefinitionList()
+    if type(Config.DefinitionListCache) == "table"
+        and #Config.DefinitionListCache == countEntries(Config.Definitions) then
+        return Config.DefinitionListCache
+    end
+
     local definitions = {}
     for buildingType, _ in pairs(Config.Definitions or {}) do
         definitions[#definitions + 1] = Config.GetDefinition(buildingType)
@@ -30,6 +45,7 @@ function Config.GetDefinitionList()
     table.sort(definitions, function(a, b)
         return tostring(a.displayName or a.buildingType or "") < tostring(b.displayName or b.buildingType or "")
     end)
+    Config.DefinitionListCache = definitions
     return definitions
 end
 
@@ -67,10 +83,16 @@ function Config.GetInstallDefinition(buildingType, installKey)
 end
 
 function Config.GetInstallDefinitionList(buildingType)
+    local normalizedBuildingType = tostring(buildingType or "")
+    local buildingInstalls = Config.InstallDefinitions[normalizedBuildingType]
+    if type(Config.InstallDefinitionListCache[normalizedBuildingType]) == "table"
+        and #Config.InstallDefinitionListCache[normalizedBuildingType] == countEntries(buildingInstalls) then
+        return Config.InstallDefinitionListCache[normalizedBuildingType]
+    end
+
     local definitions = {}
-    local buildingInstalls = Config.InstallDefinitions[tostring(buildingType or "")]
     for installKey, _ in pairs(buildingInstalls or {}) do
-        definitions[#definitions + 1] = Config.GetInstallDefinition(buildingType, installKey)
+        definitions[#definitions + 1] = Config.GetInstallDefinition(normalizedBuildingType, installKey)
     end
     table.sort(definitions, function(a, b)
         local levelA = math.max(0, math.floor(tonumber(a and a.requiredLevel) or 0))
@@ -80,6 +102,7 @@ function Config.GetInstallDefinitionList(buildingType)
         end
         return levelA < levelB
     end)
+    Config.InstallDefinitionListCache[normalizedBuildingType] = definitions
     return definitions
 end
 
