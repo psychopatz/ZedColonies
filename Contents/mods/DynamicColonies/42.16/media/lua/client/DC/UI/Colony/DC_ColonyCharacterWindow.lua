@@ -1,5 +1,5 @@
 require "ISUI/ISCollapsableWindow"
-require "DC/UI/Colony/DC_ColonySkillPanel"
+require "DC/UI/Colony/ColonySkillPanel/DC_ColonySkillPanel"
 require "DC/UI/Colony/DC_ColonyNeedsPanel"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 
