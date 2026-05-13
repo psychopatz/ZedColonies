@@ -37,18 +37,6 @@ local function registerDefinition(definition)
     Internal.Definitions[buildKey(buildingType, mode)] = shallowCopy(definition)
 end
 
-registerDefinition({
-    blueprintID = "Headquarters",
-    buildingType = "Headquarters",
-    mode = "build",
-    displayName = "HQ Blueprint",
-    craftLabel = "Craft HQ Blueprint",
-    itemFullType = "Base.DCBlueprintHeadquarters",
-    iconPath = "media/ui/Buildings/DC_Headquarters.png",
-    placementEntityType = "Base.DCColonyHQ",
-    consumeFromInventoryOnly = true,
-})
-
 function Blueprints.GetDefinition(buildingType, mode)
     return Internal.Definitions[buildKey(buildingType, mode)]
 end

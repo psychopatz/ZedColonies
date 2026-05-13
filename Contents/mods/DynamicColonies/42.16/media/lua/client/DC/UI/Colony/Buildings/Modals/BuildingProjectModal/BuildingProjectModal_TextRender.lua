@@ -117,4 +117,8 @@ function DC_BuildingProjectModal:updateText()
     if self.btnSupplyProject then
         self.btnSupplyProject:setEnable(preview.projectID ~= nil and preview.canStart ~= true)
     end
+
+    if self.relayout then
+        self:relayout()
+    end
 end

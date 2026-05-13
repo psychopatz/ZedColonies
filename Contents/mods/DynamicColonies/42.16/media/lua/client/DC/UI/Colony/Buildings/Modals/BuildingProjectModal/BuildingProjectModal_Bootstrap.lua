@@ -32,6 +32,9 @@ function DC_BuildingProjectModal.Open(args)
     modal:instantiate()
     modal:addToUIManager()
     modal:bringToTop()
+    if modal.relayout then
+        modal:relayout()
+    end
     DC_BuildingProjectModal.instance = modal
     return modal
 end

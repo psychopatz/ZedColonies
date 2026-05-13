@@ -18,48 +18,11 @@ local function getOwnerUsername(character)
         or "local"
 end
 
-local function findInventoryItemByFullTypeRecursive(container, fullType)
-    if not container or not fullType then
-        return nil
-    end
-
-    local items = container:getItems()
-    if not items then
-        return nil
-    end
-
-    for index = 0, items:size() - 1 do
-        local item = items:get(index)
-        if item then
-            if item.getFullType and tostring(item:getFullType() or "") == tostring(fullType or "") then
-                return item
-            end
-
-            if instanceof(item, "InventoryContainer") then
-                local found = findInventoryItemByFullTypeRecursive(item:getItemContainer(), fullType)
-                if found then
-                    return found
-                end
-            end
-        end
-    end
-
-    return nil
-end
-
-local function hasBlueprintItem(character, fullType)
-    local inventory = character and character.getInventory and character:getInventory() or nil
-    return inventory and findInventoryItemByFullTypeRecursive(inventory, fullType) ~= nil or false
-end
-
 function BuildRecipeCode.DCColonyBaseHQ.OnIsValid(params)
     params = type(params) == "table" and params or {}
     local square = params.square
     local character = params.character
     if not square or not character then
-        return false
-    end
-    if not hasBlueprintItem(character, "Base.DCBlueprintHeadquarters") then
         return false
     end
 

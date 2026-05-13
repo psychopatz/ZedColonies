@@ -1,0 +1,34 @@
+tileset
+{
+    file = dc_building_hq_01
+    size = 8,3
+    id = 4501
+
+    // dc_building_hq_01_16
+    tile
+    {
+        xy = 0,2
+        solidtrans = 
+    }
+    // dc_building_hq_01_17
+    tile
+    {
+        xy = 1,2
+        MaterialType = Wood
+        solidtrans = 
+    }
+    // dc_building_hq_01_18
+    tile
+    {
+        xy = 2,2
+        MaterialType = Wood
+        solidtrans = 
+    }
+    // dc_building_hq_01_19
+    tile
+    {
+        xy = 3,2
+        MaterialType = Wood
+        solidtrans = 
+    }
+}
