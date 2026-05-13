@@ -9,12 +9,12 @@ local function normalizeDamageMultiplier(value)
     return math.max(1, math.floor(tonumber(value) or 1))
 end
 
-local function isToolDurabilitySandboxEnabled()
-    local sandbox = SandboxVars and SandboxVars.DynamicTrading or nil
-    if sandbox and sandbox.NPCToolDurability ~= nil then
-        return sandbox.NPCToolDurability ~= false
+local function isPlayerOwnedToolWearSandboxEnabled()
+    local sandbox = SandboxVars and SandboxVars.DynamicColonies or nil
+    if sandbox and sandbox.PlayerOwnedNPCToolDurability ~= nil then
+        return sandbox.PlayerOwnedNPCToolDurability ~= false
     end
-    return true
+    return false
 end
 
 local function getToolLabel(entry)
@@ -102,7 +102,7 @@ local function applyWearEvent(worker, entry, damageMultiplier)
         return nil
     end
 
-    if not isToolDurabilitySandboxEnabled() then
+    if not isPlayerOwnedToolWearSandboxEnabled() then
         return normalized
     end
 

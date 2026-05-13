@@ -129,3 +129,27 @@ option DynamicColonies.CompanionCommandRadius
     page = DynamicColoniesCompanions,
     translation = DynamicColonies.CompanionCommandRadius,
 }
+
+option DynamicColonies.PlayerOwnedNPCWeaponDurability
+{
+    type = boolean,
+    default = false,
+    page = DynamicColoniesRoster,
+    translation = DynamicColonies.PlayerOwnedNPCWeaponDurability,
+}
+
+option DynamicColonies.PlayerOwnedNPCToolDurability
+{
+    type = boolean,
+    default = false,
+    page = DynamicColoniesRoster,
+    translation = DynamicColonies.PlayerOwnedNPCToolDurability,
+}
+
+option DynamicColonies.PlayerOwnedNPCAmmoConsumption
+{
+    type = boolean,
+    default = false,
+    page = DynamicColoniesRoster,
+    translation = DynamicColonies.PlayerOwnedNPCAmmoConsumption,
+}
