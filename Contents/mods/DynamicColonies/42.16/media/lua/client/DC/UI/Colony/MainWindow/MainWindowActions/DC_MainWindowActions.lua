@@ -1,4 +1,4 @@
-require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Job"
+require "DC/UI/Colony/MainWindow/MainWindowActions/MainWindowActionsJob/DC_MainWindowActionsJob"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Refresh"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Supply"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Resources"
