@@ -41,7 +41,7 @@ require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_SoulStatu
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_HealthReturnHandling"
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CompanionStart"
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_CombatXP"
-require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_UpdateLoop"
+require "DC/Common/Colony/Companion/ColonyCompanion/ColonyCompanionUpdateLoop/ColonyCompanionUpdateLoop"
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiEligibility"
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiCommands"
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion_ApiMedical"
