@@ -43,9 +43,15 @@ Network.Handlers.DestroyBuilding = function(player, args)
             false
         )
     end
+    local mapChange = Internal.BuildingMap and Internal.BuildingMap.Touch and Internal.BuildingMap.Touch(owner, {
+        plotX = args.plotX,
+        plotY = args.plotY,
+        topologyChanged = true,
+    }) or nil
     if Internal.syncBuildingState then
         Internal.syncBuildingState(player, owner, args.plotX, args.plotY, {
             sourcePlayer = player,
+            mapChange = mapChange,
         })
     end
 end

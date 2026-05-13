@@ -27,8 +27,8 @@ function DC_BuildingsWindow:getOwnerWindow()
     return DC_MainWindow and DC_MainWindow.instance or nil
 end
 
-function DC_BuildingsWindow:requestSnapshot()
-    BuildingsWindowSync.RequestSnapshot(self, DC_BuildingsWindow)
+function DC_BuildingsWindow:requestSnapshot(forceRetry)
+    BuildingsWindowSync.RequestSnapshot(self, DC_BuildingsWindow, forceRetry)
 end
 
 function DC_BuildingsWindow:getSelectedPlot()

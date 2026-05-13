@@ -146,12 +146,21 @@ Network.Handlers.DebugCompleteBuildingProject = function(player, args)
     if Internal.syncNotice then
         Internal.syncNotice(player, "Debug completed " .. activityLabel .. ".", "info", false)
     end
+    local mapChange = Internal.BuildingMap and Internal.BuildingMap.Touch and Internal.BuildingMap.Touch(owner, {
+        plotX = project.plotX,
+        plotY = project.plotY,
+        projectID = project.projectID,
+        transition = transition,
+        topologyChanged = transition and transition.safetyChanged == true or false,
+    }) or nil
     if Internal.syncBuildingState then
         Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
             sourcePlayer = player,
+            mapChange = mapChange,
         })
     end
     if transition and transition.safetyChanged == true and Internal.syncPlotSafety then
+        transition.mapChange = mapChange
         Internal.syncPlotSafety(player, owner, transition)
     end
 end

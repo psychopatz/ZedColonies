@@ -98,9 +98,15 @@ Network.Handlers.StartBuildingProject = function(player, args)
             false
         )
     end
+    local mapChange = Internal.BuildingMap and Internal.BuildingMap.Touch and Internal.BuildingMap.Touch(owner, {
+        plotX = project.plotX,
+        plotY = project.plotY,
+        projectID = project.projectID,
+    }) or nil
     if Internal.syncBuildingState then
         Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
             sourcePlayer = player,
+            mapChange = mapChange,
         })
     end
 end
@@ -160,9 +166,15 @@ Network.Handlers.ReassignBuildingProject = function(player, args)
             )
         end
     end
+    local mapChange = Internal.BuildingMap and Internal.BuildingMap.Touch and Internal.BuildingMap.Touch(owner, {
+        plotX = project.plotX,
+        plotY = project.plotY,
+        projectID = project.projectID,
+    }) or nil
     if Internal.syncBuildingState then
         Internal.syncBuildingState(player, owner, project.plotX, project.plotY, {
             sourcePlayer = player,
+            mapChange = mapChange,
         })
     end
 end

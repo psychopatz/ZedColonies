@@ -21,7 +21,7 @@ end
 function State.UpdatePanels(window)
     local selectedPlot = State.GetSelectedPlot(window)
     if window and window.mapPanel then
-        window.mapPanel:setSnapshot(window.snapshot, window.selectedPlotKey)
+        window.mapPanel:setSnapshot(window.snapshot, window.selectedPlotKey, window.syncInfo)
     end
     if window and window.detailsPanel then
         window.detailsPanel:setPlot(selectedPlot)
@@ -34,6 +34,7 @@ function State.RefreshFromSnapshot(window, windowClass)
     end
 
     window.snapshot = DC_BuildingsClientState.Normalize((windowClass and windowClass.cachedSnapshot) or window.snapshot or {})
+    window.syncInfo = window.snapshot and window.snapshot.sync or {}
     if not window.selectedPlotKey or not DC_BuildingsClientSelectors.FindPlot(window.snapshot, window.selectedPlotKey) then
         window.selectedPlotKey = DC_BuildingsClientSelectors.GetDefaultPlotKey(window.snapshot)
     end

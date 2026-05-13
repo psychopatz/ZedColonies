@@ -28,6 +28,25 @@ function Formatter.GetStatusText(territory)
         .. tostring((territory and territory.frontierRequiredHQLevel) or (territory and territory.nextFrontierRing) or (territory and territory.currentFrontierRing) or 1)
 end
 
+function Formatter.GetSyncStatusText(syncInfo)
+    local state = tostring(syncInfo and syncInfo.state or "idle")
+    if state == "loading" then
+        return "Loading colony plots..."
+    end
+    if state == "partial" then
+        local received = tonumber(syncInfo and syncInfo.receivedChunks) or 0
+        local total = tonumber(syncInfo and syncInfo.chunkCount) or 0
+        if total > 0 then
+            return "Loading plots " .. tostring(received) .. "/" .. tostring(total) .. "..."
+        end
+        return "Loading colony plots..."
+    end
+    if state == "error" then
+        return tostring(syncInfo and syncInfo.message or "Map sync failed. Retry pending.")
+    end
+    return nil
+end
+
 local function getFallbackLabel(plot)
     if not plot then
         return nil

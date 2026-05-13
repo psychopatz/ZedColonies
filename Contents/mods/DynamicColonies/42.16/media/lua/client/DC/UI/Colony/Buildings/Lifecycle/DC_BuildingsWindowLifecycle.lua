@@ -3,6 +3,7 @@ require "ISUI/ISCollapsableWindow"
 DC_BuildingsWindowLifecycle = DC_BuildingsWindowLifecycle or {}
 
 local Lifecycle = DC_BuildingsWindowLifecycle
+local RETRY_FRAMES = 180
 
 function Lifecycle.New(windowClass, x, y, width, height, ownerWindow)
     local o = ISCollapsableWindow:new(x, y, width, height)
@@ -12,7 +13,8 @@ function Lifecycle.New(windowClass, x, y, width, height, ownerWindow)
     o.resizable = true
     o.ownerWindow = ownerWindow
     o.autoRefreshFrames = 0
-    o.snapshot = { map = { plots = {} } }
+    o.snapshot = { map = { plots = {} }, sync = { state = "idle" } }
+    o.syncInfo = o.snapshot.sync
     o.selectedPlotKey = nil
     return o
 end
@@ -51,6 +53,21 @@ end
 function Lifecycle.Prerender(window)
     ISCollapsableWindow.prerender(window)
     window.autoRefreshFrames = (tonumber(window.autoRefreshFrames) or 0) + 1
+
+    local syncInfo = window.syncInfo or {}
+    if isClient() and not isServer() then
+        syncInfo.framesSinceActivity = math.max(0, math.floor(tonumber(syncInfo.framesSinceActivity) or 0)) + 1
+        window.syncInfo = syncInfo
+
+        if (syncInfo.state == "loading" or syncInfo.state == "partial")
+            and (tonumber(syncInfo.framesSinceActivity) or 0) >= RETRY_FRAMES then
+            syncInfo.framesSinceActivity = 0
+            if window.requestSnapshot then
+                window:requestSnapshot(true)
+            end
+        end
+    end
+
     if window.autoRefreshFrames >= (tonumber(window.AUTO_REFRESH_FRAMES) or 600) then
         window.autoRefreshFrames = 0
         window:requestSnapshot()

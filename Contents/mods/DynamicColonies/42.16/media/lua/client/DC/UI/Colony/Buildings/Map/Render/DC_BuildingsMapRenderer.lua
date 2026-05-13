@@ -58,15 +58,21 @@ local function drawTile(panel, rect, selected, presentation)
     end
 end
 
-function Renderer.DrawHeader(panel, territory)
+function Renderer.DrawHeader(panel, territory, syncInfo)
     territory = territory or {}
 
     panel:drawText(tostring(DC_BuildingsMapFormatter.GetHeaderText()), 10, 8, 1, 1, 1, 1, UIFont.Medium)
     panel:drawText(DC_BuildingsMapFormatter.GetStatusText(territory), 150, 10, 0.76, 0.76, 0.76, 1, UIFont.Small)
+
+    local syncText = DC_BuildingsMapFormatter.GetSyncStatusText(syncInfo)
+    if syncText then
+        panel:drawTextRight(syncText, panel.width - 10, 10, 0.9, 0.82, 0.5, 1, UIFont.Small)
+    end
 end
 
-function Renderer.DrawTiles(panel, snapshot, viewportState, selectedPlotKey)
+function Renderer.DrawTiles(panel, snapshot, viewportState, selectedPlotKey, syncInfo)
     local plots = snapshot and snapshot.map and snapshot.map.plots or {}
+    local state = tostring(syncInfo and syncInfo.state or "idle")
 
     panel:drawRect(0, 0, panel.width, panel.height, 0.1, 1, 1, 1)
     panel:drawRectBorder(0, 0, panel.width, panel.height, 0.08, 1, 1, 1)
@@ -78,13 +84,29 @@ function Renderer.DrawTiles(panel, snapshot, viewportState, selectedPlotKey)
             drawTile(panel, rect, tostring(plot.key or "") == tostring(selectedPlotKey or ""), presentation)
         end
     end
+
+    if #plots <= 0 and (state == "loading" or state == "partial") then
+        panel:drawTextCentre("Loading colony map...", panel.width / 2, (panel.height / 2) - 10, 0.9, 0.9, 0.9, 1, UIFont.Medium)
+        return
+    end
+
+    if #plots <= 0 and state == "error" then
+        panel:drawTextCentre("Colony map sync failed.", panel.width / 2, (panel.height / 2) - 18, 0.92, 0.62, 0.62, 1, UIFont.Medium)
+        panel:drawTextCentre(tostring(syncInfo and syncInfo.message or "Retrying..."), panel.width / 2, (panel.height / 2) + 4, 0.82, 0.82, 0.82, 1, UIFont.Small)
+        return
+    end
+
+    if #plots <= 0 and state == "ready" then
+        panel:drawTextCentre("No visible colony plots.", panel.width / 2, (panel.height / 2) - 10, 0.82, 0.82, 0.82, 1, UIFont.Medium)
+        return
+    end
 end
 
 function Renderer.Draw(panel, snapshot, viewportState, selectedPlotKey)
     local territory = snapshot and snapshot.map or {}
 
-    Renderer.DrawHeader(panel, territory)
-    Renderer.DrawTiles(panel, snapshot, viewportState, selectedPlotKey)
+    Renderer.DrawHeader(panel, territory, snapshot and snapshot.sync or {})
+    Renderer.DrawTiles(panel, snapshot, viewportState, selectedPlotKey, snapshot and snapshot.sync or {})
 end
 
 return Renderer

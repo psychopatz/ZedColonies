@@ -550,6 +550,11 @@ end
 
 function Internal.syncBuildingState(player, ownerUsername, plotX, plotY, options)
     local owner = getOwnerUsername(ownerUsername or player)
+    if Internal.BuildingMap and Internal.BuildingMap.SyncPlotUpdated then
+        Internal.BuildingMap.SyncPlotUpdated(player, owner, plotX, plotY, options or {})
+        return
+    end
+
     local plot, map = buildPlotPacket(owner, plotX, plotY, options and options.sourcePlayer or player)
     Internal.sendTransportPacket(player, "BuildingStateUpdated", owner, {
         version = getBuildingVersion(owner),
@@ -578,6 +583,15 @@ function Internal.syncPlotSafety(player, ownerUsername, changeInfo)
         coords = Buildings.GetRingCoordinates(changeInfo.securedRingAfter)
     end
 
+    if Internal.BuildingMap and Internal.BuildingMap.SyncPlotsUpdated then
+        Internal.BuildingMap.SyncPlotsUpdated(player, owner, coords, {
+            sourcePlayer = player,
+            reason = "plot-safety",
+            mapChange = changeInfo and changeInfo.mapChange or nil,
+        })
+        return
+    end
+
     local plots, map = buildPlotsPacket(owner, coords, player)
     Internal.sendTransportPacket(player, "PlotSafetyChanged", owner, {
         version = getBuildingVersion(owner),
@@ -590,13 +604,14 @@ end
 function Internal.syncColonyBootstrap(player, args)
     local owner = getOwnerUsername(player)
     local knownVersions = type(args and args.knownVersions) == "table" and args.knownVersions or {}
+    local forceBuildingsSnapshot = args and args.forceBuildingsSnapshot == true
     local versions = buildVersions(owner)
     local payload = {
         version = versions.building,
         versions = versions,
     }
 
-    if tonumber(knownVersions.building) ~= tonumber(versions.building) then
+    if forceBuildingsSnapshot or tonumber(knownVersions.building) ~= tonumber(versions.building) then
         if Buildings.EnsureInitialHeadquartersProject then
             Buildings.EnsureInitialHeadquartersProject(owner)
         end
@@ -621,6 +636,10 @@ end
 
 function Internal.pushOwnerBuildingMutation(ownerUsername, context)
     local owner = getOwnerUsername(ownerUsername)
+    if Internal.BuildingMap and Internal.BuildingMap.PushOwnerMutation then
+        Internal.BuildingMap.PushOwnerMutation(owner, context or {})
+        return
+    end
     local sent = Internal.forEachOnlineOwnerPlayer(owner, function(player)
         if context and context.notice then
             Internal.syncNotice(player, context.notice.message, context.notice.severity, context.notice.popup)

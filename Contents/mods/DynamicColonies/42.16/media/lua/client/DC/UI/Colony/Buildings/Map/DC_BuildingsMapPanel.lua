@@ -12,15 +12,16 @@ function MapCanvasPanel:initialise()
     ISPanel.initialise(self)
 end
 
-function MapCanvasPanel:setMapState(snapshot, selectedPlotKey, viewportState)
+function MapCanvasPanel:setMapState(snapshot, selectedPlotKey, viewportState, syncInfo)
     self.snapshot = snapshot
     self.selectedPlotKey = selectedPlotKey
     self.viewportState = viewportState
+    self.syncInfo = syncInfo
 end
 
 function MapCanvasPanel:prerender()
     ISPanel.prerender(self)
-    DC_BuildingsMapRenderer.DrawTiles(self, self.snapshot or { map = { plots = {} } }, self.viewportState or {}, self.selectedPlotKey)
+    DC_BuildingsMapRenderer.DrawTiles(self, self.snapshot or { map = { plots = {} } }, self.viewportState or {}, self.selectedPlotKey, self.syncInfo or {})
 end
 
 function MapCanvasPanel:onMouseDown(x, y)
@@ -113,7 +114,7 @@ local function relayoutCanvas(panel)
     panel.canvasPanel:setY(DC_BuildingsMapPanel.HEADER_HEIGHT)
     panel.canvasPanel:setWidth(panel.width)
     panel.canvasPanel:setHeight(math.max(0, panel.height - DC_BuildingsMapPanel.HEADER_HEIGHT))
-    panel.canvasPanel:setMapState(panel.snapshot, panel.selectedPlotKey, panel.viewportState)
+    panel.canvasPanel:setMapState(panel.snapshot, panel.selectedPlotKey, panel.viewportState, panel.syncInfo)
 end
 
 function DC_BuildingsMapPanel:initialise()
@@ -122,9 +123,10 @@ function DC_BuildingsMapPanel:initialise()
     relayoutCanvas(self)
 end
 
-function DC_BuildingsMapPanel:setSnapshot(snapshot, selectedPlotKey)
+function DC_BuildingsMapPanel:setSnapshot(snapshot, selectedPlotKey, syncInfo)
     self.snapshot = snapshot
     self.selectedPlotKey = selectedPlotKey
+    self.syncInfo = syncInfo or {}
     self.viewportState = DC_BuildingsMapViewport.EnsureState(self.viewportState, snapshot)
     self.viewportState.topInset = 0
     relayoutCanvas(self)
@@ -132,7 +134,7 @@ end
 
 function DC_BuildingsMapPanel:prerender()
     ISPanel.prerender(self)
-    DC_BuildingsMapRenderer.DrawHeader(self, self.snapshot and self.snapshot.map or {})
+    DC_BuildingsMapRenderer.DrawHeader(self, self.snapshot and self.snapshot.map or {}, self.syncInfo or {})
 end
 
 function DC_BuildingsMapPanel:onResize()
@@ -147,6 +149,7 @@ function DC_BuildingsMapPanel:new(x, y, width, height, onPlotSelectedCallback)
     o.backgroundColor = { r = 0, g = 0, b = 0, a = 0.2 }
     o.borderColor = { r = 1, g = 1, b = 1, a = 0.08 }
     o.snapshot = { map = { plots = {} } }
+    o.syncInfo = { state = "idle" }
     o.viewportState = {
         tileSize = DC_BuildingsMapViewport.DEFAULT_TILE_SIZE,
         gap = DC_BuildingsMapViewport.DEFAULT_GAP,
