@@ -1,5 +1,5 @@
 require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Descriptions"
-require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Materials"
+require "DC/Common/Buildings/Projects/BuildingsProjectMaterials/BuildingsProjectMaterials"
 require "DC/Common/Buildings/Projects/BuildingsProjectValidation/BuildingsProjectValidation"
 require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting_Preview"
 
