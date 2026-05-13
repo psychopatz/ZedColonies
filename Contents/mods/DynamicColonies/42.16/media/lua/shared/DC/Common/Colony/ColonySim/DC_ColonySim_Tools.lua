@@ -9,6 +9,14 @@ local function normalizeDamageMultiplier(value)
     return math.max(1, math.floor(tonumber(value) or 1))
 end
 
+local function isToolDurabilitySandboxEnabled()
+    local sandbox = SandboxVars and SandboxVars.DynamicTrading or nil
+    if sandbox and sandbox.NPCToolDurability ~= nil then
+        return sandbox.NPCToolDurability ~= false
+    end
+    return true
+end
+
 local function getToolLabel(entry)
     if not entry then
         return "Tool"
@@ -92,6 +100,10 @@ local function applyWearEvent(worker, entry, damageMultiplier)
     local normalized = Registry.Internal.NormalizeEquipmentEntry and Registry.Internal.NormalizeEquipmentEntry(entry) or nil
     if not normalized then
         return nil
+    end
+
+    if not isToolDurabilitySandboxEnabled() then
+        return normalized
     end
 
     local tempItem = Registry.Internal.CreateTransientInventoryItem and Registry.Internal.CreateTransientInventoryItem(normalized.fullType) or nil

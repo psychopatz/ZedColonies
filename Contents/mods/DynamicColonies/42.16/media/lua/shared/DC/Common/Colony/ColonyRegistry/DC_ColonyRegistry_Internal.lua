@@ -463,6 +463,15 @@ function Internal.BuildEquipmentEntryFromInventoryItem(invItem, overrideDisplayN
         return nil
     end
 
+    local condition = invItem.getCondition and tonumber(invItem:getCondition()) or nil
+    local maxCondition = invItem.getConditionMax and tonumber(invItem:getConditionMax()) or 0
+    if condition ~= nil and maxCondition > 0 and condition <= 0 then
+        local isBroken = invItem.isBroken and invItem:isBroken() == true or false
+        if not isBroken then
+            condition = maxCondition
+        end
+    end
+
     return Internal.NormalizeEquipmentEntry({
         fullType = invItem:getFullType(),
         displayName = overrideDisplayName or (invItem.getDisplayName and invItem:getDisplayName() or nil),
@@ -470,7 +479,7 @@ function Internal.BuildEquipmentEntryFromInventoryItem(invItem, overrideDisplayN
             or (Config.FindItemTags and Config.FindItemTags(invItem:getFullType()))
             or {},
         qty = math.max(1, math.floor(tonumber(invItem.getCount and invItem:getCount() or 1) or 1)),
-        condition = invItem.getCondition and invItem:getCondition() or nil,
+        condition = condition,
         headCondition = invItem.getHeadCondition and invItem:getHeadCondition() or nil,
         quality = invItem.getQuality and invItem:getQuality() or nil,
         haveBeenRepaired = invItem.getHaveBeenRepaired and invItem:getHaveBeenRepaired() or nil,
@@ -575,6 +584,14 @@ function Internal.BuildOutputEntryFromInventoryItem(invItem, overrideDisplayName
     end
 
     local fullType = invItem:getFullType()
+    local condition = invItem.getCondition and tonumber(invItem:getCondition()) or nil
+    local maxCondition = invItem.getConditionMax and tonumber(invItem:getConditionMax()) or 0
+    if condition ~= nil and maxCondition > 0 and condition <= 0 then
+        local isBroken = invItem.isBroken and invItem:isBroken() == true or false
+        if not isBroken then
+            condition = maxCondition
+        end
+    end
     local isColonyTool = Config.IsColonyToolFullType and Config.IsColonyToolFullType(fullType) or false
     local entry = {
         fullType = fullType,
@@ -583,7 +600,7 @@ function Internal.BuildOutputEntryFromInventoryItem(invItem, overrideDisplayName
     }
 
     if isColonyTool then
-        entry.condition = invItem.getCondition and invItem:getCondition() or nil
+        entry.condition = condition
         entry.headCondition = invItem.getHeadCondition and invItem:getHeadCondition() or nil
         entry.usedDelta = invItem.getCurrentUsesFloat and invItem:getCurrentUsesFloat()
             or invItem.getUsedDelta and invItem:getUsedDelta()
