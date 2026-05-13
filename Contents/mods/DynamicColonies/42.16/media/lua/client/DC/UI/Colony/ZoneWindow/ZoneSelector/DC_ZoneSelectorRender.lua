@@ -32,27 +32,6 @@ function Render.SetPreviewButtonsVisible(selector, visible)
     if selector.btnScaleS_Inner then selector.btnScaleS_Inner:setVisible(visible) end
 end
 
-local function drawSelectionInfo(selector, py)
-    local metrics = State.GetSelectionMetrics(selector)
-    if not metrics then
-        return py
-    end
-
-    local px = UI_BORDER_SPACING + 1
-    selector:drawText("Width: " .. tostring(metrics.width), px, py, 1, 1, 1, 1, UIFont.NewSmall)
-    py = py + getTextManager():getFontHeight(UIFont.NewSmall)
-    selector:drawText("Height: " .. tostring(metrics.height), px, py, 1, 1, 1, 1, UIFont.NewSmall)
-    py = py + getTextManager():getFontHeight(UIFont.NewSmall)
-    selector:drawText("Total: " .. tostring(metrics.total) .. " tiles", px, py, 1, 1, 1, 1, UIFont.NewSmall)
-    py = py + getTextManager():getFontHeight(UIFont.NewSmall)
-    selector:drawText("From: (" .. tostring(math.floor(metrics.x1)) .. ", " .. tostring(math.floor(metrics.y1)) .. ")", px, py, 0.7, 0.7, 0.7, 1, UIFont.NewSmall)
-    py = py + getTextManager():getFontHeight(UIFont.NewSmall)
-    selector:drawText("To: (" .. tostring(math.floor(metrics.x2)) .. ", " .. tostring(math.floor(metrics.y2)) .. ")", px, py, 0.7, 0.7, 0.7, 1, UIFont.NewSmall)
-
-    local color = State.GetHighlightColor(selector)
-    addAreaHighlightForPlayer(selector.playerNum, metrics.x1, metrics.y1, metrics.x2 + 1, metrics.y2 + 1, selector.player:getZ(), color.r, color.g, color.b, color.a)
-    return py
-end
 
 function Render.Prerender(selector)
     selector:drawRect(0, 0, selector.width, selector.height,

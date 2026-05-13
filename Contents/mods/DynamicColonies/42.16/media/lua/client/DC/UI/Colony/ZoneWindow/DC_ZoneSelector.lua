@@ -16,6 +16,9 @@ require "DC/UI/Colony/ZoneWindow/ZoneSelector/DC_ZoneSelectorState"
 require "DC/UI/Colony/ZoneWindow/ZoneSelector/DC_ZoneSelectorInput"
 require "DC/UI/Colony/ZoneWindow/ZoneSelector/DC_ZoneSelectorRender"
 require "DC/UI/Colony/ZoneWindow/ZoneSelector/DC_ZoneSelectorUI"
+require "DC/UI/Colony/ZoneWindow/ZoneSelector/Components/DC_ZoneSelector_Header"
+require "DC/UI/Colony/ZoneWindow/ZoneSelector/Components/DC_ZoneSelector_Body"
+require "DC/UI/Colony/ZoneWindow/ZoneSelector/Components/DC_ZoneSelector_Footer"
 
 DC_ZoneSelector = ISPanelJoypad:derive("DC_ZoneSelector")
 
@@ -24,9 +27,12 @@ DC_ZoneSelector = ISPanelJoypad:derive("DC_ZoneSelector")
 -- ---------------------------------------------------------------------------
 
 function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callback, zoneName, initialRect)
+    if width == 340 or width == 540 then width = 480 end
+    if height == 260 or height == 440 then height = 260 end
+
     local o = ISPanelJoypad.new(self, x, y, width, height)
 
-    if x == 0 and y == 0 then
+    if (x == 0 or x == 100) and (y == 0 or y == 50) then
         o.x = 100
         o.y = 50
         o:setX(o.x)
