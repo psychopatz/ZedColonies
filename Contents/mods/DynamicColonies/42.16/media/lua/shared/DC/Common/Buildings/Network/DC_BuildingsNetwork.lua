@@ -6,7 +6,7 @@ DC_Colony.Network.Internal = DC_Colony.Network.Internal or {}
 
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Shared"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Query"
-require "DC/Common/Buildings/Network/DC_BuildingsNetwork_MapTransport"
+require "DC/Common/Buildings/Network/BuildingsNetMapTrans/DC_BuildingsNetMapTrans"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Projects"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Supply"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Destroy"
