@@ -1,26 +1,22 @@
 DC_Buildings = DC_Buildings or {}
+DC_Buildings.Internal = DC_Buildings.Internal or {}
 
 local Buildings = DC_Buildings
 local Config = Buildings.Config
 local Internal = Buildings.Internal
+local Presentation = Buildings.Internal.Presentation or {}
+local modules = Presentation.Modules or {}
+local helpers = Presentation.Helpers or {}
 
-local function shallowCopy(source)
-    local copy = {}
-    for key, value in pairs(source or {}) do
-        copy[key] = value
-    end
-    return copy
+Buildings.Internal.Presentation = Presentation
+Presentation.Modules = modules
+Presentation.Helpers = helpers
+
+if modules.Snapshots then
+    return
 end
 
-local function getRegistry()
-    return DC_Colony and DC_Colony.Registry or nil
-end
-
-local function getDisplayName(fullType)
-    local registry = getRegistry()
-    local internal = registry and registry.Internal or nil
-    return internal and internal.GetDisplayNameForFullType and internal.GetDisplayNameForFullType(fullType) or tostring(fullType or "Unknown")
-end
+modules.Snapshots = true
 
 function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     local owner = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
@@ -75,7 +71,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
                 for _, entry in ipairs(levelDefinition.recipe or {}) do
                     recipe[#recipe + 1] = {
                         fullType = entry.fullType,
-                        displayName = getDisplayName(entry.fullType),
+                        displayName = helpers.GetDisplayName(entry.fullType),
                         count = entry.count
                     }
                 end
@@ -84,7 +80,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
                     enabled = levelDefinition.enabled == true,
                     workPoints = levelDefinition.workPoints,
                     recipe = recipe,
-                    effects = shallowCopy(levelDefinition.effects)
+                    effects = helpers.ShallowCopy(levelDefinition.effects)
                 }
             end
         end
@@ -110,7 +106,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
             progressRatio = 1
         }
         local workerName = nil
-        local registry = getRegistry()
+        local registry = helpers.GetRegistry()
         local worker = registry and registry.GetWorkerForOwnerRaw and registry.GetWorkerForOwnerRaw(owner, project.assignedBuilderID)
             or registry and registry.GetWorkerForOwner and registry.GetWorkerForOwner(owner, project.assignedBuilderID)
             or nil
@@ -173,76 +169,3 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
         map = Buildings.BuildMapSnapshot(owner, sourcePlayer)
     }
 end
-
-function Buildings.GetOwnerSummary(ownerUsername)
-    local snapshot = Buildings.BuildOwnerSnapshot(ownerUsername)
-    return {
-        ownerUsername = snapshot.ownerUsername,
-        housing = shallowCopy(snapshot.housing),
-        medical = shallowCopy(snapshot.medical),
-        activeProjectCount = #snapshot.activeProjects,
-        buildingCounts = (function()
-            local counts = {}
-            for _, entry in ipairs(snapshot.buildings or {}) do
-                counts[entry.buildingType] = entry.currentCount
-            end
-            return counts
-        end)()
-    }
-end
-
-function Buildings.ApplyWorkerState(worker)
-    if not worker or not worker.workerID then
-        return
-    end
-
-    local housing = Buildings.GetWorkerHousing(worker.ownerUsername, worker.workerID)
-    local infirmary = Buildings.GetWorkerInfirmary and Buildings.GetWorkerInfirmary(worker.ownerUsername, worker.workerID) or nil
-    worker.housingState = housing.housingState
-    worker.housingBuildingID = housing.buildingID
-    worker.housingBuildingType = housing.buildingType
-    worker.housingBuildingLevel = housing.buildingLevel
-    worker.housingRecoveryMultiplier = housing.recoveryMultiplier
-    worker.infirmaryBuildingID = infirmary and infirmary.buildingID or nil
-    worker.infirmaryBuildingType = infirmary and infirmary.buildingType or nil
-    worker.infirmaryBuildingLevel = infirmary and infirmary.buildingLevel or 0
-    worker.infirmaryBedAssigned = infirmary and infirmary.assigned == true or false
-    worker.doctorCovered = infirmary and infirmary.doctorCovered == true or false
-    if DC_Colony and DC_Colony.Energy and DC_Colony.Energy.SetRecoverySources then
-        DC_Colony.Energy.SetRecoverySources(worker, {
-            base = 1.0,
-            housing = housing.recoveryMultiplier
-        })
-    end
-
-    local project = Buildings.GetProjectForWorker(worker)
-    if project then
-        worker.assignedProjectID = project.projectID
-        worker.assignedProjectBuildingType = project.buildingType
-        worker.assignedProjectBuildingID = project.buildingID
-        worker.assignedProjectTargetLevel = project.targetLevel
-        worker.assignedProjectMaterialState = project.materialState
-        worker.assignedProjectProgress = project.progressWorkPoints
-        worker.assignedProjectRequired = project.requiredWorkPoints
-        worker.workProgress = project.progressWorkPoints
-        worker.workTarget = project.requiredWorkPoints
-        worker.workCycleHours = project.requiredWorkPoints
-    else
-        worker.assignedProjectID = nil
-        worker.assignedProjectBuildingType = nil
-        worker.assignedProjectBuildingID = nil
-        worker.assignedProjectTargetLevel = nil
-        worker.assignedProjectMaterialState = nil
-        worker.assignedProjectProgress = nil
-        worker.assignedProjectRequired = nil
-    end
-
-    if Buildings.RealBase and Buildings.RealBase.ApplyWorkerAnchors then
-        Buildings.RealBase.ApplyWorkerAnchors(worker)
-    end
-    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.OnWorkerStateApplied then
-        DC_Colony.ResidentBridge.OnWorkerStateApplied(worker)
-    end
-end
-
-return Buildings
