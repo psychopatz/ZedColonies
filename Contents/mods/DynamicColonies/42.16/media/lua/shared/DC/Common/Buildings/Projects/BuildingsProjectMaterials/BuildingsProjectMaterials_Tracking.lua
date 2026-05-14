@@ -41,15 +41,29 @@ function Materials.PullProjectMaterialsFromWarehouse(project)
 
     local moved = 0
     local outputLedger = warehouse.ledgers and warehouse.ledgers.output or {}
+
+    for recipeKey, requiredCount in pairs(required) do
+        local kind, value = Materials.ParseMaterialCountKey(recipeKey)
+        local needed = math.max(0, requiredCount - (project.materialCounts[recipeKey] or 0))
+        if needed > 0 and kind == "category" and warehouseApi and warehouseApi.TakeCategoryUnits then
+            local taken = warehouseApi.TakeCategoryUnits(owner, value, needed)
+            if taken and taken > 0 then
+                project.materialCounts[recipeKey] = math.max(0, tonumber(project.materialCounts[recipeKey]) or 0) + taken
+                moved = moved + taken
+            end
+        end
+    end
+
     for index = #outputLedger, 1, -1 do
         local entry = outputLedger[index]
         local fullType = tostring(entry and entry.fullType or "")
-        local needed = math.max(0, (required[fullType] or 0) - (project.materialCounts[fullType] or 0))
+        local recipeKey = Materials.GetMaterialCountKeyForFullType(fullType)
+        local needed = math.max(0, (required[recipeKey] or 0) - (project.materialCounts[recipeKey] or 0))
         if fullType ~= "" and needed > 0 and entry then
             local qty = math.max(0, math.floor(tonumber(entry.qty) or 0))
             local toTake = math.min(qty, needed)
             if toTake > 0 then
-                project.materialCounts[fullType] = math.max(0, tonumber(project.materialCounts[fullType]) or 0) + toTake
+                project.materialCounts[recipeKey] = math.max(0, tonumber(project.materialCounts[recipeKey]) or 0) + toTake
                 qty = qty - toTake
                 moved = moved + toTake
                 if qty <= 0 then
@@ -79,14 +93,16 @@ function Materials.BuildProjectMaterialStatus(project, sourcePlayer, availableCo
     local totalSupplied = Materials.CountSuppliedRecipeUnits(project and project.recipe or {}, project and project.materialCounts or nil)
 
     for _, entry in ipairs(project and project.recipe or {}) do
-        local fullType = tostring(entry.fullType or "")
+        local key = Materials.GetRecipeEntryKey(entry)
         local required = math.max(0, math.floor(tonumber(entry.count) or 0))
-        local supplied = math.min(required, math.max(0, tonumber(project and project.materialCounts and project.materialCounts[fullType]) or 0))
-        local available = math.max(0, resolvedAvailableCounts[fullType] or 0)
+        local supplied = math.min(required, math.max(0, tonumber(project and project.materialCounts and project.materialCounts[key]) or 0))
+        local available = math.max(0, resolvedAvailableCounts[key] or 0)
         local remaining = math.max(0, required - supplied)
         local recipeEntry = {
-            fullType = fullType,
-            displayName = Materials.GetDisplayName(fullType),
+            fullType = entry.fullType,
+            category = entry.category,
+            key = key,
+            displayName = Materials.GetRecipeEntryDisplayName(entry),
             count = required,
             available = available,
             supplied = supplied,
@@ -120,29 +136,48 @@ function Materials.ConsumeRecipe(ownerUsername, recipe)
         return true
     end
 
+    local categoryRequirements = {}
     local outputLedger = warehouse.ledgers and warehouse.ledgers.output or {}
 
-    for fullType, needed in pairs(required) do
-        local available = 0
-        for _, entry in ipairs(outputLedger) do
-            if entry.fullType == fullType then
-                available = available + math.max(0, math.floor(tonumber(entry.qty) or 0))
+    for itemKey, needed in pairs(required) do
+        local kind, value = Materials.ParseMaterialCountKey(itemKey)
+        if kind == "category" then
+            categoryRequirements[#categoryRequirements + 1] = {
+                category = value,
+                count = needed,
+            }
+        else
+            local available = 0
+            for _, entry in ipairs(outputLedger) do
+                if entry.fullType == value then
+                    available = available + math.max(0, math.floor(tonumber(entry.qty) or 0))
+                end
+            end
+            if available < needed then
+                return false
             end
         end
-        if available < needed then
-            return false
-        end
+    end
+
+    if #categoryRequirements > 0 and not (warehouseApi and warehouseApi.CanConsumeCategories and warehouseApi.CanConsumeCategories(ownerUsername, categoryRequirements)) then
+        return false
+    end
+
+    if #categoryRequirements > 0 and warehouseApi and warehouseApi.ConsumeCategories then
+        warehouseApi.ConsumeCategories(ownerUsername, categoryRequirements, {
+            reason = "project_recipe",
+        })
     end
 
     for index = #outputLedger, 1, -1 do
         local entry = outputLedger[index]
         local fullType = tostring(entry and entry.fullType or "")
-        local needed = required[fullType]
+        local needed = required[Materials.GetMaterialCountKeyForFullType(fullType)]
         if needed and needed > 0 and entry then
             local qty = math.max(0, math.floor(tonumber(entry.qty) or 0))
             local toTake = math.min(qty, needed)
             qty = qty - toTake
-            required[fullType] = needed - toTake
+            required[Materials.GetMaterialCountKeyForFullType(fullType)] = needed - toTake
             if qty <= 0 then
                 table.remove(outputLedger, index)
             else

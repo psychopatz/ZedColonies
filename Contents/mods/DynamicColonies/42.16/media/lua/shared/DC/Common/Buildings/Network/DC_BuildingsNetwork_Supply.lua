@@ -55,10 +55,10 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
 
     local neededByType = {}
     for _, entry in ipairs(materialStatus and materialStatus.entries or {}) do
-        local fullType = tostring(entry and entry.fullType or "")
+        local key = tostring(entry and entry.key or "")
         local remaining = math.max(0, tonumber(entry and entry.remaining) or 0)
-        if fullType ~= "" and remaining > 0 then
-            neededByType[fullType] = remaining
+        if key ~= "" and remaining > 0 then
+            neededByType[key] = remaining
         end
     end
 
@@ -74,13 +74,23 @@ Network.Handlers.SupplyBuildingProjectFromInventory = function(player, args)
 
     for _, item in ipairs(items) do
         local fullType = item and item.getFullType and item:getFullType() or nil
-        local needed = fullType and neededByType[fullType] or 0
+        local fullTypeKey = fullType and ("fullType:" .. tostring(fullType)) or ""
+        local converted = fullType and ColonyConfig.GetItemCategoryData and ColonyConfig.GetItemCategoryData(fullType) or nil
+        local categoryKey = converted and converted.category and ("category:" .. tostring(converted.category)) or ""
+        local needed = (fullTypeKey ~= "" and neededByType[fullTypeKey] or 0)
+        local matchedKey = fullTypeKey
+
+        if (not needed or needed <= 0) and categoryKey ~= "" then
+            needed = neededByType[categoryKey] or 0
+            matchedKey = categoryKey
+        end
+
         if needed and needed > 0 then
             local available = getInventoryItemQuantity and getInventoryItemQuantity(item) or 1
             local movedUnits = math.min(available, needed)
             project.materialCounts = type(project.materialCounts) == "table" and project.materialCounts or {}
-            project.materialCounts[fullType] = math.max(0, tonumber(project.materialCounts[fullType]) or 0) + movedUnits
-            neededByType[fullType] = needed - movedUnits
+            project.materialCounts[matchedKey] = math.max(0, tonumber(project.materialCounts[matchedKey]) or 0) + movedUnits
+            neededByType[matchedKey] = needed - movedUnits
             movedCount = movedCount + movedUnits
             if available > movedUnits and removeInventoryItemUnits then
                 removeInventoryItemUnits(item, movedUnits)

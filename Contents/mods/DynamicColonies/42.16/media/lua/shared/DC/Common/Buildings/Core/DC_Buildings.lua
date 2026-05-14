@@ -20,6 +20,7 @@ require "DC/Common/Buildings/Config/BuildingType/TradeStand/DC_BuildingsTradeSta
 require "DC/Common/Buildings/Config/BuildingType/WaterCollector/DC_BuildingsWaterCollectorConfig"
 require "DC/Common/Buildings/Config/BuildingType/WaterTank/DC_BuildingsWaterTankConfig"
 require "DC/Common/Buildings/Config/BuildingType/Warehouse/DC_BuildingsWarehouseConfig"
+require "DC/Common/Buildings/Config/BuildingType/Workshop/DC_BuildingsWorkshopConfig"
 
 require "DC/Common/Buildings/Config/DC_BuildingsConfig"
 require "DC/Common/Buildings/Data/DC_BuildingsMapData"
@@ -33,5 +34,6 @@ require "DC/Common/Buildings/Projects/BuildingsProjects/BuildingsProjects"
 require "DC/Common/Buildings/RealBase/DC_BuildingsRealBase"
 require "DC/Common/Buildings/Map/DC_BuildingsMapPresentation"
 require "DC/Common/Buildings/Presentation/BuildingsPresentation/DC_BuildingsPresentation"
+require "DC/Common/Buildings/Production/DC_BuildingsProduction"
 
 return DC_Buildings

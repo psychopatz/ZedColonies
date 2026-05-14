@@ -70,6 +70,16 @@ function Config.FindItemTags(fullType)
     return {}
 end
 
+function Config.GetItemCategoryData(fullType)
+    local categories = DC_Colony and DC_Colony.Categories or nil
+    return categories and categories.Convert and categories.Convert(fullType) or nil
+end
+
+function Config.GetItemCategoryDefinition(categoryId)
+    local categories = DC_Colony and DC_Colony.Categories or nil
+    return categories and categories.Get and categories.Get(categoryId) or nil
+end
+
 function Config.IsMedicalProvisionFullType(fullType)
     return Config.MedicalProvisionUnitValues[tostring(fullType or "")] ~= nil
 end

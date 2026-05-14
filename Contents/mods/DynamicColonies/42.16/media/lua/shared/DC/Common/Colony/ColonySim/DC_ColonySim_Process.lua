@@ -9,6 +9,7 @@ local Internal = Sim.Internal
 local Energy = DC_Colony.Energy
 local Resources = DC_Colony.Resources
 local Companion = DC_Colony.Companion
+local Research = DC_Colony.Research
 
 local function getBuildings()
     return DC_Buildings or nil
@@ -229,6 +230,12 @@ function Sim.ProcessAllWorkers(currentHour)
 
     if Resources and Resources.ProcessAllOwners then
         Resources.ProcessAllOwners(currentHour)
+    end
+    if DC_Buildings and DC_Buildings.Production and DC_Buildings.Production.ProcessAllOwners then
+        DC_Buildings.Production.ProcessAllOwners(currentHour)
+    end
+    if Research and Research.ProcessAllOwners then
+        Research.ProcessAllOwners(currentHour)
     end
 
     if Medical and Medical.SetPlansCache and Medical.BuildAllOwnerPlans then

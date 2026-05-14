@@ -19,10 +19,10 @@ Config.Definitions.WaterCollector = {
             workPoints = 36,
             xpReward = 90,
             recipe = {
-                { fullType = "Base.Tarp", count = 1 },
-                { fullType = "Base.Plank", count = 12 },
-                { fullType = "Base.Nails", count = 8 },
-                { fullType = "Base.DuctTape", count = 1 }
+                { category = "Cloth", count = 1 },
+                { category = "Wood", count = 12 },
+                { category = "Hardware", count = 8 },
+                { category = "Adhesive", count = 1 }
             },
             effects = {
                 waterStorageBonus = 100,
@@ -42,9 +42,9 @@ Config.InstallDefinitions.WaterCollector = {
         workPoints = 12,
         xpReward = 30,
         recipe = {
-            { fullType = "Base.Mov_DarkGreenBarrel", count = 1 },
-            { fullType = "Base.Tarp", count = 1 },
-            { fullType = "Base.DuctTape", count = 2 }
+            { category = "WaterContainer", count = 1 },
+            { category = "Cloth", count = 1 },
+            { category = "Adhesive", count = 2 }
         },
         effects = {
             waterCollectionRateBonus = 2
@@ -60,9 +60,9 @@ Config.InstallDefinitions.WaterCollector = {
         workPoints = 12,
         xpReward = 30,
         recipe = {
-            { fullType = "Base.Mov_LightGreenBarrel", count = 1 },
-            { fullType = "Base.Tarp", count = 1 },
-            { fullType = "Base.DuctTape", count = 2 }
+            { category = "WaterContainer", count = 1 },
+            { category = "Cloth", count = 1 },
+            { category = "Adhesive", count = 2 }
         },
         effects = {
             waterCollectionRateBonus = 2
@@ -78,9 +78,9 @@ Config.InstallDefinitions.WaterCollector = {
         workPoints = 12,
         xpReward = 30,
         recipe = {
-            { fullType = "Base.Mov_OrangeBarrel", count = 1 },
-            { fullType = "Base.Tarp", count = 1 },
-            { fullType = "Base.DuctTape", count = 2 }
+            { category = "WaterContainer", count = 1 },
+            { category = "Cloth", count = 1 },
+            { category = "Adhesive", count = 2 }
         },
         effects = {
             waterCollectionRateBonus = 2

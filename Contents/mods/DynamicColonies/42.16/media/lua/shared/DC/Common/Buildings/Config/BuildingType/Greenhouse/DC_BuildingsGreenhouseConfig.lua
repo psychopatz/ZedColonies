@@ -17,11 +17,10 @@ Config.Definitions.Greenhouse = {
             workPoints = 60,
             xpReward = 140,
             recipe = {
-                { fullType = "Base.Log", count = 4 },
-                { fullType = "Base.Plank", count = 12 },
-                { fullType = "Base.Nails", count = 24 },
-                { fullType = "Base.Tarp", count = 4 },
-                { fullType = "Base.DuctTape", count = 2 }
+                { category = "Wood", count = 16 },
+                { category = "Hardware", count = 24 },
+                { category = "Cloth", count = 4 },
+                { category = "Adhesive", count = 2 }
             },
             effects = {
                 gardenSlots = 4,

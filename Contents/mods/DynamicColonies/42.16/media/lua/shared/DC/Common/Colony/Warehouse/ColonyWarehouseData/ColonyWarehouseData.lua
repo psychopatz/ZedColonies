@@ -9,6 +9,7 @@ Internal.Data = Internal.Data or {}
 
 require "DC/Common/Colony/Warehouse/ColonyWarehouseData/ColonyWarehouseData_Common"
 require "DC/Common/Colony/Warehouse/ColonyWarehouseData/ColonyWarehouseData_Entries"
+require "DC/Common/Colony/Warehouse/ColonyWarehouseData/ColonyWarehouseData_Categories"
 require "DC/Common/Colony/Warehouse/ColonyWarehouseData/ColonyWarehouseData_Storage"
 require "DC/Common/Colony/Warehouse/ColonyWarehouseData/ColonyWarehouseData_Recalc"
 require "DC/Common/Colony/Warehouse/ColonyWarehouseData/ColonyWarehouseData_Client"

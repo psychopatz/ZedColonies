@@ -484,6 +484,28 @@ function Data.StackOutputEntries(entries)
     return stacked
 end
 
+function Data.StackLiteralSpecialEntries(entries)
+    local stacked = {}
+    local byKey = {}
+
+    for _, raw in ipairs(entries or {}) do
+        local entry = Data.NormalizeOutputEntry(raw)
+        if entry and entry.literalSpecial == true then
+            local key = Registry.Internal.GetOutputEntryStateSignature and Registry.Internal.GetOutputEntryStateSignature(entry)
+                or entry.fullType
+            local existing = byKey[key]
+            if existing then
+                existing.qty = existing.qty + entry.qty
+            else
+                byKey[key] = entry
+                stacked[#stacked + 1] = entry
+            end
+        end
+    end
+
+    return stacked
+end
+
 Internal.NormalizeProvisionEntry = Data.NormalizeProvisionEntry
 Internal.NormalizeEquipmentEntry = Data.NormalizeEquipmentEntry
 Internal.NormalizeOutputEntry = Data.NormalizeOutputEntry

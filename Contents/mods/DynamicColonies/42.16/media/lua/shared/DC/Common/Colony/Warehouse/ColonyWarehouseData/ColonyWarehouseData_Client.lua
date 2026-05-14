@@ -59,7 +59,8 @@ function Warehouse.GetClientSummary(ownerUsername)
         remainingWeight = summary.remainingWeight,
         upgradeLevel = summary.upgradeLevel,
         autoEquipEnabled = summary.autoEquipEnabled == true,
-        counts = Registry.Internal.CopyShallow(summary.counts or {})
+        counts = Registry.Internal.CopyShallow(summary.counts or {}),
+        categoryCounts = Data.BuildCategoryCountSnapshot(warehouse.abstractStock),
     }
 end
 
@@ -85,6 +86,8 @@ function Warehouse.GetClientSnapshot(ownerUsername, includeLedgers, ledgerMask)
     if normalizedMask.output == true then
         snapshot.ledgers.output = Data.CopyArray(warehouse.ledgers.output)
     end
+    snapshot.abstractStock = Data.BuildCategoryStockSnapshot(warehouse.abstractStock)
+    snapshot.literalSpecialStock = Data.BuildLiteralSpecialSnapshot(warehouse.literalSpecialStock)
     return snapshot
 end
 

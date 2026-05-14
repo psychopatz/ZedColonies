@@ -17,6 +17,7 @@ require "DC/Common/InteractionStrings/Colony/Command/DC_InteractionStrings_Colon
 require "DC/Common/Colony/StarterWorkers/DC_StarterWorkers_Config"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig_Meals"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig_ItemTags"
+require "DC/Common/Colony/Categories/DC_ColonyCategories"
 require "DC/Common/Colony/ColonyEquipment/Backpacks/DC_ColonyEquipment_Backpacks"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig_Carry"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig_Player"

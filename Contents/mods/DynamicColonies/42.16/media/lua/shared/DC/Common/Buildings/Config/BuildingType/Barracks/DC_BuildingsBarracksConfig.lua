@@ -19,10 +19,9 @@ Config.Definitions.Barracks = {
             workPoints = 36,
             xpReward = 120,
             recipe = {
-                { fullType = "Base.Log", count = 4 },
-                { fullType = "Base.Nails", count = 10 },
-                { fullType = "Base.Sheet", count = 2 },
-                { fullType = "Base.Hinge", count = 1 }
+                { category = "Wood", count = 4 },
+                { category = "Hardware", count = 11 },
+                { category = "Cloth", count = 2 }
             },
             effects = {
                 housingSlots = 4,
@@ -34,11 +33,10 @@ Config.Definitions.Barracks = {
             workPoints = 54,
             xpReward = 120,
             recipe = {
-                { fullType = "Base.Log", count = 6 },
-                { fullType = "Base.Nails", count = 16 },
-                { fullType = "Base.Sheet", count = 4 },
-                { fullType = "Base.Hinge", count = 2 },
-                { fullType = "Base.Woodglue", count = 1 }
+                { category = "Wood", count = 6 },
+                { category = "Hardware", count = 18 },
+                { category = "Cloth", count = 4 },
+                { category = "Adhesive", count = 1 }
             },
             effects = {
                 housingSlots = 4,
@@ -50,11 +48,10 @@ Config.Definitions.Barracks = {
             workPoints = 78,
             xpReward = 120,
             recipe = {
-                { fullType = "Base.Log", count = 8 },
-                { fullType = "Base.Nails", count = 24 },
-                { fullType = "Base.Sheet", count = 6 },
-                { fullType = "Base.Hinge", count = 4 },
-                { fullType = "Base.Woodglue", count = 2 }
+                { category = "Wood", count = 8 },
+                { category = "Hardware", count = 28 },
+                { category = "Cloth", count = 6 },
+                { category = "Adhesive", count = 2 }
             },
             effects = {
                 housingSlots = 4,

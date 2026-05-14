@@ -35,16 +35,15 @@ local function buildBarricadeRecipe(ringDistance)
     local ring = math.max(1, math.floor(tonumber(ringDistance) or 1))
     if ring <= 2 then
         return {
-            { fullType = "Base.Log", count = 4 },
-            { fullType = "Base.RippedSheets", count = 4 }
+            { category = "Wood", count = 4 },
+            { category = "Cloth", count = 4 }
         }
     end
 
     return {
-        { fullType = "Base.Log", count = 2 + math.max(0, ring - 1) },
-        { fullType = "Base.Nails", count = 8 + (math.max(0, ring - 1) * 4) },
-        { fullType = "Base.Sheet", count = 1 + math.floor(math.max(0, ring - 1) / 2) },
-        { fullType = "Base.Hinge", count = 1 + math.floor(math.max(0, ring - 1) / 3) }
+        { category = "Wood", count = 2 + math.max(0, ring - 1) },
+        { category = "Hardware", count = 9 + (math.max(0, ring - 1) * 4) },
+        { category = "Cloth", count = 1 + math.floor(math.max(0, ring - 1) / 2) }
     }
 end
 

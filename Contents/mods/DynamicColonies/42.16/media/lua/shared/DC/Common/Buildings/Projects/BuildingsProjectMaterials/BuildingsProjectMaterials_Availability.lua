@@ -13,12 +13,14 @@ function Materials.BuildRecipeAvailability(ownerUsername, recipe, sourcePlayer, 
     local hasAll = true
 
     for _, entry in ipairs(recipe or {}) do
-        local fullType = tostring(entry.fullType or "")
+        local key = Materials.GetRecipeEntryKey(entry)
         local required = math.max(0, math.floor(tonumber(entry.count) or 0))
-        local available = resolvedAvailableCounts[fullType] or 0
+        local available = resolvedAvailableCounts[key] or 0
         local recipeEntry = {
-            fullType = fullType,
-            displayName = Materials.GetDisplayName(fullType),
+            fullType = entry.fullType,
+            category = entry.category,
+            key = key,
+            displayName = Materials.GetRecipeEntryDisplayName(entry),
             count = required,
             available = available,
             satisfied = available >= required

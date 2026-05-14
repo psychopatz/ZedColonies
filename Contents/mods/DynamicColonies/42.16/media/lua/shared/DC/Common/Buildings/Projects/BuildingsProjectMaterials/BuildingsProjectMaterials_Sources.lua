@@ -11,11 +11,20 @@ function Materials.GetWarehouseOutputCounts(ownerUsername)
     local warehouseApi = Materials.GetWarehouse()
     local warehouse = warehouseApi and warehouseApi.GetOwnerWarehouse and warehouseApi.GetOwnerWarehouse(ownerUsername) or nil
     local counts = {}
+
+    if warehouseApi and warehouseApi.GetCategoryCounts then
+        for categoryId, qty in pairs(warehouseApi.GetCategoryCounts(ownerUsername) or {}) do
+            local key = Materials.GetMaterialCountKeyForCategory(categoryId)
+            counts[key] = (counts[key] or 0) + math.max(0, math.floor(tonumber(qty) or 0))
+        end
+    end
+
     for _, entry in ipairs(warehouse and warehouse.ledgers and warehouse.ledgers.output or {}) do
         local fullType = tostring(entry.fullType or "")
         local qty = math.max(0, math.floor(tonumber(entry.qty) or 0))
         if fullType ~= "" and qty > 0 then
-            counts[fullType] = (counts[fullType] or 0) + qty
+            local key = Materials.GetMaterialCountKeyForFullType(fullType)
+            counts[key] = (counts[key] or 0) + qty
         end
     end
     return counts
@@ -46,14 +55,24 @@ function Materials.CollectInventoryCountsRecursive(container, counts)
     end
 
     for index = 0, items:size() - 1 do
-        local item = items:get(index)
-        if item then
-            local fullType = item.getFullType and item:getFullType() or nil
-            if fullType then
-                counts[fullType] = (counts[fullType] or 0) + Materials.GetInventoryItemQuantity(item)
-            end
+            local item = items:get(index)
+            if item then
+                local fullType = item.getFullType and item:getFullType() or nil
+                if fullType then
+                    local qty = Materials.GetInventoryItemQuantity(item)
+                    local fullTypeKey = Materials.GetMaterialCountKeyForFullType(fullType)
+                    counts[fullTypeKey] = (counts[fullTypeKey] or 0) + qty
 
-            if instanceof(item, "InventoryContainer") then
+                    local converted = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetItemCategoryData
+                        and DC_Colony.Config.GetItemCategoryData(fullType) or nil
+                    local categoryId = converted and converted.category or nil
+                    if categoryId then
+                        local categoryKey = Materials.GetMaterialCountKeyForCategory(categoryId)
+                        counts[categoryKey] = (counts[categoryKey] or 0) + qty
+                    end
+                end
+
+                if instanceof(item, "InventoryContainer") then
                 Materials.CollectInventoryCountsRecursive(item:getItemContainer(), counts)
             end
         end

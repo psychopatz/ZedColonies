@@ -17,11 +17,10 @@ Config.Definitions.WaterTank = {
             workPoints = 42,
             xpReward = 110,
             recipe = {
-                { fullType = "Base.Tarp", count = 4 },
-                { fullType = "Base.DuctTape", count = 2 },
-                { fullType = "Base.Log", count = 4 },
-                { fullType = "Base.Plank", count = 4 },
-                { fullType = "Base.Nails", count = 20 }
+                { category = "Cloth", count = 4 },
+                { category = "Adhesive", count = 2 },
+                { category = "Wood", count = 8 },
+                { category = "Hardware", count = 20 }
             },
             effects = {
                 waterStorageBonus = 100

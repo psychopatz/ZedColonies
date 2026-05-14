@@ -25,10 +25,9 @@ local HQConfig = {
 local function buildRecipe(targetLevel)
     local level = math.max(1, math.floor(tonumber(targetLevel) or 1))
     return {
-        { fullType = "Base.Log", count = 4 + (level * 2) },
-        { fullType = "Base.Nails", count = 12 + (level * 8) },
-        { fullType = "Base.Sheet", count = 2 + math.floor((level + 1) / 2) },
-        { fullType = "Base.Hinge", count = 1 + math.floor(level / 2) }
+        { category = "Wood", count = 4 + (level * 2) },
+        { category = "Hardware", count = 13 + (level * 8) },
+        { category = "Cloth", count = 2 + math.floor((level + 1) / 2) }
     }
 end
 

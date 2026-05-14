@@ -24,6 +24,18 @@ function Internal.NormalizeOutputEntry(entry)
         displayName = tostring(entry.displayName or Internal.GetDisplayNameForFullType(fullType)),
         qty = math.max(1, math.floor(tonumber(entry.qty) or 1)),
     }
+    if entry.forceLiteral == true then
+        normalized.forceLiteral = true
+    end
+    if entry.literalSpecial == true then
+        normalized.literalSpecial = true
+    end
+    if entry.specialStockType ~= nil then
+        normalized.specialStockType = tostring(entry.specialStockType or "")
+    end
+    if entry.researchJobID ~= nil then
+        normalized.researchJobID = tostring(entry.researchJobID or "")
+    end
     local isColonyTool = Config.IsColonyToolFullType and Config.IsColonyToolFullType(fullType) or false
     local equipmentState = isColonyTool and Internal.NormalizeEquipmentEntry(entry) or nil
     if equipmentState then
@@ -151,6 +163,10 @@ function Internal.GetOutputEntryStateSignature(entry)
         tostring(normalized.fluidAmount ~= nil and string.format("%.4f", normalized.fluidAmount) or ""),
         tostring(normalized.fluidCapacity ~= nil and string.format("%.4f", normalized.fluidCapacity) or ""),
         tostring(normalized.isRottenProvision == true and "1" or "0"),
+        tostring(normalized.forceLiteral == true and "1" or "0"),
+        tostring(normalized.literalSpecial == true and "1" or "0"),
+        tostring(normalized.specialStockType or ""),
+        tostring(normalized.researchJobID or ""),
         tostring(normalized.condition ~= nil and normalized.condition or ""),
         tostring(normalized.conditionMax ~= nil and normalized.conditionMax or ""),
         tostring(normalized.usedDelta ~= nil and string.format("%.4f", normalized.usedDelta) or ""),

@@ -18,11 +18,10 @@ Config.Definitions.Warehouse = {
             workPoints = 54,
             xpReward = 120,
             recipe = {
-                { fullType = "Base.Log", count = 6 },
-                { fullType = "Base.Nails", count = 24 },
-                { fullType = "Base.Sheet", count = 4 },
-                { fullType = "Base.Hinge", count = 2 },
-                { fullType = "Base.Woodglue", count = 1 }
+                { category = "Wood", count = 6 },
+                { category = "Hardware", count = 26 },
+                { category = "Cloth", count = 4 },
+                { category = "Adhesive", count = 1 }
             },
             effects = {
                 warehouseBaseBonus = 100
@@ -33,11 +32,10 @@ Config.Definitions.Warehouse = {
             workPoints = 78,
             xpReward = 120,
             recipe = {
-                { fullType = "Base.Log", count = 8 },
-                { fullType = "Base.Nails", count = 36 },
-                { fullType = "Base.Sheet", count = 6 },
-                { fullType = "Base.Hinge", count = 4 },
-                { fullType = "Base.Woodglue", count = 2 }
+                { category = "Wood", count = 8 },
+                { category = "Hardware", count = 40 },
+                { category = "Cloth", count = 6 },
+                { category = "Adhesive", count = 2 }
             },
             effects = {
                 warehouseBaseBonus = 100
@@ -56,10 +54,9 @@ Config.InstallDefinitions.Warehouse = {
         workPoints = 18,
         xpReward = 60,
         recipe = {
-            { fullType = "Base.Log", count = 2 },
-            { fullType = "Base.Nails", count = 10 },
-            { fullType = "Base.Sheet", count = 1 },
-            { fullType = "Base.Hinge", count = 1 }
+            { category = "Wood", count = 2 },
+            { category = "Hardware", count = 11 },
+            { category = "Cloth", count = 1 }
         },
         effects = {
             warehouseCapacityBonus = 10
@@ -75,11 +72,10 @@ Config.InstallDefinitions.Warehouse = {
         workPoints = 30,
         xpReward = 90,
         recipe = {
-            { fullType = "Base.Log", count = 4 },
-            { fullType = "Base.Nails", count = 18 },
-            { fullType = "Base.Sheet", count = 2 },
-            { fullType = "Base.Hinge", count = 2 },
-            { fullType = "Base.Woodglue", count = 1 }
+            { category = "Wood", count = 4 },
+            { category = "Hardware", count = 20 },
+            { category = "Cloth", count = 2 },
+            { category = "Adhesive", count = 1 }
         },
         effects = {
             warehouseCapacityBonus = 50

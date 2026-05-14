@@ -69,6 +69,8 @@ function Data.BuildEmptySummary(colonyID, ownerUsername)
             provisions = 0,
             equipment = 0,
             output = 0,
+            categories = 0,
+            special = 0,
         }
     }
 end
@@ -78,6 +80,9 @@ function Data.BuildEmptyItems(colonyID)
         schemaVersion = Data.GetWarehouseItemsSchemaVersion and Data.GetWarehouseItemsSchemaVersion() or (Config.MOD_DATA_SCHEMA_VERSION or 4),
         colonyID = tostring(colonyID),
         version = 1,
+        legacyOutputMigrationComplete = true,
+        abstractStock = {},
+        literalSpecialStock = {},
         ledgers = {
             provisions = {},
             equipment = {},

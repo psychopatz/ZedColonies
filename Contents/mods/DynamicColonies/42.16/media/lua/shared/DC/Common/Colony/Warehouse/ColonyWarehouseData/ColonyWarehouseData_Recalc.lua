@@ -37,6 +37,8 @@ function Warehouse.Recalculate(warehouse)
     local provisionCount = 0
     local equipmentCount = 0
     local outputCount = 0
+    local categoryCount = Data.GetAbstractStockTotalCount(items.abstractStock)
+    local specialCount = Data.GetLiteralSpecialCount(items.literalSpecialStock)
 
     for _, entry in ipairs(items.ledgers.provisions or {}) do
         local qty = math.max(1, tonumber(entry and entry.qty) or 1)
@@ -56,11 +58,16 @@ function Warehouse.Recalculate(warehouse)
         usedWeight = usedWeight + Data.GetEntryWeight(entry and entry.fullType, qty)
     end
 
+    usedWeight = usedWeight + Data.GetAbstractStockTotalWeight(items.abstractStock)
+    usedWeight = usedWeight + Data.GetLiteralSpecialTotalWeight(items.literalSpecialStock)
+
     summary.usedWeight = usedWeight
     summary.remainingWeight = math.max(0, summary.maxWeight - summary.usedWeight)
     summary.counts.provisions = provisionCount
     summary.counts.equipment = equipmentCount
     summary.counts.output = outputCount
+    summary.counts.categories = categoryCount
+    summary.counts.special = specialCount
 
     warehouse.colonyID = summary.colonyID
     warehouse.ownerUsername = summary.ownerUsername
@@ -77,6 +84,8 @@ function Warehouse.Recalculate(warehouse)
     warehouse.usedWeight = summary.usedWeight
     warehouse.remainingWeight = summary.remainingWeight
     warehouse.counts = summary.counts
+    warehouse.abstractStock = items.abstractStock
+    warehouse.literalSpecialStock = items.literalSpecialStock
     warehouse.ledgers = items.ledgers
     return warehouse
 end

@@ -33,6 +33,8 @@ function Data.NormalizeSummary(colonyID, ownerUsername, summary)
     summary.counts.provisions = math.max(0, math.floor(tonumber(summary.counts.provisions) or 0))
     summary.counts.equipment = math.max(0, math.floor(tonumber(summary.counts.equipment) or 0))
     summary.counts.output = math.max(0, math.floor(tonumber(summary.counts.output) or 0))
+    summary.counts.categories = math.max(0, math.floor(tonumber(summary.counts.categories) or 0))
+    summary.counts.special = math.max(0, math.floor(tonumber(summary.counts.special) or 0))
     return summary
 end
 
@@ -43,10 +45,14 @@ function Data.NormalizeItems(colonyID, items)
     items.schemaVersion = Data.GetWarehouseItemsSchemaVersion and Data.GetWarehouseItemsSchemaVersion() or (Config.MOD_DATA_SCHEMA_VERSION or 4)
     items.colonyID = tostring(colonyID)
     items.version = math.max(1, math.floor(tonumber(items.version) or 1))
+    items.legacyOutputMigrationComplete = items.legacyOutputMigrationComplete == true
+    items.abstractStock = Data.NormalizeAbstractStock(items.abstractStock)
+    items.literalSpecialStock = Data.NormalizeLiteralSpecialStock(items.literalSpecialStock)
     items.ledgers = type(items.ledgers) == "table" and items.ledgers or {}
     items.ledgers.provisions = Data.StackProvisionEntries(items.ledgers.provisions)
     items.ledgers.equipment = Data.StackEquipmentEntries(items.ledgers.equipment)
     items.ledgers.output = Data.StackOutputEntries(items.ledgers.output)
+    Data.MigrateLegacyOutputLedger(items)
     return items
 end
 
@@ -77,6 +83,8 @@ function Data.GetCombinedWarehouse(ownerUsername)
     combined.ownerUsername = owner
     combined.__summary = summary
     combined.__items = items
+    combined.abstractStock = items.abstractStock
+    combined.literalSpecialStock = items.literalSpecialStock
     combined.ledgers = items.ledgers
     return combined
 end

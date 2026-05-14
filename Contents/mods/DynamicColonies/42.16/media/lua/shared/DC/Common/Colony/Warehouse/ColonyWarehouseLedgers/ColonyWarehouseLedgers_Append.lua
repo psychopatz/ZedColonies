@@ -95,6 +95,36 @@ function Ledgers.MergeOutputEntry(warehouse, entry)
         return 0
     end
 
+    if Internal.Data and Internal.Data.ShouldStoreAsLiteralSpecial
+        and Internal.Data.ShouldStoreAsLiteralSpecial(normalized) == true then
+        local qty = math.max(1, tonumber(normalized.qty) or 1)
+        local totalWeight = Internal.GetEntryWeight(normalized.fullType, qty)
+        if totalWeight > 0 and totalWeight > Warehouse.GetRemainingCapacity(warehouse) then
+            return 0
+        end
+
+        if Warehouse.AddLiteralSpecial then
+            return Warehouse.AddLiteralSpecial(warehouse.ownerUsername, normalized)
+        end
+        return 0
+    end
+
+    if normalized.forceLiteral ~= true then
+        local converted = Config.GetItemCategoryData and Config.GetItemCategoryData(normalized.fullType) or nil
+        local categoryId = tostring(converted and converted.category or "Junk")
+        local qty = math.max(1, tonumber(normalized.qty) or 1)
+        local totalWeight = Internal.GetEntryWeight(normalized.fullType, qty)
+        if totalWeight > 0 and totalWeight > Warehouse.GetRemainingCapacity(warehouse) then
+            return 0
+        end
+
+        local added = Warehouse.AddCategory and Warehouse.AddCategory(warehouse.ownerUsername, categoryId, qty, {
+            totalWeight = totalWeight,
+            sourceFullType = normalized.fullType,
+        }) or 0
+        return added
+    end
+
     local qty = math.max(1, tonumber(normalized.qty) or 1)
     local unitWeight = Internal.GetEntryWeight(normalized.fullType, 1)
     local remainingCapacity = Warehouse.GetRemainingCapacity(warehouse)
