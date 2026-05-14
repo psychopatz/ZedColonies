@@ -121,6 +121,10 @@ function Internal.saveZonesSnapshot(player, requestedColonyId, zones, knownVersi
         return
     end
 
+    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RefreshOwnerWorkers then
+        DC_Colony.ResidentBridge.RefreshOwnerWorkers(owner)
+    end
+
     sendSnapshot(player, colonyId, snapshot or Store.BuildSnapshot(colonyId), {})
 end
 

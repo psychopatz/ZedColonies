@@ -229,6 +229,10 @@ function Registry.RemoveWorkerForOwner(ownerUsername, workerID)
         return false
     end
 
+    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RemoveWorker then
+        DC_Colony.ResidentBridge.RemoveWorker(worker)
+    end
+
     workersData.summaries[workerID] = nil
     for index = #workersData.workerIDs, 1, -1 do
         if workersData.workerIDs[index] == workerID then

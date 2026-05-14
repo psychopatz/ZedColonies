@@ -21,7 +21,13 @@ function UpdateLoop.UpdateTravelCompanionHomeState(worker, ctx)
     local hpCurrent = health and health.GetCurrent and health.GetCurrent(worker) or math.max(0, tonumber(worker.hp) or 0)
     local hpMax = health and health.GetMax and health.GetMax(worker) or math.max(1, tonumber(worker.maxHp) or tonumber(Config.DEFAULT_WORKER_MAX_HP) or 100)
 
-    Internal.ReconcileCompanionHomeState(worker, "update-home")
+    local shouldReconcileHome = true
+    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.ShouldKeepHomeResidentBody then
+        shouldReconcileHome = DC_Colony.ResidentBridge.ShouldKeepHomeResidentBody(worker) ~= true
+    end
+    if shouldReconcileHome then
+        Internal.ReconcileCompanionHomeState(worker, "update-home")
+    end
 
     if energy and deltaHours > 0 and hpCurrent > 0 and energy.ApplyHomeRecovery then
         energy.ApplyHomeRecovery(worker, deltaHours, profile)

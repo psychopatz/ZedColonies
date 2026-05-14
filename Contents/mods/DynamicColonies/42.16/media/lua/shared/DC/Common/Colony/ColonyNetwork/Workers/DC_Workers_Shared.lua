@@ -33,6 +33,19 @@ local function syncCompanionWorker(player, worker)
     if companion and companion.SyncActiveNPCFromWorker then
         companion.SyncActiveNPCFromWorker(worker, true)
     end
+    local residentBridge = DC_Colony and DC_Colony.ResidentBridge or nil
+    if residentBridge and residentBridge.SyncWorker then
+        local changed = residentBridge.SyncWorker(worker) == true
+        if changed then
+            local registry = DC_Colony and DC_Colony.Registry or nil
+            if registry and registry.Save then
+                registry.Save()
+            end
+            if DTNPCManager and DTNPCManager.CheckRosterSpawns then
+                DTNPCManager.CheckRosterSpawns()
+            end
+        end
+    end
 end
 
 local function getPlayerTransferOwner(player)

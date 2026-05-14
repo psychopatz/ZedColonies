@@ -29,6 +29,9 @@ function RealBase.OnProjectCompleted(project, instance)
         elseif DC_ZoneRealBase and DC_ZoneRealBase.EnsureBaseZoneForOwner then
             DC_ZoneRealBase.EnsureBaseZoneForOwner(owner)
         end
+        if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RefreshOwnerWorkers then
+            DC_Colony.ResidentBridge.RefreshOwnerWorkers(owner)
+        end
         return result
     end
 
@@ -41,6 +44,9 @@ function RealBase.OnProjectCompleted(project, instance)
         DC_ZoneRealBase.CreateBuildingSlotForInstance(owner, instance)
     end
     result.shouldPromptName = RealBase.ShouldManageNamedInstance(instance.buildingType)
+    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RefreshOwnerWorkers then
+        DC_Colony.ResidentBridge.RefreshOwnerWorkers(owner)
+    end
     return result
 end
 
@@ -51,6 +57,9 @@ function RealBase.OnBuildingDestroyed(ownerUsername, building)
 
     if DC_ZoneRealBase and DC_ZoneRealBase.RemoveBuildingSlot then
         DC_ZoneRealBase.RemoveBuildingSlot(ownerUsername, building.buildingID)
+    end
+    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RefreshOwnerWorkers then
+        DC_Colony.ResidentBridge.RefreshOwnerWorkers(ownerUsername)
     end
 end
 

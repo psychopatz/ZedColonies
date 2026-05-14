@@ -240,6 +240,9 @@ function Buildings.ApplyWorkerState(worker)
     if Buildings.RealBase and Buildings.RealBase.ApplyWorkerAnchors then
         Buildings.RealBase.ApplyWorkerAnchors(worker)
     end
+    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.OnWorkerStateApplied then
+        DC_Colony.ResidentBridge.OnWorkerStateApplied(worker)
+    end
 end
 
 return Buildings
