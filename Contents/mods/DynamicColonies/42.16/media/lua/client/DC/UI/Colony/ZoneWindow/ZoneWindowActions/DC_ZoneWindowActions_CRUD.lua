@@ -8,6 +8,10 @@ require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 
 --- Add a new zone. Prompts for name via a modal dialog.
 function DC_ZoneWindow:onAddZone()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self) then
+        return
+    end
     local modal = ISTextBox:new(0, 0, 280, 120, "Zone Name:", "",
         self, DC_ZoneWindow.onAddZoneConfirm, nil)
     modal:initialise()
@@ -33,6 +37,10 @@ end
 
 --- Delete the currently selected zone.
 function DC_ZoneWindow:onDeleteZone()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self) then
+        return
+    end
     local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
     if not selectedZone then return end
 

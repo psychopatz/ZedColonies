@@ -102,6 +102,26 @@ function Config.GetCompanionCommandRadius()
     )
 end
 
+function Config.GetBaseTilesPerBarricade()
+    return math.max(
+        0,
+        Config.GetSandboxNumberAny(
+            { "BaseTilesPerBarricade" },
+            30
+        ) or 30
+    )
+end
+
+function Config.GetBaseAreaSlotTileCap()
+    return math.max(
+        0,
+        Config.GetSandboxNumberAny(
+            { "BaseAreaSlotTileCap" },
+            100
+        ) or 100
+    )
+end
+
 local function roundToNearestWhole(value)
     local numeric = tonumber(value) or 0
     if numeric <= 0 then

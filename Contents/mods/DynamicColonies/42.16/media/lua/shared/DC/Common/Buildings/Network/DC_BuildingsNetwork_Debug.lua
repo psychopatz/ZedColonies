@@ -146,6 +146,13 @@ Network.Handlers.DebugCompleteBuildingProject = function(player, args)
     if Internal.syncNotice then
         Internal.syncNotice(player, "Debug completed " .. activityLabel .. ".", "info", false)
     end
+    if transition and transition.realBase and transition.realBase.shouldPromptName == true and Internal.sendResponse then
+        Internal.sendResponse(player, ColonyConfig.COMMAND_MODULE or "DColony", "PromptBuildingName", {
+            buildingID = project.buildingID,
+            buildingType = project.buildingType,
+            defaultValue = transition.realBase.defaultName,
+        })
+    end
     local mapChange = Internal.BuildingMap and Internal.BuildingMap.Touch and Internal.BuildingMap.Touch(owner, {
         plotX = project.plotX,
         plotY = project.plotY,

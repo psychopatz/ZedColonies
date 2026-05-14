@@ -51,7 +51,8 @@ function Resources.ProcessFarmWorkCycle(worker, ctx)
     state.slots[slotIndex] = Internal.NormalizeSlot(nil, slotIndex)
     Resources.Save(owner)
 
-    local label = "Greenhouse " .. tostring(greenhouse.plotX or 0) .. "," .. tostring(greenhouse.plotY or 0)
+    local label = Buildings and Buildings.RealBase and Buildings.RealBase.GetInstanceDisplayName and Buildings.RealBase.GetInstanceDisplayName(greenhouse)
+        or ("Greenhouse " .. tostring(greenhouse.plotX or 0) .. "," .. tostring(greenhouse.plotY or 0))
     if worker then
         worker.siteState = label
         worker.greenhouseWorkLabel = label

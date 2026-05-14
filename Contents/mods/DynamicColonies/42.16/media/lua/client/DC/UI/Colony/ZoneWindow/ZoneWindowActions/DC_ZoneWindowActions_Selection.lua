@@ -31,6 +31,12 @@ end
 
 --- Open the 3D area selector to add a new rect to the selected zone.
 function DC_ZoneWindow:onAddArea()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self)
+        and DC_ZoneWindow.Internal.RealBase.OnAddArea then
+        DC_ZoneWindow.Internal.RealBase.OnAddArea(self)
+        return
+    end
     local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
     if not selectedZone then return end
 
@@ -61,6 +67,12 @@ end
 
 --- Delete the currently selected rect from the selected zone.
 function DC_ZoneWindow:onDeleteArea()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self)
+        and DC_ZoneWindow.Internal.RealBase.OnDeleteArea then
+        DC_ZoneWindow.Internal.RealBase.OnDeleteArea(self)
+        return
+    end
     local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
     local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
     if not selectedZone or not selectedRect then return end
@@ -75,6 +87,12 @@ end
 
 --- Show the selected rect highlighted in the 3D world for a few seconds.
 function DC_ZoneWindow:onShowArea()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self)
+        and DC_ZoneWindow.Internal.RealBase.OnShowArea then
+        DC_ZoneWindow.Internal.RealBase.OnShowArea(self)
+        return
+    end
     local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
     local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
     if not selectedZone or not selectedRect then return end
@@ -115,6 +133,12 @@ end
 
 --- Edit the selected rect: opens selector pre-loaded, then replaces the rect.
 function DC_ZoneWindow:onEditArea()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self)
+        and DC_ZoneWindow.Internal.RealBase.OnEditArea then
+        DC_ZoneWindow.Internal.RealBase.OnEditArea(self)
+        return
+    end
     local selectedZone = DC_ZoneWindowState.GetSelectedZone(self)
     local selectedRect = DC_ZoneWindowState.GetSelectedRect(self)
     if not selectedZone or not selectedRect then return end

@@ -46,6 +46,12 @@
     "Sandbox_DynamicColonies.CompanionCommandRadius": "Companion Command Radius",
     "Sandbox_DynamicColonies.CompanionCommandRadius_tooltip": "How many tiles away a commanded Travel Companion can be and still answer a radial command.",
 
+    "Sandbox_DynamicColonies.BaseTilesPerBarricade": "Base Tiles Per Barricade",
+    "Sandbox_DynamicColonies.BaseTilesPerBarricade_tooltip": "How many real-world Base Zone tiles each completed barricade adds after Headquarters has been built.",
+
+    "Sandbox_DynamicColonies.BaseAreaSlotTileCap": "Managed Area Tile Cap",
+    "Sandbox_DynamicColonies.BaseAreaSlotTileCap_tooltip": "The maximum tile count for each non-HQ managed room assignment such as infirmaries, greenhouses, and gatherer staging areas. Set to 0 to disable the cap.",
+
     "Sandbox_DynamicColonies.PlayerOwnedNPCWeaponDurability": "Player-Owned NPC Weapon Durability",
     "Sandbox_DynamicColonies.PlayerOwnedNPCWeaponDurability_tooltip": "If enabled, only player-owned NPCs consume weapon durability in combat. Non-player-owned NPCs always keep unlimited durability handling.",
 

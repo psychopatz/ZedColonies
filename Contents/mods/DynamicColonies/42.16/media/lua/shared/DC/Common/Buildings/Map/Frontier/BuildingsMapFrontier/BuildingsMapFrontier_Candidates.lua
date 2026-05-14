@@ -84,6 +84,20 @@ function Buildings.GetActiveBarricadeCount(ownerUsername)
     return count
 end
 
+function Buildings.GetCompletedBarricadeCount(ownerUsername)
+    local owner = Frontier.GetOwnerUsername(ownerUsername)
+    local count = 0
+
+    for _, instance in ipairs(Buildings.GetBuildingsForOwner(owner) or {}) do
+        if tostring(instance and instance.buildingType or "") == "Barricade"
+            and math.floor(tonumber(instance and instance.level) or 0) > 0 then
+            count = count + 1
+        end
+    end
+
+    return count
+end
+
 function Buildings.IsFrontierPlot(ownerUsername, plotX, plotY)
     local owner = Frontier.GetOwnerUsername(ownerUsername)
     local x = math.floor(tonumber(plotX) or 0)

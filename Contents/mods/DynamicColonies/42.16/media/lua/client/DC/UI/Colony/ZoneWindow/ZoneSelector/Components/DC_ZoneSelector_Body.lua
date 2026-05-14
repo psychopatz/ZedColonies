@@ -10,7 +10,7 @@ function Body:createChildren()
     local sel = self.selector
     if not sel then return end
     
-    local splitX = math.floor(self.width * 0.45)
+    local splitX = math.floor(self.width * 0.42)
     
     -- Left Panel: Metrics
     self.leftPanel = ISPanel:new(0, 0, splitX, self.height)
@@ -35,11 +35,35 @@ function Body:createChildren()
         py = py + fh + 8
         p:drawText("Total Area:", px, py, 0.8, 0.8, 0.8, 1, UIFont.Small)
         p:drawText(tostring(metrics.total) .. " tiles", px, py + fh - 2, 1, 1, 1, 1, UIFont.Medium)
+
+        py = py + fh * 2 + 2
+        p:drawText(tostring(sel.currentTilesLabel or "Current tiles") .. ":", px, py, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        p:drawText(tostring(math.max(0, math.floor(tonumber(sel.currentTiles) or 0))) .. " tiles", px, py + fh - 2, 0.82, 0.82, 0.82, 1, UIFont.Medium)
+
+        if sel.maxTiles ~= nil then
+            py = py + fh * 2 + 2
+            p:drawText(tostring(sel.tileLimitLabel or "Tile cap") .. ":", px, py, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            local withinCap = metrics.total <= tonumber(sel.maxTiles)
+            p:drawText(
+                tostring(metrics.total) .. "/" .. tostring(math.floor(tonumber(sel.maxTiles) or 0)),
+                px,
+                py + fh - 2,
+                withinCap and 0.72 or 0.95,
+                withinCap and 0.88 or 0.62,
+                withinCap and 0.72 or 0.62,
+                1,
+                UIFont.Medium
+            )
+        end
         
         py = py + fh * 2 + 10
         p:drawText("Coordinates:", px, py, 0.6, 0.6, 0.6, 1, UIFont.Small)
         p:drawText("From: " .. math.floor(metrics.x1) .. ", " .. math.floor(metrics.y1), px, py + fh, 0.7, 0.7, 0.7, 1, UIFont.NewSmall)
         p:drawText("To:   " .. math.floor(metrics.x2) .. ", " .. math.floor(metrics.y2), px, py + fh * 2 + 2, 0.7, 0.7, 0.7, 1, UIFont.NewSmall)
+
+        if sel.validationMessage and sel.validationMessage ~= "" then
+            p:drawText(sel.validationMessage, px, self.height - (fh * 2) - 8, 0.95, 0.62, 0.62, 1, UIFont.NewSmall)
+        end
     end
     self:addChild(self.leftPanel)
     
@@ -51,8 +75,8 @@ function Body:createChildren()
     
     local rpx = 10
     local rpy = 5
-    local arrowW = 32
-    local btnH = 22
+    local arrowW = 40
+    local btnH = 26
     
     -- Scale Section
     self.lblScale = ISLabel:new(rpx, rpy, 18, "Scale Area:", 1, 1, 1, 1, UIFont.Small, true)
@@ -60,7 +84,7 @@ function Body:createChildren()
     self.rightPanel:addChild(self.lblScale)
     sel.lblScale = self.lblScale
     
-    rpy = rpy + 20
+    rpy = rpy + 22
     local sx = rpx
     
     -- Row 1: Positives
@@ -80,7 +104,7 @@ function Body:createChildren()
     sel.btnScaleS:initialise()
     self.rightPanel:addChild(sel.btnScaleS)
     
-    rpy = rpy + btnH + 4
+    rpy = rpy + btnH + 6
     
     -- Row 2: Negatives
     sel.btnScaleW_Inner = ISButton:new(sx, rpy, arrowW, btnH, "-W", sel, function() sel:scale("W", -1) end)
@@ -100,13 +124,13 @@ function Body:createChildren()
     self.rightPanel:addChild(sel.btnScaleS_Inner)
     
     -- Nudge Section
-    rpy = rpy + btnH + 10
+    rpy = rpy + btnH + 12
     self.lblNudge = ISLabel:new(rpx, rpy, 18, "Move Area:", 1, 1, 1, 1, UIFont.Small, true)
     self.lblNudge:initialise()
     self.rightPanel:addChild(self.lblNudge)
     sel.lblNudge = self.lblNudge
     
-    rpy = rpy + 20
+    rpy = rpy + 22
     sel.btnNudgeW = ISButton:new(sx, rpy, arrowW, btnH, "<", sel, function() sel:nudge(-1, 0) end)
     sel.btnNudgeW:initialise()
     self.rightPanel:addChild(sel.btnNudgeW)

@@ -51,6 +51,11 @@ local function normalizeBuildingInstance(instance)
     instance.level = math.max(0, math.floor(tonumber(instance.level) or 0))
     instance.plotX = math.floor(tonumber(instance.plotX) or 0)
     instance.plotY = math.floor(tonumber(instance.plotY) or 0)
+    if instance.customName ~= nil and tostring(instance.customName) ~= "" then
+        instance.customName = tostring(instance.customName)
+    else
+        instance.customName = nil
+    end
     normalizeInstallCounts(instance)
     return instance
 end

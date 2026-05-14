@@ -1,4 +1,5 @@
 require "DC/Common/Zone/DC_ZoneData"
+require "DC/Common/Zone/RealBase/DC_ZoneRealBase"
 
 DC_ZoneDataStore = DC_ZoneDataStore or {}
 

@@ -16,7 +16,11 @@ function DC_ZoneWindow:populateZoneList()
     self.zoneList:clear()
 
     for i, zone in ipairs(DC_ZoneWindowState.GetZones(self)) do
-        local label = Formatters and Formatters.formatZoneLabel
+        local label = DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+                and DC_ZoneWindow.Internal.RealBase.IsMode(self)
+                and DC_ZoneWindow.Internal.RealBase.FormatZoneLabel
+                and DC_ZoneWindow.Internal.RealBase.FormatZoneLabel(zone)
+            or Formatters and Formatters.formatZoneLabel
             and Formatters.formatZoneLabel(zone)
             or (zone.name or "Zone " .. tostring(i))
 
@@ -70,6 +74,5 @@ function DC_ZoneWindow:renderZoneListItem(index, item, y, alt)
         list:drawRect(4, y, list.width - 4, list.itemheight, 0.08, 1, 1, 1)
     end
 
-    -- Zone name
     list:drawText(item.text or "", 12, y + 6, 0.9, 0.9, 0.9, 1, UIFont.Small)
 end

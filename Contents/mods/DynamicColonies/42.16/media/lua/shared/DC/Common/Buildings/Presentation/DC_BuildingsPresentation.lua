@@ -33,6 +33,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     local projectList = Buildings.GetOwnerProjectList(owner)
     local availableCounts = Internal and Internal.GetAvailableMaterialCounts and Internal.GetAvailableMaterialCounts(owner, sourcePlayer) or nil
     local buildings = {}
+    local colonyId = ownerData and ownerData.colonyID or owner
 
     for _, definition in ipairs(Config.GetDefinitionList and Config.GetDefinitionList() or {}) do
         local instances = {}
@@ -43,6 +44,8 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
                 instances[#instances + 1] = {
                     buildingID = instance.buildingID,
                     buildingType = instance.buildingType,
+                    customName = instance.customName,
+                    displayName = Buildings.RealBase and Buildings.RealBase.GetInstanceDisplayName and Buildings.RealBase.GetInstanceDisplayName(instance) or definition.displayName,
                     level = math.max(0, math.floor(tonumber(instance.level) or 0)),
                     plotX = math.floor(tonumber(instance.plotX) or 0),
                     plotY = math.floor(tonumber(instance.plotY) or 0),
@@ -144,6 +147,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     end
 
     return {
+        colonyId = colonyId,
         ownerUsername = owner,
         buildings = buildings,
         activeProjects = activeProjects,
@@ -204,7 +208,6 @@ function Buildings.ApplyWorkerState(worker)
     worker.infirmaryBuildingLevel = infirmary and infirmary.buildingLevel or 0
     worker.infirmaryBedAssigned = infirmary and infirmary.assigned == true or false
     worker.doctorCovered = infirmary and infirmary.doctorCovered == true or false
-
     if DC_Colony and DC_Colony.Energy and DC_Colony.Energy.SetRecoverySources then
         DC_Colony.Energy.SetRecoverySources(worker, {
             base = 1.0,
@@ -232,6 +235,10 @@ function Buildings.ApplyWorkerState(worker)
         worker.assignedProjectMaterialState = nil
         worker.assignedProjectProgress = nil
         worker.assignedProjectRequired = nil
+    end
+
+    if Buildings.RealBase and Buildings.RealBase.ApplyWorkerAnchors then
+        Buildings.RealBase.ApplyWorkerAnchors(worker)
     end
 end
 

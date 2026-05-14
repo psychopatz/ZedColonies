@@ -50,7 +50,8 @@ function Buildings.BuildHousingAssignment(ownerUsername)
             summary.occupied = summary.occupied + 1
             summary.occupants[#summary.occupants + 1] = {
                 workerID = worker.workerID,
-                name = worker.name or worker.workerID
+                name = worker.name or worker.workerID,
+                slotIndex = slotIndex
             }
             workerIndex = workerIndex + 1
         end

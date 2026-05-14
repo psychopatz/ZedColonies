@@ -48,13 +48,21 @@ function Input.OnConfirm(selector)
         return
     end
 
+    local metrics = State.GetSelectionMetrics(selector)
+    local maxTiles = selector and selector.maxTiles
+    if metrics and maxTiles ~= nil and metrics.total > maxTiles then
+        selector.validationMessage = tostring(selector.tileLimitLabel or "Tile cap") .. " exceeded (" .. tostring(metrics.total) .. "/" .. tostring(maxTiles) .. ")."
+        return
+    end
+
     local z = selector.player:getZ()
-    if (x2 - x1) < 1 or (y2 - y1) < 1 then
+    if (x2 - x1) < 0 or (y2 - y1) < 0 then
         selector:onReset()
         return
     end
 
     ISWorldObjectContextMenu.disableWorldMenu = false
+    selector.validationMessage = ""
 
     if selector.callback then
         selector.callback(x1, y1, x2, y2, z)

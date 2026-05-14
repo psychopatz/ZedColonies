@@ -221,6 +221,7 @@ local function buildHeader(ownerUsername, snapshot)
     }
     return {
         ownerUsername = ownerUsername,
+        colonyId = tostring(territory.colonyId or ownerUsername or "local"),
         hqLevel = tonumber(territory.headquartersLevel) or 0,
         securedRing = tonumber(territory.securedPerimeterRing) or 0,
         currentRing = tonumber(territory.currentFrontierRing) or 1,
@@ -229,6 +230,7 @@ local function buildHeader(ownerUsername, snapshot)
         frontierExpansionAvailable = territory.frontierExpansionAvailable == true,
         unlockedPlotCount = tonumber(territory.unlockedPlotCount) or 0,
         activeBarricadeCount = tonumber(territory.activeBarricadeCount) or 0,
+        completedBarricadeCount = tonumber(territory.completedBarricadeCount) or tonumber(territory.activeBarricadeCount) or 0,
         maxActiveBarricades = tonumber(territory.maxActiveBarricades) or 0,
         bounds = {
             minX = math.floor(tonumber(bounds.minX) or 0),
@@ -273,6 +275,7 @@ local function trimPlotPayload(ownerUsername, header, plot)
             frontierRequiredHQLevel = header.frontierRequiredHQLevel,
             unlockedPlotCount = header.unlockedPlotCount,
             activeBarricadeCount = header.activeBarricadeCount,
+            completedBarricadeCount = header.completedBarricadeCount,
             maxActiveBarricades = header.maxActiveBarricades,
         },
     }
@@ -611,6 +614,9 @@ function MapTransport.PushOwnerMutation(ownerUsername, context)
     for index = 0, onlinePlayers:size() - 1 do
         local player = onlinePlayers:get(index)
         if player and getOwnerUsername(player) == owner then
+            if context and context.promptBuildingName and Internal.sendResponse then
+                Internal.sendResponse(player, ColonyConfig.COMMAND_MODULE or "DColony", "PromptBuildingName", context.promptBuildingName)
+            end
             if context and context.notice and Internal.syncNotice then
                 Internal.syncNotice(player, context.notice.message, context.notice.severity, context.notice.popup)
             end

@@ -26,9 +26,22 @@ DC_ZoneSelector = ISPanelJoypad:derive("DC_ZoneSelector")
 -- Constructor
 -- ---------------------------------------------------------------------------
 
-function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callback, zoneName, initialRect)
-    if width == 340 or width == 540 then width = 480 end
-    if height == 260 or height == 440 then height = 260 end
+function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callback, zoneName, initialRect, selectionOptions)
+    selectionOptions = type(selectionOptions) == "table" and selectionOptions or {}
+    if width == 340 or width == 540 then
+        if selectionOptions.maxTiles ~= nil or selectionOptions.currentTiles ~= nil then
+            width = 540
+        else
+            width = 480
+        end
+    end
+    if height == 260 or height == 440 then
+        if selectionOptions.maxTiles ~= nil or selectionOptions.currentTiles ~= nil then
+            height = 320
+        else
+            height = 260
+        end
+    end
 
     local o = ISPanelJoypad.new(self, x, y, width, height)
 
@@ -48,6 +61,11 @@ function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callba
     o.highlightColor  = highlightColor or { r = 0.2, g = 0.8, b = 0.2, a = 0.5 }
     o.callback        = callback
     o.zoneName        = zoneName
+    o.maxTiles        = selectionOptions.maxTiles ~= nil and math.max(0, math.floor(tonumber(selectionOptions.maxTiles) or 0)) or nil
+    o.tileLimitLabel  = tostring(selectionOptions.tileLimitLabel or "Tile cap")
+    o.currentTiles    = math.max(0, math.floor(tonumber(selectionOptions.currentTiles) or 0))
+    o.currentTilesLabel = tostring(selectionOptions.currentTilesLabel or "Current tiles")
+    o.validationMessage = ""
 
     -- State machine
     o.selectorState   = DC_ZoneSelectorState.STATE_IDLE

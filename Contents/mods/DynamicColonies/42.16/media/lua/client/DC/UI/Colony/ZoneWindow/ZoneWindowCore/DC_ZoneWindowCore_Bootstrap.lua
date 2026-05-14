@@ -5,7 +5,7 @@
 DC_ZoneWindow = DC_ZoneWindow or {}
 DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
 
-function DC_ZoneWindow:new(x, y, width, height, player, colonyId)
+function DC_ZoneWindow:new(x, y, width, height, player, colonyId, options)
     local o = ISCollapsableWindow.new(self, x, y, width, height)
     setmetatable(o, self)
     self.__index = self
@@ -13,6 +13,8 @@ function DC_ZoneWindow:new(x, y, width, height, player, colonyId)
     o.player    = player
     o.colonyId  = colonyId or ""
     o.title     = "Zone Management"
+    o.mode      = "generic"
+    o.realBaseContext = {}
     o.resizable = true
     o.moveWithMouse = true
     o.anchorRight   = true
@@ -27,6 +29,10 @@ function DC_ZoneWindow:new(x, y, width, height, player, colonyId)
     -- Minimum window size
     o.minimumWidth  = 600
     o.minimumHeight = 400
+
+    if DC_ZoneWindow and DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.ApplyOptions then
+        DC_ZoneWindow.Internal.RealBase.ApplyOptions(o, options)
+    end
 
     return o
 end
@@ -45,4 +51,3 @@ function DC_ZoneWindow:prerender()
         DC_ZoneWindowState.TickDirtySave(self)
     end
 end
-

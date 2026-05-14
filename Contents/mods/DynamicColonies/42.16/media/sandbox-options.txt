@@ -130,6 +130,26 @@ option DynamicColonies.CompanionCommandRadius
     translation = DynamicColonies.CompanionCommandRadius,
 }
 
+option DynamicColonies.BaseTilesPerBarricade
+{
+    type = integer,
+    default = 30,
+    min = 0,
+    max = 500,
+    page = DynamicColoniesColony,
+    translation = DynamicColonies.BaseTilesPerBarricade,
+}
+
+option DynamicColonies.BaseAreaSlotTileCap
+{
+    type = integer,
+    default = 100,
+    min = 0,
+    max = 500,
+    page = DynamicColoniesColony,
+    translation = DynamicColonies.BaseAreaSlotTileCap,
+}
+
 option DynamicColonies.PlayerOwnedNPCWeaponDurability
 {
     type = boolean,

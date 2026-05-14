@@ -85,8 +85,20 @@ function State.RefreshWindow(window)
         window.selectedZone = nil
         window.selectedZoneId = nil
         window.selectedRect = nil
-    elseif window.selectedRect and not (selectedZone.rects and selectedZone.rects[window.selectedRect]) then
-        window.selectedRect = nil
+    elseif window.selectedRect then
+        local keepSelectedRect = false
+        if DC_ZoneWindow and DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase
+            and DC_ZoneWindow.Internal.RealBase.IsMode
+            and DC_ZoneWindow.Internal.RealBase.IsMode(window)
+            and DC_ZoneRealBase and DC_ZoneRealBase.GetAreaSlot then
+            keepSelectedRect = DC_ZoneRealBase.GetAreaSlot(selectedZone, window.selectedRect) ~= nil
+        else
+            keepSelectedRect = selectedZone.rects and selectedZone.rects[window.selectedRect] ~= nil
+        end
+
+        if not keepSelectedRect then
+            window.selectedRect = nil
+        end
     end
 
     if window.populateZoneList then

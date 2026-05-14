@@ -19,7 +19,9 @@ end
 
 function DC_BuildingsClientState.Normalize(snapshot)
     local state = snapshot or {}
+    state.colonyId = tostring(state.colonyId or "")
     state.map = type(state.map) == "table" and state.map or {}
+    state.map.colonyId = tostring(state.map.colonyId or state.colonyId or "")
     state.map.plots = type(state.map.plots) == "table" and state.map.plots or {}
     state.map.bounds = type(state.map.bounds) == "table" and state.map.bounds or {
         minX = -1,
@@ -46,6 +48,7 @@ function DC_BuildingsClientState.Normalize(snapshot)
         frontierRequiredHQLevel = tonumber(state.map.frontierRequiredHQLevel) or 1,
         unlockedPlotCount = tonumber(state.map.unlockedPlotCount) or 0,
         activeBarricadeCount = tonumber(state.map.activeBarricadeCount) or 0,
+        completedBarricadeCount = tonumber(state.map.completedBarricadeCount) or tonumber(state.map.activeBarricadeCount) or 0,
         maxActiveBarricades = tonumber(state.map.maxActiveBarricades) or 0,
     }
 

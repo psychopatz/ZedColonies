@@ -51,6 +51,12 @@ function Layout.LayoutChildren(window)
         window.btnRefresh:setWidth(90)
         window.btnRefresh:setHeight(24)
     end
+    if window.btnBaseZone then
+        window.btnBaseZone:setX(window.width - 206)
+        window.btnBaseZone:setY(window.height - 30)
+        window.btnBaseZone:setWidth(96)
+        window.btnBaseZone:setHeight(24)
+    end
 end
 
 function Layout.CreateChildren(window)
@@ -91,6 +97,14 @@ function Layout.CreateChildren(window)
     window.btnRefresh:setAnchorTop(false)
     window.btnRefresh:setAnchorBottom(true)
     window:addChild(window.btnRefresh)
+
+    window.btnBaseZone = ISButton:new(window.width - 206, window.height - 30, 96, 24, "Base Zone", window, window.onOpenBaseZone)
+    window.btnBaseZone:initialise()
+    window.btnBaseZone:setAnchorLeft(false)
+    window.btnBaseZone:setAnchorRight(true)
+    window.btnBaseZone:setAnchorTop(false)
+    window.btnBaseZone:setAnchorBottom(true)
+    window:addChild(window.btnBaseZone)
 
     Layout.LayoutChildren(window)
     window:requestSnapshot()

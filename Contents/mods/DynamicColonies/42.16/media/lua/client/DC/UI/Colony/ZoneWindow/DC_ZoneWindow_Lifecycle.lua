@@ -9,7 +9,7 @@ DC_ZoneWindow = DC_ZoneWindow or {}
 --- @param player IsoPlayer
 --- @param colonyId string
 --- @return DC_ZoneWindow
-function DC_ZoneWindow.Open(player, colonyId)
+function DC_ZoneWindow.OpenWithOptions(player, colonyId, options)
     -- Close existing instance if open
     if DC_ZoneWindow.instance then
         DC_ZoneWindow.instance:close()
@@ -23,7 +23,7 @@ function DC_ZoneWindow.Open(player, colonyId)
     local x = math.floor((sw - w) / 2)
     local y = math.floor((sh - h) / 2)
 
-    local instance = DC_ZoneWindow:new(x, y, w, h, player, colonyId)
+    local instance = DC_ZoneWindow:new(x, y, w, h, player, colonyId, options)
     instance:initialise()
     instance:instantiate()
     instance:addToUIManager()
@@ -33,6 +33,20 @@ function DC_ZoneWindow.Open(player, colonyId)
 
     print("[DC_ZoneWindow] Opened zone management for colony: " .. tostring(colonyId))
     return instance
+end
+
+function DC_ZoneWindow.Open(player, colonyId)
+    return DC_ZoneWindow.OpenWithOptions(player, colonyId, nil)
+end
+
+function DC_ZoneWindow.OpenRealBase(player, colonyId, context)
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.Open then
+        return DC_ZoneWindow.Internal.RealBase.Open(player, colonyId, context or {})
+    end
+    return DC_ZoneWindow.OpenWithOptions(player, colonyId, {
+        mode = "realbase",
+        realBaseContext = context or {}
+    })
 end
 
 

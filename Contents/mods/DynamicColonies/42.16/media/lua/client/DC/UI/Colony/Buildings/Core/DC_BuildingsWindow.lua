@@ -6,6 +6,7 @@ require "DC/UI/Colony/Buildings/Actions/DC_BuildingsWindowActions"
 require "DC/UI/Colony/Buildings/Sync/DC_BuildingsWindowSync"
 require "DC/UI/Colony/Buildings/Layout/DC_BuildingsWindowLayout"
 require "DC/UI/Colony/Buildings/Lifecycle/DC_BuildingsWindowLifecycle"
+require "DC/UI/Colony/Buildings/RealBase/DC_BuildingsRealBase"
 
 DC_BuildingsWindow = ISCollapsableWindow:derive("DC_BuildingsWindow")
 DC_BuildingsWindow.instance = DC_BuildingsWindow.instance or nil
@@ -97,6 +98,12 @@ end
 
 function DC_BuildingsWindow:onRefresh()
     self:requestSnapshot()
+end
+
+function DC_BuildingsWindow:onOpenBaseZone()
+    if DC_BuildingsRealBaseUI and DC_BuildingsRealBaseUI.OpenBaseZone then
+        DC_BuildingsRealBaseUI.OpenBaseZone(self)
+    end
 end
 
 function DC_BuildingsWindow:layoutChildren()

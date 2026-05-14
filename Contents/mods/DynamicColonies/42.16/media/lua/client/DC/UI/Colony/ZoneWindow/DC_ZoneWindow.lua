@@ -17,10 +17,14 @@ require "DC/Common/Zone/DC_ZoneData"
 require "DC/UI/Colony/ZoneWindow/DC_ZoneSelector"
 require "DC/UI/Colony/ZoneWindow/ZoneWindowState/DC_ZoneWindowState"
 require "DC/UI/Colony/ZoneWindow/ZoneWindowSync/DC_ZoneWindowSync"
+require "DC/UI/Colony/ZoneWindow/RealBase/DC_ZoneWindowRealBase"
+
+local existingZoneWindow = DC_ZoneWindow
+local existingInternal = existingZoneWindow and existingZoneWindow.Internal or nil
 
 DC_ZoneWindow = ISCollapsableWindow:derive("DC_ZoneWindow")
 DC_ZoneWindow.instance = nil
-DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
+DC_ZoneWindow.Internal = existingInternal or DC_ZoneWindow.Internal or {}
 
 
 require "DC/UI/Colony/ZoneWindow/ZoneWindowCore/DC_ZoneWindowCore"

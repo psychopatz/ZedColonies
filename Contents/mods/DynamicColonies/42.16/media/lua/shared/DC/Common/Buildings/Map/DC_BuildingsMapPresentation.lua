@@ -64,6 +64,10 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
     local owner = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
         and DC_Colony.Config.GetOwnerUsername(ownerUsername)
         or tostring(ownerUsername or "local")
+    local ownerData = Buildings.Internal and Buildings.Internal.GetExistingOwnerData and Buildings.Internal.GetExistingOwnerData(owner)
+        or Buildings.EnsureOwner and Buildings.EnsureOwner(owner)
+        or nil
+    local colonyId = tostring(ownerData and ownerData.colonyID or owner or "local")
     local housing = Buildings.BuildHousingAssignment(owner)
     local territory = Buildings.GetTerritorySummary and Buildings.GetTerritorySummary(owner) or {
         headquartersLevel = 0,
@@ -74,6 +78,7 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
         frontierRequiredHQLevel = 1,
         unlockedPlotCount = 0,
         activeBarricadeCount = 0,
+        completedBarricadeCount = 0,
         maxActiveBarricades = 0
     }
     local occupantsByBuildingID = {}
@@ -166,11 +171,15 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
             plotEntry.building = {
                 buildingID = building.buildingID,
                 buildingType = building.buildingType,
-                displayName = definition and definition.displayName or building.buildingType,
+                displayName = Buildings.RealBase and Buildings.RealBase.GetInstanceDisplayName and Buildings.RealBase.GetInstanceDisplayName(building)
+                    or definition and definition.displayName
+                    or building.buildingType,
+                defaultDisplayName = definition and definition.displayName or building.buildingType,
                 iconPath = definition and definition.iconPath or nil,
                 level = math.max(0, math.floor(tonumber(building.level) or 0)),
                 plotX = x,
                 plotY = y,
+                customName = building.customName,
                 isInfinite = definition and definition.isInfinite == true or false,
                 maxLevel = definition and definition.maxLevel or 0,
                 installs = Buildings.GetBuildingInstallCounts and Buildings.GetBuildingInstallCounts(building) or {},
@@ -205,6 +214,7 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
     }
 
     return {
+        colonyId = colonyId,
         bounds = bounds,
         unlockedBounds = bounds,
         headquartersLevel = territory.headquartersLevel,
@@ -215,6 +225,7 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
         frontierRequiredHQLevel = territory.frontierRequiredHQLevel,
         unlockedPlotCount = territory.unlockedPlotCount,
         activeBarricadeCount = territory.activeBarricadeCount,
+        completedBarricadeCount = territory.completedBarricadeCount,
         maxActiveBarricades = territory.maxActiveBarricades,
         plots = plots
     }

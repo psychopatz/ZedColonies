@@ -70,6 +70,7 @@ local function applyHeader(windowClass, header)
     end
 
     local snapshot = ensureSnapshot(windowClass)
+    snapshot.colonyId = tostring(header.colonyId or snapshot.colonyId or "")
     snapshot.map.headquartersLevel = tonumber(header.hqLevel) or tonumber(snapshot.map.headquartersLevel) or 0
     snapshot.map.securedPerimeterRing = tonumber(header.securedRing) or tonumber(snapshot.map.securedPerimeterRing) or 0
     snapshot.map.currentFrontierRing = tonumber(header.currentRing) or tonumber(snapshot.map.currentFrontierRing) or 1
@@ -78,6 +79,7 @@ local function applyHeader(windowClass, header)
     snapshot.map.frontierExpansionAvailable = header.frontierExpansionAvailable == true
     snapshot.map.unlockedPlotCount = tonumber(header.unlockedPlotCount) or tonumber(snapshot.map.unlockedPlotCount) or 0
     snapshot.map.activeBarricadeCount = tonumber(header.activeBarricadeCount) or tonumber(snapshot.map.activeBarricadeCount) or 0
+    snapshot.map.completedBarricadeCount = tonumber(header.completedBarricadeCount) or tonumber(snapshot.map.completedBarricadeCount) or tonumber(snapshot.map.activeBarricadeCount) or 0
     snapshot.map.maxActiveBarricades = tonumber(header.maxActiveBarricadeCount or header.maxActiveBarricades) or tonumber(snapshot.map.maxActiveBarricades) or 0
     if type(header.bounds) == "table" then
         snapshot.map.bounds = {

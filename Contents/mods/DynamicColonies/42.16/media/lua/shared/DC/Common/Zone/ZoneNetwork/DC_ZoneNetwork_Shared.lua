@@ -73,6 +73,12 @@ function Internal.syncZonesSnapshot(player, requestedColonyId, knownVersion)
         return
     end
 
+    if DC_ZoneRealBase and DC_ZoneRealBase.EnsureSystemZonesForOwner then
+        DC_ZoneRealBase.EnsureSystemZonesForOwner(owner, colonyId)
+    elseif DC_ZoneRealBase and DC_ZoneRealBase.EnsureBaseZoneForOwner then
+        DC_ZoneRealBase.EnsureBaseZoneForOwner(owner, colonyId)
+    end
+
     local snapshot = Store.BuildSnapshot(colonyId)
     if knownVersion ~= nil and tostring(knownVersion) == tostring(snapshot.version) then
         sendSnapshot(player, colonyId, snapshot, { unchanged = true })
@@ -92,7 +98,20 @@ function Internal.saveZonesSnapshot(player, requestedColonyId, zones, knownVersi
         return
     end
 
-    local ok, saveReason, snapshot = Store.SaveSnapshot(colonyId, zones, knownVersion)
+    local zonesToSave = zones
+    if DC_ZoneRealBase and DC_ZoneRealBase.SanitizeSnapshotForSave then
+        local valid, validationReason, sanitizedZones = DC_ZoneRealBase.SanitizeSnapshotForSave(owner, colonyId, zones, {})
+        if valid ~= true then
+            if Internal.syncNotice then
+                Internal.syncNotice(player, validationReason or "Unable to save that Base Zone layout.", "error", true)
+            end
+            sendSnapshot(player, colonyId, Store.BuildSnapshot(colonyId), {})
+            return
+        end
+        zonesToSave = sanitizedZones
+    end
+
+    local ok, saveReason, snapshot = Store.SaveSnapshot(colonyId, zonesToSave, knownVersion)
     if not ok then
         local currentSnapshot = snapshot or Store.BuildSnapshot(colonyId)
         sendSnapshot(player, colonyId, currentSnapshot, { conflict = saveReason == "conflict" })

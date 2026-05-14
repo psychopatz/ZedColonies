@@ -124,6 +124,14 @@ function Sim.ProcessBuilderJob(worker, ctx)
                     plotY = buildResult.project.plotY,
                     additionalPlots = additionalPlots,
                     transition = buildResult.transition,
+                    promptBuildingName = buildResult.transition
+                        and buildResult.transition.realBase
+                        and buildResult.transition.realBase.shouldPromptName == true
+                        and {
+                            buildingID = buildResult.instance and buildResult.instance.buildingID or buildResult.project.buildingID,
+                            buildingType = buildResult.instance and buildResult.instance.buildingType or buildResult.project.buildingType,
+                            defaultValue = buildResult.transition.realBase.defaultName,
+                        } or nil,
                     notice = {
                         message = tostring(buildResult.project.buildingType or "Building")
                             .. " reached level "

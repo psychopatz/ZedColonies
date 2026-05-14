@@ -26,6 +26,10 @@ function State.UpdatePanels(window)
     if window and window.detailsPanel then
         window.detailsPanel:setPlot(selectedPlot)
     end
+    if window and window.btnBaseZone then
+        local enabled = DC_BuildingsRealBaseUI and DC_BuildingsRealBaseUI.CanOpenBaseZone and DC_BuildingsRealBaseUI.CanOpenBaseZone(window.snapshot) == true
+        window.btnBaseZone:setEnable(enabled == true)
+    end
 end
 
 function State.RefreshFromSnapshot(window, windowClass)

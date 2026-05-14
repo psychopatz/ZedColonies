@@ -137,6 +137,9 @@ function DC_ZoneData.normalizeZone(zone, colonyId, fallbackIndex, usedIds)
         end
     end
     normalized.rects = rects
+    if DC_ZoneRealBase and DC_ZoneRealBase.NormalizeZoneShape then
+        DC_ZoneRealBase.NormalizeZoneShape(normalized)
+    end
 
     return normalized
 end

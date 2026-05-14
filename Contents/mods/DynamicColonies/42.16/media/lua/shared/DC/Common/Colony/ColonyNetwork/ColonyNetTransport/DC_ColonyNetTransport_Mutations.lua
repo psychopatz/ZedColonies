@@ -13,6 +13,9 @@ function Internal.pushOwnerBuildingMutation(ownerUsername, context)
     end
 
     local sent = Internal.forEachOnlineOwnerPlayer(owner, function(player)
+        if context and context.promptBuildingName and Internal.sendResponse then
+            Internal.sendResponse(player, ((DC_Colony and DC_Colony.Config and DC_Colony.Config.COMMAND_MODULE) or "DColony"), "PromptBuildingName", context.promptBuildingName)
+        end
         if context and context.notice then
             Internal.syncNotice(player, context.notice.message, context.notice.severity, context.notice.popup)
         end

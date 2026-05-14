@@ -73,6 +73,10 @@ function Buildings.CompleteProject(project)
                 end
             end
         end
+
+        if Buildings.RealBase and Buildings.RealBase.OnProjectCompleted then
+            transition.realBase = Buildings.RealBase.OnProjectCompleted(project, instance)
+        end
     end
 
     project.status = "Completed"
@@ -112,6 +116,9 @@ function Buildings.DestroyBuilding(ownerUsername, plotX, plotY, buildingID)
         local instance = buildings[index]
         if tostring(instance.buildingID or "") == tostring(building.buildingID or "") then
             table.remove(buildings, index)
+            if Buildings.RealBase and Buildings.RealBase.OnBuildingDestroyed then
+                Buildings.RealBase.OnBuildingDestroyed(owner, building)
+            end
             Buildings.Save()
             return true, nil, building
         end

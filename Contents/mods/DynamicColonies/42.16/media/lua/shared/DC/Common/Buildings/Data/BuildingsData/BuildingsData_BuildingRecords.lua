@@ -13,6 +13,7 @@ function Buildings.CreateBuildingInstance(ownerUsername, buildingType, level, pl
         level = math.max(0, math.floor(tonumber(level) or 0)),
         plotX = math.floor(tonumber(plotX) or 0),
         plotY = math.floor(tonumber(plotY) or 0),
+        customName = nil,
         installs = {}
     }
 

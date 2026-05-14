@@ -11,5 +11,6 @@ require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Projects"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Supply"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Destroy"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork_Debug"
+require "DC/Common/Buildings/Network/DC_BuildingsNetwork_RealBase"
 
 return DC_Colony.Network

@@ -30,6 +30,7 @@ require "DC/Common/Buildings/Presentation/BuildingsHousing/BuildingsHousing"
 require "DC/Common/Buildings/Map/DC_BuildingsMap"
 require "DC/Common/Buildings/Projects/DC_BuildingsProjectTargeting"
 require "DC/Common/Buildings/Projects/BuildingsProjects/BuildingsProjects"
+require "DC/Common/Buildings/RealBase/DC_BuildingsRealBase"
 require "DC/Common/Buildings/Map/DC_BuildingsMapPresentation"
 require "DC/Common/Buildings/Presentation/DC_BuildingsPresentation"
 

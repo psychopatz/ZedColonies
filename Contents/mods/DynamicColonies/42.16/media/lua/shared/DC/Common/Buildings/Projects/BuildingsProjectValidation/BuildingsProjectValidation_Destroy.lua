@@ -28,6 +28,12 @@ function Buildings.CanDestroyBuilding(ownerUsername, plotX, plotY, buildingID)
         if not Validation.HasCompletedOuterBarricade(owner, x, y) then
             return false, "This barricade stays locked until the next ring has a completed barricade enclosing it from outside.", nil
         end
+        if Buildings.RealBase and Buildings.RealBase.CanDestroyBuilding then
+            local canDestroy, blockReason = Buildings.RealBase.CanDestroyBuilding(owner, building)
+            if canDestroy ~= true then
+                return false, blockReason or "That barricade still supports the active Base Zone.", nil
+            end
+        end
     end
     return true, nil, building
 end

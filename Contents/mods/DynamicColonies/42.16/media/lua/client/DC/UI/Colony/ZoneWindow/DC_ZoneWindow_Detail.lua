@@ -11,6 +11,13 @@ local Formatters = DC_ZoneWindow.Internal.Formatters
 
 --- Refresh the detail panel to reflect the currently selected zone.
 function DC_ZoneWindow:refreshDetailPanel()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self)
+        and DC_ZoneWindow.Internal.RealBase.RefreshDetailPanel then
+        DC_ZoneWindow.Internal.RealBase.RefreshDetailPanel(self)
+        return
+    end
+
     local zone = DC_ZoneWindowState.GetSelectedZone(self)
 
     -- Enable/disable controls based on selection
@@ -86,6 +93,13 @@ end
 
 --- Rebuild the rect list for the selected zone.
 function DC_ZoneWindow:populateRectList()
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.IsMode
+        and DC_ZoneWindow.Internal.RealBase.IsMode(self)
+        and DC_ZoneWindow.Internal.RealBase.PopulateAreaList then
+        DC_ZoneWindow.Internal.RealBase.PopulateAreaList(self)
+        return
+    end
+
     if not self.rectList then return end
 
     self.rectList:clear()

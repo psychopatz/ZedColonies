@@ -47,7 +47,7 @@ function Resources.GetGreenhouseSnapshots(ownerUsername)
 
             snapshots[#snapshots + 1] = {
                 buildingID = instance.buildingID,
-                displayName = "Greenhouse",
+                displayName = Buildings and Buildings.RealBase and Buildings.RealBase.GetInstanceDisplayName and Buildings.RealBase.GetInstanceDisplayName(instance) or "Greenhouse",
                 plotX = math.floor(tonumber(instance.plotX) or 0),
                 plotY = math.floor(tonumber(instance.plotY) or 0),
                 level = math.floor(tonumber(instance.level) or 0),
@@ -166,7 +166,7 @@ end
 
 function Resources.GetAnyGreenhouseLabel(ownerUsername)
     for _, greenhouse in ipairs(Resources.GetGreenhouseSnapshots(ownerUsername)) do
-        return "Greenhouse " .. tostring(greenhouse.plotX) .. "," .. tostring(greenhouse.plotY)
+        return tostring(greenhouse.displayName or ("Greenhouse " .. tostring(greenhouse.plotX) .. "," .. tostring(greenhouse.plotY)))
     end
     return "Greenhouse"
 end

@@ -202,6 +202,10 @@ function DC_ZoneWindow:createChildren()
     self.detailInfoLabel:initialise()
     self.detailPanel:addChild(self.detailInfoLabel)
 
+    self.detailStatusLabel = ISLabel:new(L.PANEL_INNER_PAD, L.PANEL_HEADER_HEIGHT + 80, 20, "", 0.75, 0.75, 0.75, 1, UIFont.Small, true)
+    self.detailStatusLabel:initialise()
+    self.detailPanel:addChild(self.detailStatusLabel)
+
     -- ===== RECT LIST (right bottom) =====
     self.rectList = ISScrollingListBox:new(rightX, rectListY, rightWidth, rectListH)
     self.rectList:initialise()
@@ -250,6 +254,9 @@ function DC_ZoneWindow:createChildren()
 
     -- Apply dynamic layout
     ZoneWindowLayout.applyWindowLayout(self)
+    if DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase and DC_ZoneWindow.Internal.RealBase.ConfigureWindow then
+        DC_ZoneWindow.Internal.RealBase.ConfigureWindow(self)
+    end
 
     -- Initial state from the persisted zone store
     self:refreshFromColonyData()

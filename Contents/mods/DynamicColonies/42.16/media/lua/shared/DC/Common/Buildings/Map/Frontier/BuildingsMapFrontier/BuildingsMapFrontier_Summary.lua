@@ -14,6 +14,7 @@ function Buildings.GetTerritorySummary(ownerUsername)
     local nextFrontierRing = Frontier.GetNextFrontierRing(owner)
     local currentFrontierRing = Frontier.GetActiveFrontierRing(owner)
     local activeBarricades = Buildings.GetActiveBarricadeCount(owner)
+    local completedBarricades = Buildings.GetCompletedBarricadeCount and Buildings.GetCompletedBarricadeCount(owner) or activeBarricades
     local maxBarricades = Buildings.GetMaxActiveBarricades(owner)
 
     return {
@@ -26,6 +27,7 @@ function Buildings.GetTerritorySummary(ownerUsername)
         frontierRequiredHQLevel = nextFrontierRing,
         unlockedPlotCount = #unlockedPlots,
         activeBarricadeCount = activeBarricades,
+        completedBarricadeCount = completedBarricades,
         maxActiveBarricades = maxBarricades
     }
 end

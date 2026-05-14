@@ -20,6 +20,7 @@ end
 function Transport.buildMapMeta(mapSnapshot)
     local map = mapSnapshot or {}
     return {
+        colonyId = tostring(map.colonyId or "local"),
         bounds = Transport.copyShallow(map.bounds),
         headquartersLevel = tonumber(map.headquartersLevel) or 0,
         securedPerimeterRing = tonumber(map.securedPerimeterRing) or 0,
@@ -29,6 +30,7 @@ function Transport.buildMapMeta(mapSnapshot)
         frontierRequiredHQLevel = tonumber(map.frontierRequiredHQLevel) or 0,
         unlockedPlotCount = tonumber(map.unlockedPlotCount) or 0,
         activeBarricadeCount = tonumber(map.activeBarricadeCount) or 0,
+        completedBarricadeCount = tonumber(map.completedBarricadeCount) or tonumber(map.activeBarricadeCount) or 0,
         maxActiveBarricades = tonumber(map.maxActiveBarricades) or 0,
     }
 end
