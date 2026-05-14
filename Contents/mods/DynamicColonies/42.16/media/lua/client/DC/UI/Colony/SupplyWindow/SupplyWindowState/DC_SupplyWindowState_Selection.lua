@@ -5,9 +5,7 @@ local Internal = DC_SupplyWindow.Internal
 
 function DC_SupplyWindow:setActiveTab(tabID)
     local targetTab = tabID or Internal.Tabs.Provisions
-    if self.activeTab == targetTab then
-        return
-    end
+    local wasSameTab = self.activeTab == targetTab
 
     self.activeTab = targetTab
     self.selectedWorkerEntry = nil
@@ -30,6 +28,14 @@ function DC_SupplyWindow:setActiveTab(tabID)
         self:rebuildPlayerList()
     end
     self:refreshWorkerEntries()
+
+    if self.requestActiveTabDetails then
+        self:requestActiveTabDetails(false)
+    end
+
+    if wasSameTab then
+        return
+    end
 end
 
 function DC_SupplyWindow:refreshDetailSelection()

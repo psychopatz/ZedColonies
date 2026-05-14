@@ -28,7 +28,12 @@ Network.Handlers.WithdrawWarehouseSupplies = function(player, args)
         return
     end
 
-    local moved = Withdraw.withdrawWarehouseNutritionEntries(owner, inventory, Shared.normalizeLedgerIndexes(args))
+    local moved = Withdraw.withdrawWarehouseNutritionEntries(
+        owner,
+        inventory,
+        Shared.normalizeLedgerIndexes(args),
+        Shared.normalizeLedgerQuantities and Shared.normalizeLedgerQuantities(args) or nil
+    )
     if moved <= 0 then
         return
     end
@@ -56,7 +61,13 @@ Network.Handlers.WithdrawWarehouseTools = function(player, args)
         return
     end
 
-    local moved = Withdraw.withdrawWarehouseToolEntries(player, owner, inventory, Shared.normalizeLedgerIndexes(args))
+    local moved = Withdraw.withdrawWarehouseToolEntries(
+        player,
+        owner,
+        inventory,
+        Shared.normalizeLedgerIndexes(args),
+        Shared.normalizeLedgerQuantities and Shared.normalizeLedgerQuantities(args) or nil
+    )
     if moved <= 0 then
         return
     end

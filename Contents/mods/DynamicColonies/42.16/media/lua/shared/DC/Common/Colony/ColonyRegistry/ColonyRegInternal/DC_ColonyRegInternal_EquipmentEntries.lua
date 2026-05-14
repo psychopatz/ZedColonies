@@ -217,11 +217,21 @@ function Internal.GetEquipmentDurabilitySignature(entry)
         return ""
     end
 
+    local conditionRatio = 0
+    if normalized.conditionMax and normalized.conditionMax > 0 then
+        conditionRatio = (math.max(0, tonumber(normalized.condition) or 0) / normalized.conditionMax)
+    end
+
+    local roundedConditionRatio = math.floor((conditionRatio / 0.10) + 0.5) * 0.10
+    local roundedUsedDelta = normalized.usedDelta ~= nil
+        and (math.floor((math.max(0, tonumber(normalized.usedDelta) or 0) * 100) + 0.5) / 100)
+        or nil
+
     return table.concat({
         tostring(normalized.fullType or ""),
-        tostring(normalized.condition ~= nil and normalized.condition or ""),
         tostring(normalized.conditionMax ~= nil and normalized.conditionMax or ""),
-        tostring(normalized.usedDelta ~= nil and string.format("%.4f", normalized.usedDelta) or ""),
+        tostring(normalized.condition ~= nil and string.format("%.2f", roundedConditionRatio) or ""),
+        tostring(roundedUsedDelta ~= nil and string.format("%.2f", roundedUsedDelta) or ""),
         tostring(normalized.useDelta ~= nil and string.format("%.4f", normalized.useDelta) or ""),
         tostring(normalized.keepOnDeplete == true and "1" or "0"),
         tostring(normalized.fluidAmount ~= nil and string.format("%.4f", normalized.fluidAmount) or ""),

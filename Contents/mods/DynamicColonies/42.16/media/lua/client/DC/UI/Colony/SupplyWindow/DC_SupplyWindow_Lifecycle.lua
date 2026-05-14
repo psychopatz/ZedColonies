@@ -36,16 +36,8 @@ local function copyArrayEntries(source)
     for index, value in ipairs(source) do
         if type(value) == "table" then
             local itemCopy = {}
-            for key, nestedValue in pairs(value) do
-                if type(nestedValue) == "table" then
-                    local nestedCopy = {}
-                    for nestedKey, nestedInner in pairs(nestedValue) do
-                        nestedCopy[nestedKey] = nestedInner
-                    end
-                    itemCopy[key] = nestedCopy
-                else
-                    itemCopy[key] = nestedValue
-                end
+            for key, entryValue in pairs(value) do
+                itemCopy[key] = entryValue
             end
             copy[index] = itemCopy
         else
@@ -129,11 +121,31 @@ local function mergeWorkerData(previousWorker, incomingWorker)
         merged.warehouse = warehouseCopy
     elseif type(incomingWorker.warehouse) == "table" then
         local warehouseCopy = copyWarehouseSummary(incomingWorker.warehouse) or {}
+        local previousLedgers = type(previousWorker) == "table"
+            and type(previousWorker.warehouse) == "table"
+            and type(previousWorker.warehouse.ledgers) == "table"
+            and previousWorker.warehouse.ledgers
+            or {}
         if type(incomingWorker.warehouse.ledgers) == "table" then
             warehouseCopy.ledgers = {
-                provisions = copyArrayEntries(incomingWorker.warehouse.ledgers.provisions) or {},
-                equipment = copyArrayEntries(incomingWorker.warehouse.ledgers.equipment) or {},
-                output = copyArrayEntries(incomingWorker.warehouse.ledgers.output) or {},
+                provisions = type(incomingWorker.warehouse.ledgers.provisions) == "table"
+                    and copyArrayEntries(incomingWorker.warehouse.ledgers.provisions)
+                    or copyArrayEntries(previousLedgers.provisions)
+                    or {},
+                equipment = type(incomingWorker.warehouse.ledgers.equipment) == "table"
+                    and copyArrayEntries(incomingWorker.warehouse.ledgers.equipment)
+                    or copyArrayEntries(previousLedgers.equipment)
+                    or {},
+                output = type(incomingWorker.warehouse.ledgers.output) == "table"
+                    and copyArrayEntries(incomingWorker.warehouse.ledgers.output)
+                    or copyArrayEntries(previousLedgers.output)
+                    or {},
+            }
+        elseif type(previousLedgers) == "table" then
+            warehouseCopy.ledgers = {
+                provisions = copyArrayEntries(previousLedgers.provisions) or {},
+                equipment = copyArrayEntries(previousLedgers.equipment) or {},
+                output = copyArrayEntries(previousLedgers.output) or {},
             }
         end
         merged.warehouse = warehouseCopy
@@ -195,36 +207,22 @@ function DC_SupplyWindow.Open(worker, viewMode, options)
     window.autoRefreshPending = nil
     window.workerSummaryVersion = nil
     window.workerDetailVersion = nil
+    window.workerDetailVersionsByKey = {}
     window.warehouseSummaryVersion = nil
     window.warehouseVersion = nil
+    window.warehouseVersionsByKey = {}
     window.initialSummarySyncPending = true
-    window.fullHydrationPending = true
-    window.fullHydrationDelayTicks = 6
-    window.fullHydrationRequested = false
     window.deferredEquipmentPreloadPending = true
     window.deferredEquipmentPreloadTicks = 0
     local cachedWorker = DC_SupplyWindow.Internal
         and DC_SupplyWindow.Internal.resolveWorkerDetail
         and DC_SupplyWindow.Internal.resolveWorkerDetail(worker.workerID)
         or (DC_MainWindow and DC_MainWindow.cachedDetails and DC_MainWindow.cachedDetails[worker.workerID] or nil)
-    if cachedWorker then
-        window.workerDetailVersion = DC_MainWindow and DC_MainWindow.cachedDetailVersions and DC_MainWindow.cachedDetailVersions[worker.workerID] or nil
-        window.initialSummarySyncPending = nil
-        window.fullHydrationDelayTicks = 2
-    end
     window:setVisible(true)
     window:addToUIManager()
     window:bringToTop()
     window:setWorkerData(mergeWorkerData(cachedWorker, buildWorkerShell(worker)))
     window:startInventoryScan()
-    if window.requireCanonicalWorkerDetail and window.requestWorkerDetails then
-        window:requestWorkerDetails({
-            includeWorkerLedgers = true,
-            includeWarehouseLedgers = true,
-            bypassWorkerKnownVersion = window.forceRefresh == true,
-            bypassWarehouseKnownVersion = window.forceRefresh == true,
-        })
-    end
     window:updateStatus(
         window.isCompanionOpen == true
             and ("Loading companion inventory for " .. subjectName .. "...")

@@ -7,6 +7,60 @@ local Shared = Internal.ColonyNetShared or {}
 local Config = Shared.Config or {}
 local Registry = Shared.Registry or {}
 
+local function stripLedgerEntryFields(entry)
+    if type(entry) ~= "table" then
+        return entry
+    end
+
+    entry.entryID = nil
+    if entry.fullType then
+        entry.displayName = nil
+        entry.consumedOutputDisplayName = nil
+    end
+    entry.pending = nil
+    entry.transferPending = nil
+    return entry
+end
+
+local function stripLedgerEntries(entries)
+    if type(entries) ~= "table" then
+        return entries
+    end
+
+    for _, entry in ipairs(entries) do
+        stripLedgerEntryFields(entry)
+    end
+    return entries
+end
+
+local function stripWorkerPacket(worker)
+    if type(worker) ~= "table" then
+        return worker
+    end
+
+    stripLedgerEntries(worker.nutritionLedger)
+    stripLedgerEntries(worker.toolLedger)
+    stripLedgerEntries(worker.haulLedger)
+    stripLedgerEntries(worker.outputLedger)
+    if type(worker.warehouse) == "table" and type(worker.warehouse.ledgers) == "table" then
+        stripLedgerEntries(worker.warehouse.ledgers.provisions)
+        stripLedgerEntries(worker.warehouse.ledgers.equipment)
+        stripLedgerEntries(worker.warehouse.ledgers.output)
+    end
+    return worker
+end
+
+local function stripWarehousePacket(warehouse)
+    if type(warehouse) ~= "table" or type(warehouse.ledgers) ~= "table" then
+        return warehouse
+    end
+
+    stripLedgerEntries(warehouse.ledgers.provisions)
+    stripLedgerEntries(warehouse.ledgers.equipment)
+    stripLedgerEntries(warehouse.ledgers.output)
+    return warehouse
+end
+
 function Internal.syncWorkerList(player, knownVersion)
     local owner = Config.GetOwnerUsername(player)
     local workers = Registry.GetWorkerSummariesForOwner and Registry.GetWorkerSummariesForOwner(owner) or {}
@@ -25,20 +79,26 @@ function Internal.syncWorkerList(player, knownVersion)
     })
 end
 
-function Internal.syncWorkerDetail(player, workerID, knownVersion, includeWorkerLedgers)
+function Internal.syncWorkerDetail(player, workerID, knownVersion, includeWorkerLedgers, includeWarehouseLedgers, workerLedgerMask, warehouseLedgerMask)
     local owner = Config.GetOwnerUsername(player)
+    local normalizedWorkerMask = Shared.normalizeWorkerLedgerMask(includeWorkerLedgers, workerLedgerMask)
+    local normalizedWarehouseMask = Shared.normalizeWarehouseLedgerMask(includeWarehouseLedgers, warehouseLedgerMask)
     local worker = Registry.GetWorkerDetailsForOwner(
         owner,
         workerID,
-        false,
-        includeWorkerLedgers ~= false
+        normalizedWarehouseMask,
+        normalizedWorkerMask or (includeWorkerLedgers ~= false)
     )
-    local version = Shared.buildWorkerDetailVersion(worker, workerID, includeWorkerLedgers == true)
+    stripWorkerPacket(worker)
+    local version = Shared.buildWorkerDetailVersion(worker, workerID, normalizedWorkerMask or (includeWorkerLedgers == true), normalizedWorkerMask, normalizedWarehouseMask)
     if knownVersion and tostring(knownVersion) == version then
         Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWorkerDetails", {
             workerID = workerID,
             version = version,
-            includeWorkerLedgers = includeWorkerLedgers == true,
+            includeWorkerLedgers = normalizedWorkerMask ~= nil or includeWorkerLedgers == true,
+            includeWarehouseLedgers = normalizedWarehouseMask ~= nil or includeWarehouseLedgers == true,
+            workerLedgerMask = normalizedWorkerMask,
+            warehouseLedgerMask = normalizedWarehouseMask,
             unchanged = true
         })
         return
@@ -47,20 +107,26 @@ function Internal.syncWorkerDetail(player, workerID, knownVersion, includeWorker
     Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWorkerDetails", {
         workerID = workerID,
         version = version,
-        includeWorkerLedgers = includeWorkerLedgers == true,
+        includeWorkerLedgers = normalizedWorkerMask ~= nil or includeWorkerLedgers == true,
+        includeWarehouseLedgers = normalizedWarehouseMask ~= nil or includeWarehouseLedgers == true,
+        workerLedgerMask = normalizedWorkerMask,
+        warehouseLedgerMask = normalizedWarehouseMask,
         worker = worker
     })
 end
 
-function Internal.syncWarehouse(player, knownVersion, includeLedgers)
+function Internal.syncWarehouse(player, knownVersion, includeLedgers, ledgerMask)
     local owner = Config.GetOwnerUsername(player)
     local Warehouse = DC_Colony and DC_Colony.Warehouse or nil
-    local warehouse = Warehouse and Warehouse.GetClientSnapshot and Warehouse.GetClientSnapshot(owner, includeLedgers == true) or nil
-    local version = Shared.buildWarehouseVersion(warehouse, owner, includeLedgers == true)
+    local normalizedMask = Shared.normalizeWarehouseLedgerMask(includeLedgers, ledgerMask)
+    local warehouse = Warehouse and Warehouse.GetClientSnapshot and Warehouse.GetClientSnapshot(owner, normalizedMask ~= nil, normalizedMask) or nil
+    stripWarehousePacket(warehouse)
+    local version = Shared.buildWarehouseVersion(warehouse, owner, normalizedMask ~= nil, normalizedMask)
     if knownVersion and tostring(knownVersion) == version then
         Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWarehouse", {
             version = version,
-            includeLedgers = includeLedgers == true,
+            includeLedgers = normalizedMask ~= nil,
+            ledgerMask = normalizedMask,
             unchanged = true
         })
         return
@@ -68,7 +134,8 @@ function Internal.syncWarehouse(player, knownVersion, includeLedgers)
 
     Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWarehouse", {
         version = version,
-        includeLedgers = includeLedgers == true,
+        includeLedgers = normalizedMask ~= nil,
+        ledgerMask = normalizedMask,
         warehouse = warehouse
     })
 end

@@ -59,7 +59,7 @@ function DC_SupplyWindow:canTransferWithWorker(showStatus)
 end
 
 function DC_SupplyWindow:updateTransferControls()
-    if not self.btnWithdrawSelected or not self.btnWithdrawVisible or not self.btnDepositSelected or not self.btnDepositVisible then
+    if not self.btnWithdrawSelected or not self.btnDepositSelected then
         return
     end
 
@@ -72,9 +72,7 @@ function DC_SupplyWindow:updateTransferControls()
     local dropEnabled = canDropHaulEntries(self) and hasWorkerEntries
 
     self.btnWithdrawSelected:setEnable(transferAllowed and hasWorkerEntries)
-    self.btnWithdrawVisible:setEnable(transferAllowed and hasWorkerEntries)
     self.btnDepositSelected:setEnable(depositEnabled)
-    self.btnDepositVisible:setEnable(depositEnabled)
     if self.btnDropSelected then
         self.btnDropSelected:setVisible(canDropHaulEntries(self))
         self.btnDropSelected:setEnable(dropEnabled)
@@ -93,15 +91,11 @@ function DC_SupplyWindow:updateTransferControls()
 
     if activeTab == Internal.Tabs.Equipment then
         self.btnDepositSelected:setTitle(">")
-        self.btnDepositVisible:setTitle(">>")
     elseif isWarehouseOutputTab then
         self.btnDepositSelected:setTitle(">")
-        self.btnDepositVisible:setTitle(">>")
     else
         self.btnDepositSelected:setTitle(">")
-        self.btnDepositVisible:setTitle(">>")
     end
 
     self.btnWithdrawSelected:setTitle("<")
-    self.btnWithdrawVisible:setTitle("<<")
 end

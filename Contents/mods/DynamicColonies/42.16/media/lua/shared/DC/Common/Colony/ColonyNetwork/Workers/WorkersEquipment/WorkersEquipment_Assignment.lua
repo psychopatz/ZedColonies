@@ -146,7 +146,14 @@ Network.Handlers.AssignWarehouseToolToWorker = function(player, args)
         return
     end
 
-    local taken = Warehouse.TakeEquipmentEntries(owner, Equipment.resolveWarehouseEquipmentIndexes(owner, args))
+    local requestedQuantities = nil
+    if args and args.ledgerIndex then
+        requestedQuantities = {
+            [math.floor(tonumber(args.ledgerIndex) or 0)] = math.max(1, math.floor(tonumber(args.requestedQty) or 1))
+        }
+    end
+
+    local taken = Warehouse.TakeEquipmentEntries(owner, Equipment.resolveWarehouseEquipmentIndexes(owner, args), requestedQuantities)
     local toolEntry = taken and taken[1] or nil
     if not toolEntry or not toolEntry.fullType then
         Shared.saveAndRefreshBasic(player, worker, true)

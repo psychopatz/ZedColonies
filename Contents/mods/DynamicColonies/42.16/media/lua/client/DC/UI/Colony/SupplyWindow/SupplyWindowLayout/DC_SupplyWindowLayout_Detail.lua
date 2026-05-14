@@ -70,11 +70,8 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         if transferAllowed then
             transferGuidance =
                 "<LINE> <RGB:0.62,0.62,0.62> Use "
-                .. "<RGB:1,1,1> < <RGB:0.62,0.62,0.62> for one selected worker item or "
-                .. "<RGB:1,1,1> << <RGB:0.62,0.62,0.62> to pull every visible filtered worker item back to your inventory. "
-                .. "<LINE> <RGB:0.62,0.62,0.62> Use "
-                .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> for one selected item or "
-                .. "<RGB:1,1,1> >> <RGB:0.62,0.62,0.62> to send every visible filtered item when the active tab supports transfers. "
+                .. "<RGB:1,1,1> < <RGB:0.62,0.62,0.62> for the selected worker item and "
+                .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> for the selected player item. "
                 .. "<LINE> <RGB:0.62,0.62,0.62> Select the "
                 .. "<RGB:1,1,1> cash <RGB:0.62,0.62,0.62> entry on Provisions and use "
                 .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> or "

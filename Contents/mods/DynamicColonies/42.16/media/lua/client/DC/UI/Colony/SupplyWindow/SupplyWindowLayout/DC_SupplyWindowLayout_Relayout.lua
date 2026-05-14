@@ -44,35 +44,27 @@ function DC_SupplyWindow:relayout()
     self.btnWithdrawSelected:setY(layout.centerButtonsY)
     self.btnWithdrawSelected:setWidth(layout.controlWidth)
 
-    self.btnWithdrawVisible:setX(layout.controlX)
-    self.btnWithdrawVisible:setY(layout.centerButtonsY + 40)
-    self.btnWithdrawVisible:setWidth(layout.controlWidth)
-
     self.btnDepositSelected:setX(layout.controlX)
-    self.btnDepositSelected:setY(layout.centerButtonsY + 80)
+    self.btnDepositSelected:setY(layout.centerButtonsY + 40)
     self.btnDepositSelected:setWidth(layout.controlWidth)
-
-    self.btnDepositVisible:setX(layout.controlX)
-    self.btnDepositVisible:setY(layout.centerButtonsY + 120)
-    self.btnDepositVisible:setWidth(layout.controlWidth)
 
     if self.btnDropSelected then
         self.btnDropSelected:setX(layout.controlX)
-        self.btnDropSelected:setY(layout.centerButtonsY + 160)
+        self.btnDropSelected:setY(layout.centerButtonsY + 80)
         self.btnDropSelected:setWidth(layout.controlWidth)
         self.btnDropSelected:setHeight(32)
     end
 
     if self.btnAutoEquipNow then
         self.btnAutoEquipNow:setX(layout.controlX)
-        self.btnAutoEquipNow:setY(layout.centerButtonsY + 200)
+        self.btnAutoEquipNow:setY(layout.centerButtonsY + 120)
         self.btnAutoEquipNow:setWidth(layout.controlWidth)
         self.btnAutoEquipNow:setHeight(32)
     end
 
     if self.btnAutoEquipToggle then
         self.btnAutoEquipToggle:setX(layout.controlX)
-        self.btnAutoEquipToggle:setY(layout.centerButtonsY + 240)
+        self.btnAutoEquipToggle:setY(layout.centerButtonsY + 160)
         self.btnAutoEquipToggle:setWidth(layout.controlWidth)
         self.btnAutoEquipToggle:setHeight(32)
     end

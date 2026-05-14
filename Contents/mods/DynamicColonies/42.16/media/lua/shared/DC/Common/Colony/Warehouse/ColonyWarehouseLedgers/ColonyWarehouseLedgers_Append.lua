@@ -11,17 +11,7 @@ local Ledgers = Internal.Ledgers or {}
 Internal.Ledgers = Ledgers
 
 function Ledgers.GetProvisionStackKey(entry)
-    return table.concat({
-        tostring(entry and entry.fullType or ""),
-        tostring(entry and entry.provisionType or ""),
-        tostring(math.max(0, tonumber(entry and entry.caloriesRemaining) or 0)),
-        tostring(math.max(0, tonumber(entry and entry.hydrationRemaining) or 0)),
-        tostring(math.max(0, tonumber(entry and entry.treatmentUnitsRemaining) or 0)),
-        tostring(entry and entry.medicalUse or ""),
-        tostring(entry and entry.consumedOutputFullType or ""),
-        tostring(entry and entry.consumedOutputDisplayName or ""),
-        tostring(entry and entry.consumedOutputFluidAmount ~= nil and string.format("%.4f", entry.consumedOutputFluidAmount) or "")
-    }, "|")
+    return Internal.Data and Internal.Data.GetProvisionBucketKey and Internal.Data.GetProvisionBucketKey(entry) or ""
 end
 
 function Ledgers.AppendProvisionEntry(warehouse, entry)
@@ -34,29 +24,19 @@ function Ledgers.AppendProvisionEntry(warehouse, entry)
         return false
     end
 
-    local normalized = {
-        fullType = entry.fullType,
-        entryID = tostring(entry.entryID or Registry.Internal.GenerateLedgerEntryID and Registry.Internal.GenerateLedgerEntryID("prov") or ""),
-        displayName = entry.displayName or Registry.Internal.GetDisplayNameForFullType(entry.fullType),
-        provisionType = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and "medical" or "nutrition",
-        caloriesRemaining = math.max(0, tonumber(entry.caloriesRemaining) or 0),
-        hydrationRemaining = math.max(0, tonumber(entry.hydrationRemaining) or 0),
-        treatmentUnitsRemaining = math.max(0, tonumber(entry.treatmentUnitsRemaining) or 0),
-        medicalUse = Config.IsMedicalProvisionEntry and Config.IsMedicalProvisionEntry(entry) and tostring(entry.medicalUse or "bandage") or nil,
-        qty = math.max(1, math.floor(tonumber(entry.qty) or 1))
-    }
-    if entry.consumedOutputFullType then
-        normalized.consumedOutputFullType = tostring(entry.consumedOutputFullType)
-        normalized.consumedOutputDisplayName = tostring(entry.consumedOutputDisplayName or Registry.Internal.GetDisplayNameForFullType(entry.consumedOutputFullType))
-        if entry.consumedOutputFluidAmount ~= nil then
-            normalized.consumedOutputFluidAmount = math.max(0, tonumber(entry.consumedOutputFluidAmount) or 0)
-        end
+    local normalized = Internal.Data and Internal.Data.NormalizeProvisionEntry and Internal.Data.NormalizeProvisionEntry(entry) or nil
+    if not normalized then
+        return false
     end
 
     local stackKey = Ledgers.GetProvisionStackKey(normalized)
     for _, existing in ipairs(warehouse.ledgers.provisions) do
         if Ledgers.GetProvisionStackKey(existing) == stackKey then
-            existing.qty = math.max(1, math.floor(tonumber(existing.qty) or 1)) + normalized.qty
+            if Internal.Data and Internal.Data.MergeProvisionEntries then
+                Internal.Data.MergeProvisionEntries(existing, normalized)
+            else
+                existing.qty = math.max(1, math.floor(tonumber(existing.qty) or 1)) + normalized.qty
+            end
             Warehouse.TouchItemsVersion(warehouse.ownerUsername)
             Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
             Warehouse.Recalculate(warehouse)
@@ -76,7 +56,7 @@ function Ledgers.AppendEquipmentEntry(warehouse, entry, ignoreCapacity)
         return false
     end
 
-    local normalized = Registry.Internal.NormalizeEquipmentEntry and Registry.Internal.NormalizeEquipmentEntry(entry) or nil
+    local normalized = Internal.Data and Internal.Data.NormalizeEquipmentEntry and Internal.Data.NormalizeEquipmentEntry(entry) or nil
     if not normalized then
         return false
     end
@@ -84,6 +64,22 @@ function Ledgers.AppendEquipmentEntry(warehouse, entry, ignoreCapacity)
     local weight = Internal.GetEntryWeight(normalized.fullType, 1)
     if ignoreCapacity ~= true and weight > 0 and weight > Warehouse.GetRemainingCapacity(warehouse) then
         return false
+    end
+
+    local stackKey = Internal.Data and Internal.Data.GetEquipmentStackKey and Internal.Data.GetEquipmentStackKey(normalized) or ""
+    for _, existing in ipairs(warehouse.ledgers.equipment) do
+        local existingKey = Internal.Data and Internal.Data.GetEquipmentStackKey and Internal.Data.GetEquipmentStackKey(existing) or ""
+        if existingKey == stackKey then
+            if Internal.Data and Internal.Data.MergeEquipmentEntries then
+                Internal.Data.MergeEquipmentEntries(existing, normalized)
+            else
+                existing.qty = math.max(1, tonumber(existing.qty) or 1) + math.max(1, tonumber(normalized.qty) or 1)
+            end
+            Warehouse.TouchItemsVersion(warehouse.ownerUsername)
+            Warehouse.TouchSummaryVersion(warehouse.ownerUsername)
+            Warehouse.Recalculate(warehouse)
+            return true
+        end
     end
 
     warehouse.ledgers.equipment[#warehouse.ledgers.equipment + 1] = normalized

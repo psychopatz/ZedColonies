@@ -6,6 +6,18 @@ local Internal = DC_Colony.Network.Internal
 local Transport = Internal.Transport or {}
 local Config = Transport.Config or {}
 
+Transport.TrustedFastPathCommands = Transport.TrustedFastPathCommands or {
+    ColonyBootstrap = true,
+    BuildingStateUpdated = true,
+    PlotSafetyChanged = true,
+    WorkerUpdated = true,
+    WorkerListUpdated = true,
+    WarehouseSummaryUpdated = true,
+    ResourcesSummaryUpdated = true,
+    FactionStatusSummary = true,
+    ColonyNotice = true,
+}
+
 function Transport.sanitizeKey(key)
     local keyType = type(key)
     if keyType == "string" or keyType == "number" then
@@ -15,6 +27,73 @@ function Transport.sanitizeKey(key)
         return tostring(key)
     end
     return nil
+end
+
+function Transport.isFlatSerializableArray(value)
+    if type(value) ~= "table" then
+        return false
+    end
+
+    local count = 0
+    for index, child in ipairs(value) do
+        count = index
+        local childType = type(child)
+        if childType == "table" then
+            for nestedKey, nestedValue in pairs(child) do
+                local nestedKeyType = type(nestedKey)
+                local nestedValueType = type(nestedValue)
+                if not (nestedKeyType == "string" or nestedKeyType == "number") then
+                    return false
+                end
+                if nestedValueType == "table" then
+                    return false
+                end
+            end
+        elseif childType ~= "string" and childType ~= "number" and childType ~= "boolean" then
+            return false
+        end
+    end
+
+    if count <= 0 then
+        return false
+    end
+
+    for key, _value in pairs(value) do
+        if type(key) ~= "number" or key < 1 or key > count or math.floor(key) ~= key then
+            return false
+        end
+    end
+
+    return true
+end
+
+local function sanitizeFlatArray(value, stats, path)
+    local copy = {}
+    for index, child in ipairs(value or {}) do
+        if type(child) == "table" then
+            local childCopy = {}
+            for key, nestedValue in pairs(child) do
+                local safeKey = Transport.sanitizeKey(key)
+                local nestedType = type(nestedValue)
+                if safeKey ~= nil and nestedType ~= "table" and nestedType ~= "function" and nestedType ~= "thread" then
+                    if nestedType == "number" and nestedValue ~= nestedValue then
+                        childCopy[safeKey] = 0
+                    elseif nestedType == "userdata" then
+                        childCopy[safeKey] = tostring(nestedValue)
+                    elseif nestedType == "string" or nestedType == "number" or nestedType == "boolean" then
+                        childCopy[safeKey] = nestedValue
+                    end
+                elseif stats then
+                    stats.dropped = stats.dropped + 1
+                    stats.paths[#stats.paths + 1] = tostring(path or "<root>") .. "[" .. tostring(index) .. "]." .. tostring(key)
+                end
+            end
+            copy[index] = childCopy
+        else
+            copy[index] = child
+        end
+    end
+    return copy
 end
 
 function Transport.sanitizeValue(value, seen, depth, stats, path)
@@ -63,6 +142,12 @@ function Transport.sanitizeValue(value, seen, depth, stats, path)
         return nil
     end
     seen[value] = true
+
+    if Transport.isFlatSerializableArray(value) then
+        local fastCopy = sanitizeFlatArray(value, stats, path)
+        seen[value] = nil
+        return fastCopy
+    end
 
     local copy = {}
     for key, child in pairs(value) do
@@ -115,12 +200,22 @@ function Transport.estimatePayloadSize(value, seen)
     return total
 end
 
-function Internal.sanitizeNetworkArgs(args)
+function Internal.sanitizeNetworkArgs(args, options)
     local stats = {
         dropped = 0,
         paths = {},
     }
-    local safeArgs = Transport.sanitizeValue(args or {}, nil, 0, stats, "root")
+    local safeArgs = nil
+    if options and options.fastPath == true and type(args) == "table" then
+        safeArgs = sanitizeFlatArray(args, stats, "root")
+        for key, value in pairs(args or {}) do
+            if type(key) ~= "number" then
+                safeArgs[key] = Transport.sanitizeValue(value, nil, 1, stats, "root." .. tostring(key))
+            end
+        end
+    else
+        safeArgs = Transport.sanitizeValue(args or {}, nil, 0, stats, "root")
+    end
     if type(safeArgs) ~= "table" then
         safeArgs = {}
     end
@@ -128,7 +223,8 @@ function Internal.sanitizeNetworkArgs(args)
 end
 
 function Internal.sendResponse(player, module, command, args)
-    local safeArgs = Internal.sanitizeNetworkArgs and select(1, Internal.sanitizeNetworkArgs(args)) or (args or {})
+    local fastPath = Transport.TrustedFastPathCommands and Transport.TrustedFastPathCommands[command] == true
+    local safeArgs = Internal.sanitizeNetworkArgs and select(1, Internal.sanitizeNetworkArgs(args, { fastPath = fastPath })) or (args or {})
     if DynamicTrading and DynamicTrading.ServerHelpers and DynamicTrading.ServerHelpers.SendResponse then
         DynamicTrading.ServerHelpers.SendResponse(player, module, command, safeArgs)
         return
@@ -152,11 +248,12 @@ function Internal.sendTransportPacket(player, command, ownerUsername, payload)
     args.ownerUsername = args.ownerUsername or ownerUsername
     args.domain = args.domain or domain
 
-    local safeArgs, stats = Internal.sanitizeNetworkArgs(args)
-    local estimatedSize = Transport.estimatePayloadSize(safeArgs)
+    local fastPath = Transport.TrustedFastPathCommands and Transport.TrustedFastPathCommands[command] == true
+    local safeArgs, stats = Internal.sanitizeNetworkArgs(args, { fastPath = fastPath })
+    local estimatedSize = fastPath and 0 or Transport.estimatePayloadSize(safeArgs)
     local debugEnabled = Transport.isDebugTransportEnabled(player)
 
-    if debugEnabled and estimatedSize > Transport.MAX_DEBUG_PACKET_SIZE then
+    if debugEnabled and not fastPath and estimatedSize > Transport.MAX_DEBUG_PACKET_SIZE then
         Transport.logTransport(
             "Warn",
             "Rejected oversize colony packet command=" .. tostring(command)

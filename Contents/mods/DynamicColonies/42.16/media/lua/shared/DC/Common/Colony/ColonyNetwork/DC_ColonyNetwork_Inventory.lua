@@ -43,6 +43,69 @@ local function syncExistingInventoryItem(item)
     end
 end
 
+local function applyProvisionEntryState(item, customData)
+    if not item or type(customData) ~= "table" then
+        return
+    end
+
+    local caloriesRemaining = tonumber(customData.caloriesRemaining)
+    local hydrationRemaining = tonumber(customData.hydrationRemaining)
+    if caloriesRemaining == nil and hydrationRemaining == nil then
+        return
+    end
+
+    local nutritionInternal = DC_Colony and DC_Colony.Nutrition and DC_Colony.Nutrition.Internal or nil
+    local fullType = item.getFullType and item:getFullType() or nil
+    local expectedCalories, expectedHydration, scriptItem = 0, 0, nil
+    if nutritionInternal and nutritionInternal.GetExpectedStaticNutritionForFullType then
+        expectedCalories, expectedHydration, scriptItem = nutritionInternal.GetExpectedStaticNutritionForFullType(fullType)
+    end
+
+    if caloriesRemaining ~= nil and item.setCalories then
+        item:setCalories(math.max(0, caloriesRemaining))
+    end
+
+    if expectedCalories and expectedCalories > 0 and item.setHungChange and scriptItem and scriptItem.getHungerChange then
+        local hungerChange = tonumber(scriptItem:getHungerChange()) or 0
+        item:setHungChange(hungerChange * math.max(0, math.min(1, math.max(0, caloriesRemaining or expectedCalories) / expectedCalories)))
+    end
+
+    if expectedHydration and expectedHydration > 0 and item.setThirstChange and scriptItem and scriptItem.getThirstChange then
+        local thirstChange = tonumber(scriptItem:getThirstChange()) or 0
+        item:setThirstChange(thirstChange * math.max(0, math.min(1, math.max(0, hydrationRemaining or expectedHydration) / expectedHydration)))
+    end
+end
+
+local function applyInventoryItemCustomData(item, customData)
+    if not item or type(customData) ~= "table" then
+        return
+    end
+
+    applyProvisionEntryState(item, customData)
+
+    if DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal and DC_Colony.Registry.Internal.ApplyEquipmentEntryState then
+        DC_Colony.Registry.Internal.ApplyEquipmentEntryState(item, customData)
+    else
+        if customData.condition ~= nil and item.getConditionMax and item:getConditionMax() > 0 then
+            item:setCondition(math.max(0, math.min(item:getConditionMax(), math.floor(tonumber(customData.condition) or item:getConditionMax()))))
+        end
+        if customData.usedDelta ~= nil and item.IsDrainable and item:IsDrainable() then
+            item:setUsedDelta(math.max(0, math.min(1, tonumber(customData.usedDelta) or 0)))
+        end
+        if customData.headCondition ~= nil and item.setHeadCondition and item.getHeadConditionMax then
+            item:setHeadCondition(math.max(0, math.min(item:getHeadConditionMax(), math.floor(tonumber(customData.headCondition) or item:getHeadConditionMax()))))
+        elseif customData.condition ~= nil and item.setHeadConditionFromCondition then
+            pcall(function()
+                item:setHeadConditionFromCondition(item)
+            end)
+        end
+    end
+
+    if customData.fluidAmount ~= nil and item.getFluidContainer and item:getFluidContainer() then
+        item:getFluidContainer():setAmount(math.max(0, tonumber(customData.fluidAmount) or 0))
+    end
+end
+
 local function removeInventoryItemUnits(item, count)
     local quantity = math.max(0, math.floor(tonumber(count) or 0))
     if quantity <= 0 or not item then
@@ -85,10 +148,30 @@ end
 local function addInventoryItem(container, fullType, count, customData)
     if DynamicTrading and DynamicTrading.ServerHelpers then
         if customData and DynamicTrading.ServerHelpers.AddItemWithCondition then
-            return DynamicTrading.ServerHelpers.AddItemWithCondition(container, fullType, count, customData)
+            local items = DynamicTrading.ServerHelpers.AddItemWithCondition(container, fullType, count, customData)
+            if items then
+                for i = 0, items:size() - 1 do
+                    local item = items:get(i)
+                    applyInventoryItemCustomData(item, customData)
+                    if isServer() and item.syncItemFields then
+                        item:syncItemFields()
+                    end
+                end
+            end
+            return items
         end
         if DynamicTrading.ServerHelpers.AddItem then
-            return DynamicTrading.ServerHelpers.AddItem(container, fullType, count)
+            local items = DynamicTrading.ServerHelpers.AddItem(container, fullType, count)
+            if items then
+                for i = 0, items:size() - 1 do
+                    local item = items:get(i)
+                    applyInventoryItemCustomData(item, customData)
+                    if isServer() and item.syncItemFields then
+                        item:syncItemFields()
+                    end
+                end
+            end
+            return items
         end
     end
 
@@ -97,26 +180,7 @@ local function addInventoryItem(container, fullType, count, customData)
     if items and customData then
         for i = 0, items:size() - 1 do
             local item = items:get(i)
-            if DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal and DC_Colony.Registry.Internal.ApplyEquipmentEntryState then
-                DC_Colony.Registry.Internal.ApplyEquipmentEntryState(item, customData)
-            else
-                if customData.condition ~= nil and item.getConditionMax and item:getConditionMax() > 0 then
-                    item:setCondition(math.max(0, math.min(item:getConditionMax(), math.floor(tonumber(customData.condition) or item:getConditionMax()))))
-                end
-                if customData.usedDelta ~= nil and item.IsDrainable and item:IsDrainable() then
-                    item:setUsedDelta(math.max(0, math.min(1, tonumber(customData.usedDelta) or 0)))
-                end
-                if customData.headCondition ~= nil and item.setHeadCondition and item.getHeadConditionMax then
-                    item:setHeadCondition(math.max(0, math.min(item:getHeadConditionMax(), math.floor(tonumber(customData.headCondition) or item:getHeadConditionMax()))))
-                elseif customData.condition ~= nil and item.setHeadConditionFromCondition then
-                    pcall(function()
-                        item:setHeadConditionFromCondition(item)
-                    end)
-                end
-            end
-            if customData.fluidAmount ~= nil and item.getFluidContainer and item:getFluidContainer() then
-                item:getFluidContainer():setAmount(math.max(0, tonumber(customData.fluidAmount) or 0))
-            end
+            applyInventoryItemCustomData(item, customData)
             if isServer() and item.syncItemFields then
                 item:syncItemFields()
             end

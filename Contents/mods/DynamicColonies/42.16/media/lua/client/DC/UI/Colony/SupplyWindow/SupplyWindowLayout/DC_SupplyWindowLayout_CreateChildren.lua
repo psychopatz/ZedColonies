@@ -188,27 +188,19 @@ function DC_SupplyWindow:createChildren()
     self.btnWithdrawSelected:initialise()
     self:addChild(self.btnWithdrawSelected)
 
-    self.btnWithdrawVisible = ISButton:new(layout.controlX, layout.centerButtonsY + 40, layout.controlWidth, 32, "<<", self, self.onWithdrawVisible)
-    self.btnWithdrawVisible:initialise()
-    self:addChild(self.btnWithdrawVisible)
-
-    self.btnDepositSelected = ISButton:new(layout.controlX, layout.centerButtonsY + 80, layout.controlWidth, 32, ">", self, self.onDepositSelected)
+    self.btnDepositSelected = ISButton:new(layout.controlX, layout.centerButtonsY + 40, layout.controlWidth, 32, ">", self, self.onDepositSelected)
     self.btnDepositSelected:initialise()
     self:addChild(self.btnDepositSelected)
 
-    self.btnDepositVisible = ISButton:new(layout.controlX, layout.centerButtonsY + 120, layout.controlWidth, 32, ">>", self, self.onDepositVisible)
-    self.btnDepositVisible:initialise()
-    self:addChild(self.btnDepositVisible)
-
-    self.btnDropSelected = ISButton:new(layout.controlX, layout.centerButtonsY + 160, layout.controlWidth, 32, "Drop", self, self.onDropSelected)
+    self.btnDropSelected = ISButton:new(layout.controlX, layout.centerButtonsY + 80, layout.controlWidth, 32, "Drop", self, self.onDropSelected)
     self.btnDropSelected:initialise()
     self:addChild(self.btnDropSelected)
 
-    self.btnAutoEquipNow = ISButton:new(layout.controlX, layout.centerButtonsY + 200, layout.controlWidth, 32, "Auto Equip", self, self.onAutoEquipNow)
+    self.btnAutoEquipNow = ISButton:new(layout.controlX, layout.centerButtonsY + 120, layout.controlWidth, 32, "Auto Equip", self, self.onAutoEquipNow)
     self.btnAutoEquipNow:initialise()
     self:addChild(self.btnAutoEquipNow)
 
-    self.btnAutoEquipToggle = ISButton:new(layout.controlX, layout.centerButtonsY + 240, layout.controlWidth, 32, "Auto Off", self, self.onToggleAutoEquip)
+    self.btnAutoEquipToggle = ISButton:new(layout.controlX, layout.centerButtonsY + 160, layout.controlWidth, 32, "Auto Off", self, self.onToggleAutoEquip)
     self.btnAutoEquipToggle:initialise()
     self:addChild(self.btnAutoEquipToggle)
 

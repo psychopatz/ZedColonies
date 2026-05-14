@@ -21,6 +21,36 @@ local function getWithdrawSourceLabel(window)
     return tostring(window and (window.workerName or window.workerID) or "worker")
 end
 
+local function copyEntry(entry)
+    local copied = {}
+    for key, value in pairs(entry or {}) do
+        copied[key] = value
+    end
+    return copied
+end
+
+function DC_SupplyWindow:openWithdrawQuantityModal(selectedEntry)
+    local available = math.max(1, math.floor(tonumber(selectedEntry and selectedEntry.qty) or 1))
+    if available <= 1 then
+        return false
+    end
+
+    local itemLabel = tostring(selectedEntry and (selectedEntry.displayName or selectedEntry.fullType) or "selected item")
+    DC_ColonyQuantityModal.Open({
+        title = "Choose Quantity",
+        promptText = "How many " .. itemLabel .. " entries do you want to withdraw?",
+        maxValue = available,
+        defaultValue = 1,
+        onConfirm = function(quantity)
+            local requestEntry = copyEntry(selectedEntry)
+            requestEntry.requestedQty = math.max(1, math.floor(tonumber(quantity) or 1))
+            self:withdrawWorkerEntries({ requestEntry })
+        end
+    })
+
+    return true
+end
+
 function DC_SupplyWindow:withdrawWorkerEntries(entries)
     if not self.workerID then
         self:updateStatus("No worker selected.")
@@ -32,11 +62,13 @@ function DC_SupplyWindow:withdrawWorkerEntries(entries)
 
     local selectedEntries = {}
     local seenIndexes = {}
+    local quantityByIndex = {}
     for _, entry in ipairs(entries or {}) do
         local ledgerIndex = math.floor(tonumber(entry and entry.ledgerIndex) or 0)
         if ledgerIndex > 0 and not seenIndexes[ledgerIndex] then
             seenIndexes[ledgerIndex] = true
             selectedEntries[#selectedEntries + 1] = entry
+            quantityByIndex[ledgerIndex] = math.max(1, math.floor(tonumber(entry and entry.requestedQty) or tonumber(entry and entry.qty) or 1))
         end
     end
 
@@ -58,13 +90,20 @@ function DC_SupplyWindow:withdrawWorkerEntries(entries)
     local command = getWithdrawCommand(self, activeTab)
 
     local payload = {}
+    local ledgerRequests = {}
     for _, entry in ipairs(selectedEntries) do
         payload[#payload + 1] = entry.ledgerIndex
+        ledgerRequests[#ledgerRequests + 1] = {
+            ledgerIndex = entry.ledgerIndex,
+            qty = quantityByIndex[entry.ledgerIndex] or 1,
+        }
     end
 
     if not self:sendColonyCommand(command, {
             workerID = self.workerID,
-            ledgerIndexes = payload
+            ledgerIndexes = payload,
+            ledgerRequests = ledgerRequests,
+            requestedQty = #selectedEntries == 1 and quantityByIndex[selectedEntries[1].ledgerIndex] or nil,
         }) then
         self:updateStatus("Unable to collect items from " .. getWithdrawSourceLabel(self) .. ".")
         return
@@ -94,6 +133,12 @@ function DC_SupplyWindow:onWithdrawSelected()
     if selectedEntry.kind == "placeholder" then
         self:updateStatus("That row is a missing equipment placeholder. Assign a matching tool from the left side.")
         return
+    end
+
+    if (tonumber(selectedEntry.qty) or 1) > 1 and not (Internal.isGroupEntry and Internal.isGroupEntry(selectedEntry)) then
+        if self:openWithdrawQuantityModal(selectedEntry) then
+            return
+        end
     end
 
     self:withdrawWorkerEntries(Internal.getConcreteTransferEntries(selectedEntry))

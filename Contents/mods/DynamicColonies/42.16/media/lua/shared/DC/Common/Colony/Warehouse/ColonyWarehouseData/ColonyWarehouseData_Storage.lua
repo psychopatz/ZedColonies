@@ -40,7 +40,7 @@ function Data.NormalizeItems(colonyID, items)
     items.__summary = nil
     items.__items = nil
 
-    items.schemaVersion = Config.MOD_DATA_SCHEMA_VERSION or 3
+    items.schemaVersion = Data.GetWarehouseItemsSchemaVersion and Data.GetWarehouseItemsSchemaVersion() or (Config.MOD_DATA_SCHEMA_VERSION or 4)
     items.colonyID = tostring(colonyID)
     items.version = math.max(1, math.floor(tonumber(items.version) or 1))
     items.ledgers = type(items.ledgers) == "table" and items.ledgers or {}

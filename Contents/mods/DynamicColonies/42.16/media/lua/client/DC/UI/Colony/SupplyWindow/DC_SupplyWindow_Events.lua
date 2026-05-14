@@ -31,6 +31,19 @@ local function mergeWarehouseDetail(previousWarehouse, incomingWarehouse)
 
     if incomingWarehouse.ledgers == nil and type(previousWarehouse) == "table" and type(previousWarehouse.ledgers) == "table" then
         merged.ledgers = copyTable(previousWarehouse.ledgers)
+    elseif type(incomingWarehouse.ledgers) == "table" then
+        local previousLedgers = type(previousWarehouse) == "table" and type(previousWarehouse.ledgers) == "table" and previousWarehouse.ledgers or {}
+        merged.ledgers = {
+            provisions = type(incomingWarehouse.ledgers.provisions) == "table"
+                and incomingWarehouse.ledgers.provisions
+                or previousLedgers.provisions,
+            equipment = type(incomingWarehouse.ledgers.equipment) == "table"
+                and incomingWarehouse.ledgers.equipment
+                or previousLedgers.equipment,
+            output = type(incomingWarehouse.ledgers.output) == "table"
+                and incomingWarehouse.ledgers.output
+                or previousLedgers.output,
+        }
     end
 
     return merged
@@ -45,9 +58,9 @@ local function onServerCommand(module, command, args)
     end
     if command == "SyncWorkerDetails" then
         if args and args.unchanged == true then
-            if args.includeWorkerLedgers == true then
-                DC_SupplyWindow.instance.workerDetailVersion = args and args.version or DC_SupplyWindow.instance.workerDetailVersion
-                DC_SupplyWindow.instance.fullHydrationRequested = nil
+            if args.includeWorkerLedgers == true or type(args and args.workerLedgerMask) == "table" or type(args and args.warehouseLedgerMask) == "table" then
+                DC_SupplyWindow.instance.workerDetailVersionsByKey = DC_SupplyWindow.instance.workerDetailVersionsByKey or {}
+                DC_SupplyWindow.instance.workerDetailVersionsByKey[Internal.getWorkerSyncVersionKey and Internal.getWorkerSyncVersionKey(args and args.workerLedgerMask, args and args.warehouseLedgerMask) or "worker|summary|summary"] = args and args.version or nil
             else
                 DC_SupplyWindow.instance.workerSummaryVersion = args and args.version or DC_SupplyWindow.instance.workerSummaryVersion
             end
@@ -59,10 +72,10 @@ local function onServerCommand(module, command, args)
         local worker = args and args.worker or nil
         if worker and worker.workerID == DC_SupplyWindow.instance.workerID then
             local cache = DC_MainWindow and DC_MainWindow.cachedDetails or nil
-            local includeWorkerLedgers = args and args.includeWorkerLedgers == true
+            local includeWorkerLedgers = args and (args.includeWorkerLedgers == true or type(args.workerLedgerMask) == "table" or type(args.warehouseLedgerMask) == "table")
             if DC_MainWindow then
                 DC_MainWindow.cachedDetailVersions = DC_MainWindow.cachedDetailVersions or {}
-                if includeWorkerLedgers then
+                if not includeWorkerLedgers then
                     DC_MainWindow.cachedDetailVersions[worker.workerID] = args and args.version or nil
                 end
             end
@@ -80,8 +93,8 @@ local function onServerCommand(module, command, args)
             end
 
             if includeWorkerLedgers then
-                DC_SupplyWindow.instance.workerDetailVersion = args and args.version or nil
-                DC_SupplyWindow.instance.fullHydrationRequested = nil
+                DC_SupplyWindow.instance.workerDetailVersionsByKey = DC_SupplyWindow.instance.workerDetailVersionsByKey or {}
+                DC_SupplyWindow.instance.workerDetailVersionsByKey[Internal.getWorkerSyncVersionKey and Internal.getWorkerSyncVersionKey(args and args.workerLedgerMask, args and args.warehouseLedgerMask) or "worker|summary|summary"] = args and args.version or nil
             else
                 DC_SupplyWindow.instance.workerSummaryVersion = args and args.version or nil
             end
@@ -100,8 +113,9 @@ local function onServerCommand(module, command, args)
         end
     elseif command == "SyncWarehouse" then
         if args and args.unchanged == true then
-            if args.includeLedgers == true then
-                DC_SupplyWindow.instance.warehouseVersion = args and args.version or DC_SupplyWindow.instance.warehouseVersion
+            if args.includeLedgers == true or type(args and args.ledgerMask) == "table" then
+                DC_SupplyWindow.instance.warehouseVersionsByKey = DC_SupplyWindow.instance.warehouseVersionsByKey or {}
+                DC_SupplyWindow.instance.warehouseVersionsByKey[Internal.getWarehouseSyncVersionKey and Internal.getWarehouseSyncVersionKey(args and args.ledgerMask) or "warehouse|summary"] = args and args.version or nil
             else
                 DC_SupplyWindow.instance.warehouseSummaryVersion = args and args.version or DC_SupplyWindow.instance.warehouseSummaryVersion
             end
@@ -112,8 +126,9 @@ local function onServerCommand(module, command, args)
         end
         local currentWorker = DC_SupplyWindow.instance.workerData or {}
         currentWorker.warehouse = mergeWarehouseDetail(currentWorker.warehouse, args and args.warehouse or nil)
-        if args and args.includeLedgers == true then
-            DC_SupplyWindow.instance.warehouseVersion = args and args.version or nil
+        if args and (args.includeLedgers == true or type(args.ledgerMask) == "table") then
+            DC_SupplyWindow.instance.warehouseVersionsByKey = DC_SupplyWindow.instance.warehouseVersionsByKey or {}
+            DC_SupplyWindow.instance.warehouseVersionsByKey[Internal.getWarehouseSyncVersionKey and Internal.getWarehouseSyncVersionKey(args and args.ledgerMask) or "warehouse|summary"] = args and args.version or nil
         else
             DC_SupplyWindow.instance.warehouseSummaryVersion = args and args.version or nil
         end

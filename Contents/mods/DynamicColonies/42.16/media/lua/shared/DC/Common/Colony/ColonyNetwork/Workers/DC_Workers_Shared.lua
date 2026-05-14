@@ -147,6 +147,28 @@ function Shared.normalizeLedgerIndexes(args)
     return indexes
 end
 
+function Shared.normalizeLedgerQuantities(args)
+    local quantities = {}
+    local requests = args and args.ledgerRequests or nil
+
+    for _, request in ipairs(requests or {}) do
+        local index = math.floor(tonumber(request and request.ledgerIndex) or 0)
+        local qty = math.max(1, math.floor(tonumber(request and request.qty) or 1))
+        if index > 0 then
+            quantities[index] = qty
+        end
+    end
+
+    if args and args.ledgerIndex then
+        local index = math.floor(tonumber(args.ledgerIndex) or 0)
+        if index > 0 then
+            quantities[index] = math.max(1, math.floor(tonumber(args.requestedQty) or quantities[index] or 1))
+        end
+    end
+
+    return quantities
+end
+
 function Shared.getCurrentWorldHours()
     local Config = getConfig()
     if not Config then

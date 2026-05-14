@@ -7,6 +7,14 @@ local Registry = DC_Colony.Registry
 local Skills = DC_Colony.Skills
 local Internal = Registry.Internal
 
+local function copyShallow(source)
+    local copied = {}
+    for key, value in pairs(source or {}) do
+        copied[key] = value
+    end
+    return copied
+end
+
 local function copyLedgerEntries(entries)
     local copied = {}
     for index, entry in ipairs(entries or {}) do
@@ -15,18 +23,61 @@ local function copyLedgerEntries(entries)
     return copied
 end
 
-local function copyWarehouseDetail(warehouse)
+local function normalizeWarehouseLedgerMask(includeWarehouseLedgers)
+    if includeWarehouseLedgers == true then
+        return {
+            provisions = true,
+            equipment = true,
+            output = true,
+        }
+    end
+
+    if type(includeWarehouseLedgers) ~= "table" then
+        return nil
+    end
+
+    local normalized = {}
+    if includeWarehouseLedgers.provisions == true then
+        normalized.provisions = true
+    end
+    if includeWarehouseLedgers.equipment == true then
+        normalized.equipment = true
+    end
+    if includeWarehouseLedgers.output == true then
+        normalized.output = true
+    end
+
+    for _key, _value in pairs(normalized) do
+        return normalized
+    end
+
+    return nil
+end
+
+local function copyWarehouseDetail(warehouse, includeWarehouseLedgers)
     if type(warehouse) ~= "table" then
         return warehouse
     end
 
-    local copied = Internal and Internal.CopyShallow and Internal.CopyShallow(warehouse) or {}
+    local copied = Internal and Internal.CopyShallow and Internal.CopyShallow(warehouse) or copyShallow(warehouse)
+    local ledgerMask = normalizeWarehouseLedgerMask(includeWarehouseLedgers)
+
+    if not ledgerMask then
+        copied.ledgers = nil
+        return copied
+    end
+
     local sourceLedgers = type(warehouse.ledgers) == "table" and warehouse.ledgers or {}
-    copied.ledgers = {
-        provisions = copyLedgerEntries(sourceLedgers.provisions),
-        equipment = copyLedgerEntries(sourceLedgers.equipment),
-        output = copyLedgerEntries(sourceLedgers.output),
-    }
+    copied.ledgers = {}
+    if ledgerMask.provisions == true then
+        copied.ledgers.provisions = copyLedgerEntries(sourceLedgers.provisions)
+    end
+    if ledgerMask.equipment == true then
+        copied.ledgers.equipment = copyLedgerEntries(sourceLedgers.equipment)
+    end
+    if ledgerMask.output == true then
+        copied.ledgers.output = copyLedgerEntries(sourceLedgers.output)
+    end
     return copied
 end
 
@@ -251,27 +302,35 @@ function Registry.GetWorkerDetailsForOwner(ownerUsername, workerID, includeWareh
     Registry.RecalculateWorker(worker)
     local detail = Internal.CopyShallow(worker)
     local includeWorkerLedgerData = includeWorkerLedgers ~= false
-    detail.nutritionLedger = includeWorkerLedgerData and copyLedgerEntries(worker.nutritionLedger) or nil
-    detail.toolLedger = includeWorkerLedgerData and copyLedgerEntries(worker.toolLedger) or nil
-    detail.haulLedger = includeWorkerLedgerData and copyLedgerEntries(worker.haulLedger) or nil
-    detail.outputLedger = includeWorkerLedgerData and copyLedgerEntries(worker.outputLedger) or nil
+    local workerLedgerMask = includeWorkerLedgerData == true and type(includeWorkerLedgers) == "table" and includeWorkerLedgers or nil
+
+    if includeWorkerLedgerData and not workerLedgerMask then
+        detail.nutritionLedger = copyLedgerEntries(worker.nutritionLedger)
+        detail.toolLedger = copyLedgerEntries(worker.toolLedger)
+        detail.haulLedger = copyLedgerEntries(worker.haulLedger)
+        detail.outputLedger = copyLedgerEntries(worker.outputLedger)
+    elseif includeWorkerLedgerData then
+        detail.nutritionLedger = workerLedgerMask.nutrition == true and copyLedgerEntries(worker.nutritionLedger) or nil
+        detail.toolLedger = workerLedgerMask.tool == true and copyLedgerEntries(worker.toolLedger) or nil
+        detail.haulLedger = workerLedgerMask.haul == true and copyLedgerEntries(worker.haulLedger) or nil
+        detail.outputLedger = workerLedgerMask.output == true and copyLedgerEntries(worker.outputLedger) or nil
+    else
+        detail.nutritionLedger = nil
+        detail.toolLedger = nil
+        detail.haulLedger = nil
+        detail.outputLedger = nil
+    end
     detail.activityLog = copyLedgerEntries(worker.activityLog)
     detail.statusFlags = Internal.CopyDeep and Internal.CopyDeep(worker.statusFlags) or worker.statusFlags
     detail.energy = Internal.CopyDeep and Internal.CopyDeep(worker.energy) or worker.energy
     detail.tiredness = Internal.CopyDeep and Internal.CopyDeep(worker.tiredness) or worker.tiredness
     detail.companion = Internal.CopyDeep and Internal.CopyDeep(worker.companion) or worker.companion
     detail.selfTreatmentState = Internal.CopyDeep and Internal.CopyDeep(worker.selfTreatmentState) or worker.selfTreatmentState
-    detail.warehouse = copyWarehouseDetail(worker.warehouse)
+    detail.warehouse = copyWarehouseDetail(worker.warehouse, includeWarehouseLedgers)
     if Skills and Skills.BuildClientSkillSnapshotForWorker then
         detail.skills = Skills.BuildClientSkillSnapshotForWorker(worker)
         detail.primarySkillID = Skills.GetPrimarySkillID and Skills.GetPrimarySkillID(worker) or nil
         detail.jobSkillEffects = Skills.GetWorkerJobEffects and Skills.GetWorkerJobEffects(worker) or nil
-    end
-    if not includeWorkerLedgerData then
-        detail.nutritionLedger = nil
-        detail.toolLedger = nil
-        detail.haulLedger = nil
-        detail.outputLedger = nil
     end
     return detail
 end

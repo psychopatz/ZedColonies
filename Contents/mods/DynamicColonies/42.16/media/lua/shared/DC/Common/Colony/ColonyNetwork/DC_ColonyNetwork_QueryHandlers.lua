@@ -27,7 +27,10 @@ Network.Handlers.RequestWorkerDetails = function(player, args)
         player,
         args.workerID,
         args.knownVersion,
-        args.includeWorkerLedgers == true
+        args.includeWorkerLedgers == true or type(args.workerLedgerMask) == "table",
+        args.includeWarehouseLedgers == true or type(args.warehouseLedgerMask) == "table",
+        args.workerLedgerMask,
+        args.warehouseLedgerMask
     )
 end
 
@@ -35,7 +38,8 @@ Network.Handlers.RequestWarehouse = function(player, args)
     Network.Internal.syncWarehouse(
         player,
         args and args.knownVersion,
-        args and args.includeLedgers == true
+        args and (args.includeLedgers == true or type(args.ledgerMask) == "table"),
+        args and args.ledgerMask
     )
 end
 

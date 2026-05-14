@@ -86,9 +86,9 @@ function Withdraw.withdrawWorkerToolEntries(player, worker, inventory, indexes)
     return moved
 end
 
-function Withdraw.withdrawWarehouseToolEntries(player, ownerUsername, inventory, indexes)
+function Withdraw.withdrawWarehouseToolEntries(player, ownerUsername, inventory, indexes, quantitiesByIndex)
     local moved = 0
-    for _, entry in ipairs(Warehouse.TakeEquipmentEntries(ownerUsername, indexes) or {}) do
+    for _, entry in ipairs(Warehouse.TakeEquipmentEntries(ownerUsername, indexes, quantitiesByIndex) or {}) do
         if entry and entry.fullType then
             if Withdraw.materializeWithdrawnTool(player, inventory, entry) then
                 moved = moved + math.max(1, math.floor(tonumber(entry.qty) or 1))

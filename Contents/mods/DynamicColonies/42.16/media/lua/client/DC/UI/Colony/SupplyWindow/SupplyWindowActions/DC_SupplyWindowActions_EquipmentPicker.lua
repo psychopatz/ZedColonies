@@ -26,7 +26,8 @@ function DC_SupplyWindow:assignEquipmentPickerCandidate(candidate, requirementKe
                 workerID = self.workerID,
                 ledgerIndex = candidate.ledgerIndex,
                 entryID = candidate.entryID,
-                requirementKey = requirementKey
+                requirementKey = requirementKey,
+                requestedQty = 1,
             }) then
             self:updateStatus("Unable to move that warehouse item into " .. tostring(self.workerName or "this worker") .. ".")
             return
@@ -82,8 +83,9 @@ function DC_SupplyWindow:openEquipmentPickerForWorkerEntry(entry)
     local warehouseLedger = self.workerData and self.workerData.warehouse and self.workerData.warehouse.ledgers and self.workerData.warehouse.ledgers.equipment or nil
     if type(warehouseLedger) ~= "table" then
         self:sendColonyCommand("RequestWarehouse", {
-            knownVersion = self.warehouseVersion,
-            includeLedgers = true
+            knownVersion = self.warehouseVersionsByKey and self.warehouseVersionsByKey[Internal.getWarehouseSyncVersionKey and Internal.getWarehouseSyncVersionKey({ equipment = true }) or "warehouse|equipment"] or nil,
+            includeLedgers = true,
+            ledgerMask = { equipment = true }
         })
     end
 

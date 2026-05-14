@@ -75,7 +75,7 @@ end
 
 function Data.BuildEmptyItems(colonyID)
     return {
-        schemaVersion = Config.MOD_DATA_SCHEMA_VERSION or 3,
+        schemaVersion = Data.GetWarehouseItemsSchemaVersion and Data.GetWarehouseItemsSchemaVersion() or (Config.MOD_DATA_SCHEMA_VERSION or 4),
         colonyID = tostring(colonyID),
         version = 1,
         ledgers = {

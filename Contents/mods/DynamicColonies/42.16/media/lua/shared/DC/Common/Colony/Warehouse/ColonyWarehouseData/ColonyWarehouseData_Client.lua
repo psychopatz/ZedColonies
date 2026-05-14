@@ -10,6 +10,34 @@ local Data = Internal.Data or {}
 
 Internal.Data = Data
 
+local function normalizeLedgerMask(includeLedgers, ledgerMask)
+    if type(ledgerMask) == "table" then
+        local normalized = {}
+        if ledgerMask.provisions == true then
+            normalized.provisions = true
+        end
+        if ledgerMask.equipment == true then
+            normalized.equipment = true
+        end
+        if ledgerMask.output == true then
+            normalized.output = true
+        end
+        for _key, _value in pairs(normalized) do
+            return normalized
+        end
+    end
+
+    if includeLedgers == true then
+        return {
+            provisions = true,
+            equipment = true,
+            output = true,
+        }
+    end
+
+    return nil
+end
+
 function Warehouse.GetClientSummary(ownerUsername)
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
     if not warehouse then
@@ -35,22 +63,28 @@ function Warehouse.GetClientSummary(ownerUsername)
     }
 end
 
-function Warehouse.GetClientSnapshot(ownerUsername, includeLedgers)
+function Warehouse.GetClientSnapshot(ownerUsername, includeLedgers, ledgerMask)
     local snapshot = Warehouse.GetClientSummary(ownerUsername)
     if not snapshot then
         return nil
     end
 
-    if includeLedgers ~= true then
+    local normalizedMask = normalizeLedgerMask(includeLedgers, ledgerMask)
+    if not normalizedMask then
         return snapshot
     end
 
     local warehouse = Warehouse.GetOwnerWarehouse(ownerUsername)
-    snapshot.ledgers = {
-        provisions = Data.CopyArray(warehouse.ledgers.provisions),
-        equipment = Data.CopyArray(warehouse.ledgers.equipment),
-        output = Data.CopyArray(warehouse.ledgers.output)
-    }
+    snapshot.ledgers = {}
+    if normalizedMask.provisions == true then
+        snapshot.ledgers.provisions = Data.CopyArray(warehouse.ledgers.provisions)
+    end
+    if normalizedMask.equipment == true then
+        snapshot.ledgers.equipment = Data.CopyArray(warehouse.ledgers.equipment)
+    end
+    if normalizedMask.output == true then
+        snapshot.ledgers.output = Data.CopyArray(warehouse.ledgers.output)
+    end
     return snapshot
 end
 

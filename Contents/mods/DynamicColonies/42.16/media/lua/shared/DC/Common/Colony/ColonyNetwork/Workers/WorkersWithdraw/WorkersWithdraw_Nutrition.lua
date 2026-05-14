@@ -7,6 +7,22 @@ local Network = DC_Colony.Network
 local Internal = Network.Internal or {}
 local Withdraw = (Network.Workers or {}).Withdraw or {}
 
+local function getProvisionCustomData(entry)
+    if type(entry) ~= "table" then
+        return nil
+    end
+
+    return {
+        caloriesRemaining = entry.caloriesRemaining,
+        hydrationRemaining = entry.hydrationRemaining,
+        treatmentUnitsRemaining = entry.treatmentUnitsRemaining,
+        medicalUse = entry.medicalUse,
+        consumedOutputFullType = entry.consumedOutputFullType,
+        consumedOutputDisplayName = entry.consumedOutputDisplayName,
+        consumedOutputFluidAmount = entry.consumedOutputFluidAmount,
+    }
+end
+
 function Withdraw.withdrawWorkerNutritionEntries(worker, inventory, indexes)
     local moved = 0
     table.sort(indexes or {}, function(a, b)
@@ -15,7 +31,7 @@ function Withdraw.withdrawWorkerNutritionEntries(worker, inventory, indexes)
     for _, index in ipairs(indexes or {}) do
         local entry = worker and worker.nutritionLedger and worker.nutritionLedger[index] or nil
         if entry and entry.fullType then
-            Internal.addInventoryItem(inventory, entry.fullType, 1)
+            Internal.addInventoryItem(inventory, entry.fullType, 1, getProvisionCustomData(entry))
             table.remove(worker.nutritionLedger, index)
             moved = moved + 1
         end
@@ -26,12 +42,12 @@ function Withdraw.withdrawWorkerNutritionEntries(worker, inventory, indexes)
     return moved
 end
 
-function Withdraw.withdrawWarehouseNutritionEntries(ownerUsername, inventory, indexes)
+function Withdraw.withdrawWarehouseNutritionEntries(ownerUsername, inventory, indexes, quantitiesByIndex)
     local moved = 0
-    for _, entry in ipairs(Warehouse.TakeProvisionEntries(ownerUsername, indexes) or {}) do
+    for _, entry in ipairs(Warehouse.TakeProvisionEntries(ownerUsername, indexes, quantitiesByIndex) or {}) do
         if entry and entry.fullType then
             local qty = math.max(1, tonumber(entry.qty) or 1)
-            Internal.addInventoryItem(inventory, entry.fullType, qty)
+            Internal.addInventoryItem(inventory, entry.fullType, qty, getProvisionCustomData(entry))
             moved = moved + qty
         end
     end

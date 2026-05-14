@@ -53,10 +53,20 @@ function EventSync.mergeWarehouseDetail(previousWarehouse, incomingWarehouse)
             merged.ledgers.output = EventSync.copyArrayEntries(previousWarehouse.ledgers.output)
         end
     elseif type(incomingWarehouse.ledgers) == "table" then
+        local previousLedgers = type(previousWarehouse) == "table" and type(previousWarehouse.ledgers) == "table" and previousWarehouse.ledgers or {}
         merged.ledgers = {
-            provisions = EventSync.copyArrayEntries(incomingWarehouse.ledgers.provisions) or {},
-            equipment = EventSync.copyArrayEntries(incomingWarehouse.ledgers.equipment) or {},
-            output = EventSync.copyArrayEntries(incomingWarehouse.ledgers.output) or {},
+            provisions = type(incomingWarehouse.ledgers.provisions) == "table"
+                and EventSync.copyArrayEntries(incomingWarehouse.ledgers.provisions)
+                or EventSync.copyArrayEntries(previousLedgers.provisions)
+                or {},
+            equipment = type(incomingWarehouse.ledgers.equipment) == "table"
+                and EventSync.copyArrayEntries(incomingWarehouse.ledgers.equipment)
+                or EventSync.copyArrayEntries(previousLedgers.equipment)
+                or {},
+            output = type(incomingWarehouse.ledgers.output) == "table"
+                and EventSync.copyArrayEntries(incomingWarehouse.ledgers.output)
+                or EventSync.copyArrayEntries(previousLedgers.output)
+                or {},
         }
     end
 
