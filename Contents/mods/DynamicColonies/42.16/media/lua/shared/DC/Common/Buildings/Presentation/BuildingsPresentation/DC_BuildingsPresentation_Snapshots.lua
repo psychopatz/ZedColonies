@@ -18,6 +18,28 @@ end
 
 modules.Snapshots = true
 
+local function getRecipeEntryDisplay(entry)
+    local categoryId = tostring(entry and entry.category or "")
+    if categoryId ~= "" then
+        local config = DC_Colony and DC_Colony.Config or nil
+        local definition = config and config.GetItemCategoryDefinition and config.GetItemCategoryDefinition(categoryId) or nil
+        return {
+            fullType = nil,
+            category = categoryId,
+            displayName = tostring(definition and definition.displayName or categoryId),
+            count = entry and entry.count,
+        }
+    end
+
+    local fullType = entry and entry.fullType or nil
+    return {
+        fullType = fullType,
+        category = nil,
+        displayName = helpers.GetDisplayName(fullType),
+        count = entry and entry.count,
+    }
+end
+
 function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     local owner = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetOwnerUsername
         and DC_Colony.Config.GetOwnerUsername(ownerUsername)
@@ -69,11 +91,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
             if levelDefinition then
                 local recipe = {}
                 for _, entry in ipairs(levelDefinition.recipe or {}) do
-                    recipe[#recipe + 1] = {
-                        fullType = entry.fullType,
-                        displayName = helpers.GetDisplayName(entry.fullType),
-                        count = entry.count
-                    }
+                    recipe[#recipe + 1] = getRecipeEntryDisplay(entry)
                 end
                 levels[#levels + 1] = {
                     level = level,
@@ -145,6 +163,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     return {
         colonyId = colonyId,
         ownerUsername = owner,
+        ownerVersion = math.max(1, math.floor(tonumber(ownerData and ownerData.version) or 1)),
         buildings = buildings,
         activeProjects = activeProjects,
         warehouse = warehouseApi and warehouseApi.GetClientSummary and warehouseApi.GetClientSummary(owner) or nil,

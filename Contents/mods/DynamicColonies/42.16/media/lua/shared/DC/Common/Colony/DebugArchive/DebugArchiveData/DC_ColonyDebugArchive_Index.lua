@@ -87,9 +87,12 @@ end
 function DebugArchive.GetIndexSnapshot()
     local colonies = {}
     local owners = Registry and Registry.GetOwnerUsernames and Registry.GetOwnerUsernames() or {}
+    local versionParts = {}
 
     for _, ownerUsername in ipairs(owners) do
-        colonies[#colonies + 1] = buildIndexEntry(ownerUsername)
+        local entry = buildIndexEntry(ownerUsername)
+        colonies[#colonies + 1] = entry
+        versionParts[#versionParts + 1] = tostring(entry and entry.version or "")
     end
 
     table.sort(colonies, function(a, b)
@@ -102,7 +105,7 @@ function DebugArchive.GetIndexSnapshot()
     end)
 
     return {
-        version = Internal.buildVersionToken(colonies),
+        version = "debug-index:" .. tostring(#colonies) .. ":" .. table.concat(versionParts, "|"),
         colonyCount = #colonies,
         colonies = colonies,
     }

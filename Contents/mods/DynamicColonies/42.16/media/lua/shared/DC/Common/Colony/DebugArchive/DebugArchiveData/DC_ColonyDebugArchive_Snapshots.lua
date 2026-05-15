@@ -11,6 +11,36 @@ local Resources = DC_Colony.Resources
 local Research = DC_Colony.Research
 local Buildings = DC_Buildings
 
+local function buildCompactSnapshotVersion(ownerUsername, workerSummary, warehouseSummary, abstractSummary, researchSnapshot, buildingSnapshot, rawState)
+    local rawVersions = rawState and rawState.versions or {}
+    local rawCounts = rawState and rawState.counts or {}
+
+    local parts = {
+        "debug-colony",
+        tostring(ownerUsername or ""),
+        tostring(rawVersions and rawVersions.workerListVersion or "workers:1"),
+        tostring(rawVersions and rawVersions.warehouseVersion or "warehouse:1"),
+        tostring(rawVersions and rawVersions.warehouseInventoryVersion or "warehouseinv:1"),
+        tostring(rawVersions and rawVersions.abstractInventoryVersion or "abstract:1"),
+        tostring(rawVersions and rawVersions.researchVersion or "research:1"),
+        "bld:" .. tostring(buildingSnapshot and buildingSnapshot.ownerVersion or 1),
+        "workers:" .. tostring(workerSummary and workerSummary.totalCount or 0),
+        "living:" .. tostring(workerSummary and workerSummary.livingCount or 0),
+        "dead:" .. tostring(workerSummary and workerSummary.deadCount or 0),
+        "whW:" .. tostring(math.floor((tonumber(warehouseSummary and warehouseSummary.usedWeight) or 0) * 100 + 0.5)),
+        "absI:" .. tostring(abstractSummary and abstractSummary.totalItemCount or 0),
+        "absC:" .. tostring(abstractSummary and abstractSummary.totalCategoryCount or 0),
+        "absW:" .. tostring(math.floor((tonumber(abstractSummary and abstractSummary.totalWeight) or 0) * 100 + 0.5)),
+        "rq:" .. tostring(researchSnapshot and researchSnapshot.queueCount or 0),
+        "bp:" .. tostring(researchSnapshot and researchSnapshot.unlockedCount or 0),
+        "map:" .. tostring(buildingSnapshot and buildingSnapshot.colonyId or ownerUsername or ""),
+        "bc:" .. tostring(rawCounts and rawCounts.buildings or 0),
+        "pc:" .. tostring(rawCounts and rawCounts.activeProjects or 0),
+    }
+
+    return table.concat(parts, ":")
+end
+
 local function sortCountsTable(source)
     local rows = {}
     for key, count in pairs(source or {}) do
@@ -305,7 +335,15 @@ function DebugArchive.GetColonySnapshot(ownerUsername)
         buildingSnapshot
     )
 
-    snapshot.version = Internal.buildVersionToken(snapshot)
+    snapshot.version = buildCompactSnapshotVersion(
+        owner,
+        workerSummary,
+        snapshot.warehouse.summary,
+        abstractInventory.summary,
+        researchSnapshot,
+        buildingSnapshot,
+        snapshot.rawState
+    )
     return snapshot
 end
 
