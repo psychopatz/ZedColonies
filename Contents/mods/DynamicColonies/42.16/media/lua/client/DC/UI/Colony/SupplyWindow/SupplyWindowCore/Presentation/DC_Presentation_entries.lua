@@ -371,18 +371,29 @@ function Internal.getWorkerTabSummary(window, entries)
     if activeTab == Internal.Tabs.Output then
         local stacks = 0
         local totalQty = 0
+        local categoryCount = 0
+        local specialCount = 0
         for _, entry in ipairs(entries or {}) do
             stacks = stacks + 1
             totalQty = totalQty + math.max(1, tonumber(entry.qty) or 1)
+            if entry and entry.kind == "category" then
+                categoryCount = categoryCount + 1
+            elseif entry and entry.kind == "special" then
+                specialCount = specialCount + 1
+            end
         end
         local worker = window and window.workerData or nil
         local config = Internal.Config or {}
         local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
         if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-            return tostring(stacks)
-                .. " stacks | "
+            local summary = tostring(categoryCount)
+                .. " categories | "
                 .. tostring(totalQty)
                 .. " total"
+            if specialCount > 0 then
+                summary = summary .. " | " .. tostring(specialCount) .. " literal"
+            end
+            return summary
         end
 
         local summary = tostring(stacks) .. " stacks | " .. tostring(totalQty) .. " total"
@@ -513,7 +524,7 @@ function Internal.getPlayerEntryPresentation(entry, activeTab, worker, window)
         if Internal.isWarehouseView and Internal.isWarehouseView(window) then
             return applyRottenTitleSuffix({
                 statText = appendWeightText(
-                    appendSegment("Store in warehouse storage", appendSegment(getDurabilityText(entry), getOutputStateText(entry))),
+                    appendSegment("Store in warehouse inventory", appendSegment(getDurabilityText(entry), getOutputStateText(entry))),
                     entry
                 ),
                 badgeText = "Ready",
@@ -635,6 +646,23 @@ function Internal.getWorkerEntryPresentation(entry, activeTab)
     end
 
     if activeTab == Internal.Tabs.Output then
+        if entry.kind == "category" then
+            return {
+                statText = appendWeightText(
+                    "Qty " .. tostring(entry.qty or 0) .. " | Group " .. tostring(entry.group or "Waste"),
+                    entry
+                ),
+                badgeText = "Category",
+            }
+        end
+
+        if entry.kind == "special" then
+            return {
+                statText = appendWeightText("Qty " .. tostring(entry.qty or 1) .. " | Literal special stock", entry),
+                badgeText = "Read Only",
+            }
+        end
+
         return applyRottenTitleSuffix({
             statText = appendWeightText(
                 appendSegment("Qty " .. tostring(entry.qty or 1), appendSegment(getItemStateText(entry), getOutputStateText(entry))),

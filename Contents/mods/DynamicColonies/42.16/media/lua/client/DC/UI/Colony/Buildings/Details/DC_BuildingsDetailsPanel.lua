@@ -200,6 +200,8 @@ function DC_BuildingsDetailsPanel:onSwapClicked()
         self:dispatchAction("swapProjectBuilder")
     elseif manageState.isGreenhouse == true then
         self:dispatchAction("manageGreenhouse")
+    elseif manageState.isResearchStation == true then
+        self:dispatchAction("manageResearch")
     end
 end
 

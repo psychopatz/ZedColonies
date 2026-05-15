@@ -146,6 +146,69 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
             text = text .. " <RGB:0.82,0.82,0.82> Use the Garden button to manage beds, seeds, and temperature in a dedicated modal. <LINE> "
         end
 
+        if tonumber(building.productionRecipeCount or 0) > 0 then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Production Loop <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Ready Recipes: <RGB:1,1,1> "
+                .. tostring(building.productionReadyCount or 0)
+                .. " / "
+                .. tostring(building.productionRecipeCount or 0)
+                .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Tick Rate: <RGB:1,1,1> Every "
+                .. tostring(building.productionIntervalHours or 1)
+                .. " hour(s), up to "
+                .. tostring(building.productionMaxCyclesPerPass or 1)
+                .. " cycle(s) per pass <LINE> "
+            for _, recipe in ipairs(building.productionRecipes or {}) do
+                local statusColor = recipe.ready == true and "<RGB:0.76,0.92,0.76>" or "<RGB:0.95,0.62,0.62>"
+                text = text .. " " .. statusColor .. tostring(recipe.displayName or recipe.id or "Recipe") .. " <LINE> "
+                for _, line in ipairs(DC_BuildingsUIUtils.BuildRecipeLines(recipe.inputs or {})) do
+                    text = text .. " " .. line .. " <LINE> "
+                end
+                if #(recipe.outputs or {}) > 0 then
+                    text = text .. " <RGB:0.72,0.72,0.72> Outputs: <RGB:1,1,1> "
+                    for outputIndex, output in ipairs(recipe.outputs or {}) do
+                        if outputIndex > 1 then
+                            text = text .. ", "
+                        end
+                        text = text .. tostring(output.count or 0) .. " x " .. tostring(output.displayName or output.category or "Output")
+                    end
+                    text = text .. " <LINE> "
+                end
+            end
+        end
+
+        if building.buildingType == "ResearchStation" then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Research Queue <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Queued Jobs: <RGB:1,1,1> " .. tostring(building.researchQueueCount or 0) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Unlocked Blueprints: <RGB:1,1,1> " .. tostring(building.unlockedBlueprintCount or 0) .. " <LINE> "
+            if building.activeResearch then
+                text = text .. " <RGB:0.72,0.72,0.72> Active Study: <RGB:1,1,1> " .. tostring(building.activeResearch.displayName or building.activeResearch.fullType or "Unknown") .. " <LINE> "
+                text = text .. " <RGB:0.72,0.72,0.72> Progress: <RGB:1,1,1> "
+                    .. tostring(math.floor((tonumber(building.activeResearch.progressHours) or 0) + 0.5))
+                    .. " / "
+                    .. tostring(math.floor((tonumber(building.activeResearch.requiredHours) or 0) + 0.5))
+                    .. " hours <LINE> "
+            else
+                text = text .. " <RGB:0.62,0.62,0.62> No active research job. <LINE> "
+            end
+            if #(building.unlockedBlueprintPreview or {}) > 0 then
+                text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Recent Unlocks <LINE> "
+                for _, blueprint in ipairs(building.unlockedBlueprintPreview or {}) do
+                    text = text .. " <RGB:0.82,0.82,0.82> - "
+                        .. tostring(blueprint.displayName or blueprint.fullType or "Blueprint")
+                        .. " <RGB:0.72,0.72,0.72>("
+                        .. tostring(blueprint.buildingType or "Workshop")
+                        .. ") <LINE> "
+                end
+            end
+            text = text .. " <RGB:0.82,0.82,0.82> Use the Research button to submit specimens and inspect the unlock queue. <LINE> "
+        elseif tonumber(building.unlockedBlueprintCountForBuilding or 0) > 0 then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Blueprint Unlocks <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Research Recipes Available Here: <RGB:1,1,1> "
+                .. tostring(building.unlockedBlueprintCountForBuilding or 0)
+                .. " <LINE> "
+        end
+
         text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Occupants <LINE> "
         local occupants = building.occupants or {}
         if #occupants <= 0 then

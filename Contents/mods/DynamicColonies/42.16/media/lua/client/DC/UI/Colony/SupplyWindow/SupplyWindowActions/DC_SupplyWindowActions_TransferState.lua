@@ -70,8 +70,9 @@ function DC_SupplyWindow:updateTransferControls()
     local depositEnabled = transferAllowed and (activeTab ~= Internal.Tabs.Output or isWarehouseOutputTab)
     local hasWorkerEntries = #(self.workerEntries or {}) > 0
     local dropEnabled = canDropHaulEntries(self) and hasWorkerEntries
+    local withdrawEnabled = transferAllowed and hasWorkerEntries and not isWarehouseOutputTab
 
-    self.btnWithdrawSelected:setEnable(transferAllowed and hasWorkerEntries)
+    self.btnWithdrawSelected:setEnable(withdrawEnabled)
     self.btnDepositSelected:setEnable(depositEnabled)
     if self.btnDropSelected then
         self.btnDropSelected:setVisible(canDropHaulEntries(self))

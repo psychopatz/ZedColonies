@@ -91,13 +91,9 @@ function Internal.getTransferBlockedReason(worker)
 end
 
 function Internal.canStoreInWarehouseOutput(entry)
-    if not entry or entry.kind == "money" then
-        return false
-    end
-    if Internal.Config and Internal.Config.IsMedicalProvisionFullType and Internal.Config.IsMedicalProvisionFullType(entry.fullType) then
-        return false
-    end
-    return tostring(entry.fullType or "") ~= ""
+    return entry ~= nil
+        and entry.kind ~= "money"
+        and tostring(entry.fullType or "") ~= ""
 end
 
 function Internal.shouldShowPlayerEntry(entry, activeTab, window)

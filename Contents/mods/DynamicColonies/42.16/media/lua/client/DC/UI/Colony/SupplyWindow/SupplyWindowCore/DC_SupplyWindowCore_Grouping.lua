@@ -23,6 +23,8 @@ end
 local function canGroupEntry(entry)
     return entry
         and entry.kind ~= "money"
+        and entry.kind ~= "category"
+        and entry.kind ~= "special"
         and entry.kind ~= "placeholder"
         and entry.kind ~= "group"
 end

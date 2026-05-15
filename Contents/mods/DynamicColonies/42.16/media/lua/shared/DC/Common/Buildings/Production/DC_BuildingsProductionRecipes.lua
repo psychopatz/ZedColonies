@@ -8,13 +8,15 @@ Production.Recipes = Production.Recipes or {
         {
             id = "cook_meal",
             requiredLevel = 1,
+            foodNutrition = {
+                categories = { "RawFood", "CookableMeat", "CookableFish", "CookableProduce" },
+                calories = 500,
+                hydration = 500,
+            },
             inputs = {
-                { category = "CookableMeat", count = 1 },
-                { category = "CookableProduce", count = 1 },
-                { category = "Water", count = 1 },
             },
             outputs = {
-                { category = "Meal", count = 2 },
+                { category = "Meal", count = 1 },
             }
         },
         {

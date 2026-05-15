@@ -1,5 +1,6 @@
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig"
 require "DC/Common/Colony/ColonyNutrition/DC_ColonyNutrition"
+require "DC/Common/Colony/AbstractInventory/DC_ColonyAbstractInventory"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Warehouse = DC_Colony.Warehouse or {}

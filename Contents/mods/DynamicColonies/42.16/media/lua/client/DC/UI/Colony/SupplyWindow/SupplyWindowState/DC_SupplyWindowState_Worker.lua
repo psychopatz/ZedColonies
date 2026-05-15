@@ -41,18 +41,33 @@ function DC_SupplyWindow:refreshWorkerEntries()
             end
         end
     elseif activeTab == Internal.Tabs.Output then
-        local ledger = nil
         if isWarehouseView then
-            ledger = warehouseLedgers.output or {}
-        elseif normalizedJob == ((config.JobTypes or {}).Scavenge) then
-            ledger = worker and worker.haulLedger or {}
+            local abstractStock = warehouse and (warehouse.abstractStock or warehouse.categoryCounts) or {}
+            local literalSpecialStock = warehouse and warehouse.literalSpecialStock or {}
+            for categoryId, stockEntry in pairs(abstractStock or {}) do
+                local entry = Internal.buildWarehouseCategoryEntry(categoryId, stockEntry)
+                if entry then
+                    self.workerEntries[#self.workerEntries + 1] = entry
+                end
+            end
+            for index, literalEntry in ipairs(literalSpecialStock or {}) do
+                local entry = Internal.buildWarehouseLiteralSpecialEntry(literalEntry, index)
+                if entry then
+                    self.workerEntries[#self.workerEntries + 1] = entry
+                end
+            end
         else
-            ledger = worker and worker.outputLedger or {}
-        end
-        for index, ledgerEntry in ipairs(ledger) do
-            local entry = Internal.buildWorkerOutputEntry(ledgerEntry, index)
-            if entry then
-                self.workerEntries[#self.workerEntries + 1] = entry
+            local ledger = nil
+            if normalizedJob == ((config.JobTypes or {}).Scavenge) then
+                ledger = worker and worker.haulLedger or {}
+            else
+                ledger = worker and worker.outputLedger or {}
+            end
+            for index, ledgerEntry in ipairs(ledger) do
+                local entry = Internal.buildWorkerOutputEntry(ledgerEntry, index)
+                if entry then
+                    self.workerEntries[#self.workerEntries + 1] = entry
+                end
             end
         end
     else

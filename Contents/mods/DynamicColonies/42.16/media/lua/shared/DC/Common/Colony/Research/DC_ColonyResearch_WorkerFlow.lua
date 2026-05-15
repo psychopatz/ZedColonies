@@ -4,6 +4,7 @@ DC_Colony.Research.Internal = DC_Colony.Research.Internal or {}
 
 local Research = DC_Colony.Research
 local Internal = Research.Internal
+local AbstractInventory = DC_Colony.AbstractInventory
 
 local function hasResearchStation(ownerUsername)
     local buildings = DC_Buildings
@@ -17,12 +18,11 @@ local function hasResearchStation(ownerUsername)
 end
 
 local function releaseCompletedSpecimen(ownerUsername, job)
-    local warehouse = DC_Colony and DC_Colony.Warehouse or nil
-    if not (warehouse and warehouse.TakeLiteralSpecial and job and job.jobID) then
+    if not (AbstractInventory and AbstractInventory.TakeLiteralSpecial and job and job.jobID) then
         return
     end
 
-    warehouse.TakeLiteralSpecial(ownerUsername, 1, function(entry)
+    AbstractInventory.TakeLiteralSpecial(ownerUsername, 1, function(entry)
         return tostring(entry and entry.researchJobID or "") == tostring(job.jobID)
             and tostring(entry and entry.specialStockType or "") == "research_specimen"
     end, {

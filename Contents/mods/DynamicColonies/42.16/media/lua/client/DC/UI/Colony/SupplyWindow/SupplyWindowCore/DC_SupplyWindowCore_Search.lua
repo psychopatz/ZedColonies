@@ -32,6 +32,8 @@ function Internal.matchesFilter(entry, filterText)
     local haystacks = {
         string.lower(tostring(entry.displayName or "")),
         string.lower(tostring(entry.fullType or "")),
+        string.lower(tostring(entry.category or "")),
+        string.lower(tostring(entry.group or "")),
         string.lower(tostring(entry.hintText or "")),
         string.lower(tostring(entry.searchText or "")),
     }
@@ -48,6 +50,8 @@ end
 function Internal.compareEntries(a, b)
     local kindOrder = {
         money = 0,
+        category = 1,
+        special = 2,
         tool = 1,
         worker = 1,
         output = 1,

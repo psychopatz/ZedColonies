@@ -56,6 +56,10 @@ function DC_SupplyWindow:withdrawWorkerEntries(entries)
         self:updateStatus("No worker selected.")
         return
     end
+    if Internal.isWarehouseView and Internal.isWarehouseView(self) and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output then
+        self:updateStatus("Abstract warehouse categories cannot be withdrawn as literal items.")
+        return
+    end
     if not self:canTransferWithWorker(true) then
         return
     end
@@ -124,6 +128,10 @@ function DC_SupplyWindow:onWithdrawSelected()
         self:updateStatus("Select an item on the worker side first.")
         return
     end
+    if Internal.isWarehouseView and Internal.isWarehouseView(self) and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output then
+        self:updateStatus("Abstract warehouse categories cannot be withdrawn as literal items.")
+        return
+    end
 
     if selectedEntry.kind == "money" then
         self:openWithdrawMoneyModal()
@@ -145,6 +153,10 @@ function DC_SupplyWindow:onWithdrawSelected()
 end
 
 function DC_SupplyWindow:onWithdrawVisible()
+    if Internal.isWarehouseView and Internal.isWarehouseView(self) and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output then
+        self:updateStatus("Abstract warehouse categories cannot be withdrawn as literal items.")
+        return
+    end
     local visibleEntries = {}
     for _, entry in ipairs(self.workerVisibleEntries or {}) do
         if entry and entry.kind ~= "money" and entry.kind ~= "placeholder" then

@@ -160,6 +160,10 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
             local currentLevelDefinition = Config.GetLevelDefinition and Config.GetLevelDefinition(building.buildingType, building.level) or nil
             local resourcesApi = DC_Colony and DC_Colony.Resources or nil
             local buildingMetrics = resourcesApi and resourcesApi.GetBuildingMetrics and resourcesApi.GetBuildingMetrics(owner, building) or {}
+            local productionApi = DC_Buildings and DC_Buildings.Production or nil
+            local researchApi = DC_Colony and DC_Colony.Research or nil
+            local productionMetrics = productionApi and productionApi.GetBuildingMetrics and productionApi.GetBuildingMetrics(owner, building) or {}
+            local researchMetrics = researchApi and researchApi.GetBuildingMetrics and researchApi.GetBuildingMetrics(owner, building) or {}
             if tostring(building.buildingType or "") == "Barricade"
                 and Config.Frontier
                 and Config.Frontier.GetBarricadeLevelDefinition then
@@ -192,6 +196,12 @@ function Buildings.BuildMapSnapshot(ownerUsername, sourcePlayer)
                 destroyReason = destroyReason
             }
             for key, value in pairs(buildingMetrics or {}) do
+                plotEntry.building[key] = value
+            end
+            for key, value in pairs(productionMetrics or {}) do
+                plotEntry.building[key] = value
+            end
+            for key, value in pairs(researchMetrics or {}) do
                 plotEntry.building[key] = value
             end
         end

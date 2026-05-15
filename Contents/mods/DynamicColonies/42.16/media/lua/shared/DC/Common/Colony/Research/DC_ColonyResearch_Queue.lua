@@ -4,6 +4,7 @@ DC_Colony.Research.Internal = DC_Colony.Research.Internal or {}
 
 local Research = DC_Colony.Research
 local Internal = Research.Internal
+local AbstractInventory = DC_Colony.AbstractInventory
 
 local function canResearchConvertedItem(converted)
     local group = tostring(converted and converted.group or "")
@@ -44,9 +45,8 @@ function Research.SubmitResearchItem(ownerUsername, fullType, itemMeta)
     end
 
     local jobID = Internal.NextJobID(ownerUsername)
-    local warehouse = DC_Colony and DC_Colony.Warehouse or nil
     if itemMeta == nil or itemMeta.storeSpecimen ~= false then
-        local added = warehouse and warehouse.AddLiteralSpecial and warehouse.AddLiteralSpecial(ownerUsername, {
+        local added = AbstractInventory and AbstractInventory.AddLiteralSpecial and AbstractInventory.AddLiteralSpecial(ownerUsername, {
             fullType = normalizedFullType,
             qty = 1,
             forceLiteral = true,

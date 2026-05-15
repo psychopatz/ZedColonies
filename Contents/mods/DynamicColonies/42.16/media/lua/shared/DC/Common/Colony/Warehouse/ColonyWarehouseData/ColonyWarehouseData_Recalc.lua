@@ -29,6 +29,8 @@ function Warehouse.Recalculate(warehouse)
     Data.NormalizeItems(summary.colonyID, items)
 
     summary.ownerUsername = Config.GetOwnerUsername(summary.ownerUsername)
+    local abstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
+    local abstractSnapshot = abstractInventory and abstractInventory.GetSnapshot and abstractInventory.GetSnapshot(summary.ownerUsername) or nil
     summary.buildingCapacityBonus = Data.GetBuildingCapacityBonus(summary.ownerUsername)
     summary.capacityBonus = summary.manualCapacityBonus + summary.buildingCapacityBonus
     summary.maxWeight = summary.capacityBase + summary.capacityBonus
@@ -37,8 +39,21 @@ function Warehouse.Recalculate(warehouse)
     local provisionCount = 0
     local equipmentCount = 0
     local outputCount = 0
-    local categoryCount = Data.GetAbstractStockTotalCount(items.abstractStock)
-    local specialCount = Data.GetLiteralSpecialCount(items.literalSpecialStock)
+    local categoryCount = 0
+    local specialCount = 0
+    local abstractWeight = 0
+    local literalSpecialWeight = 0
+
+    if abstractSnapshot then
+        for _categoryId, entry in pairs(abstractSnapshot.categoryStock or {}) do
+            categoryCount = categoryCount + math.max(0, tonumber(entry and entry.count) or 0)
+            abstractWeight = abstractWeight + math.max(0, tonumber(entry and entry.totalWeight) or 0)
+        end
+        for _, entry in ipairs(abstractSnapshot.literalSpecialStock or {}) do
+            specialCount = specialCount + math.max(0, tonumber(entry and entry.qty) or 0)
+            literalSpecialWeight = literalSpecialWeight + Data.GetEntryWeight(entry and entry.fullType, math.max(0, tonumber(entry and entry.qty) or 0))
+        end
+    end
 
     for _, entry in ipairs(items.ledgers.provisions or {}) do
         local qty = math.max(1, tonumber(entry and entry.qty) or 1)
@@ -58,8 +73,8 @@ function Warehouse.Recalculate(warehouse)
         usedWeight = usedWeight + Data.GetEntryWeight(entry and entry.fullType, qty)
     end
 
-    usedWeight = usedWeight + Data.GetAbstractStockTotalWeight(items.abstractStock)
-    usedWeight = usedWeight + Data.GetLiteralSpecialTotalWeight(items.literalSpecialStock)
+    usedWeight = usedWeight + abstractWeight
+    usedWeight = usedWeight + literalSpecialWeight
 
     summary.usedWeight = usedWeight
     summary.remainingWeight = math.max(0, summary.maxWeight - summary.usedWeight)
@@ -84,8 +99,9 @@ function Warehouse.Recalculate(warehouse)
     warehouse.usedWeight = summary.usedWeight
     warehouse.remainingWeight = summary.remainingWeight
     warehouse.counts = summary.counts
-    warehouse.abstractStock = items.abstractStock
-    warehouse.literalSpecialStock = items.literalSpecialStock
+    warehouse.abstractStock = abstractSnapshot and abstractSnapshot.categoryStock or {}
+    warehouse.foodNutritionPools = abstractSnapshot and abstractSnapshot.foodNutritionPools or {}
+    warehouse.literalSpecialStock = abstractSnapshot and abstractSnapshot.literalSpecialStock or {}
     warehouse.ledgers = items.ledgers
     return warehouse
 end

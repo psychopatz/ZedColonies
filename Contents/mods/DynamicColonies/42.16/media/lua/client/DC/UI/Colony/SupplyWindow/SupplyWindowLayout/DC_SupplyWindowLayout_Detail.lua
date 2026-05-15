@@ -63,11 +63,22 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         local workerTabLabel = Internal.getActiveWorkerTabLabel(self)
         local workerStorageLabel = "stored in "
         local transferAllowed = Internal.canTransferWithWorker(self.workerData)
+        local isWarehouseOutputTab = Internal.isWarehouseView and Internal.isWarehouseView(self) and self.activeTab == Internal.Tabs.Output
+        local rightPaneDescription = tostring(self.workerName or "the worker") .. " is " .. workerStorageLabel .. workerTabLabel
         if self.activeTab == Internal.Tabs.Output and not transferAllowed then
             workerStorageLabel = "currently carrying in "
+            rightPaneDescription = tostring(self.workerName or "the worker") .. " is " .. workerStorageLabel .. workerTabLabel
+        elseif Internal.isWarehouseView and Internal.isWarehouseView(self) then
+            rightPaneDescription = "the colony warehouse currently holds " .. string.lower(tostring(workerTabLabel or "storage"))
         end
         local transferGuidance = ""
-        if transferAllowed then
+        if isWarehouseOutputTab then
+            transferGuidance =
+                "<LINE> <RGB:0.62,0.62,0.62> This warehouse Inventory tab shows abstract colony categories and literal special stock. "
+                .. "<LINE> <RGB:0.62,0.62,0.62> Use "
+                .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> on the left side to deposit real items. Provisions and Equipment stay literal in their own tabs, while items deposited here are abstracted for colony systems. "
+                .. "<LINE> <RGB:0.62,0.62,0.62> Category rows on the right side are read-only and cannot be withdrawn as literal items. "
+        elseif transferAllowed then
             transferGuidance =
                 "<LINE> <RGB:0.62,0.62,0.62> Use "
                 .. "<RGB:1,1,1> < <RGB:0.62,0.62,0.62> for the selected worker item and "
@@ -104,15 +115,12 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             end
         end
         self.detailText:setText(
-            " <RGB:0.78,0.78,0.78> Left side shows your inventory cache, right side shows what "
-                .. tostring(self.workerName or "the worker")
-                .. " is "
-                .. workerStorageLabel
-                .. workerTabLabel
+            " <RGB:0.78,0.78,0.78> Left side shows your inventory cache, right side shows "
+                .. rightPaneDescription
                 .. ". "
                 .. transferGuidance
-                .. ((Internal.isWarehouseView and Internal.isWarehouseView(self) and self.activeTab == Internal.Tabs.Output)
-                        and "<LINE> <RGB:0.62,0.62,0.62> Warehouse weight shows total used capacity across Provisions, Storage, and Equipment, not just the currently visible storage rows. "
+                .. ((isWarehouseOutputTab)
+                        and "<LINE> <RGB:0.62,0.62,0.62> Warehouse weight shows total used capacity across Provisions, Inventory, and Equipment, not just the currently visible abstract rows. "
                     or "")
                 .. (((self.activeTab == Internal.Tabs.Equipment) and Internal.isInventoryView and Internal.isInventoryView(self))
                         and "<LINE> <RGB:0.62,0.62,0.62> Use <RGB:1,1,1> Auto Equip <RGB:0.62,0.62,0.62> to fill missing gear from warehouse storage, and <RGB:1,1,1> Auto On/Off <RGB:0.62,0.62,0.62> to control automatic warehouse equipping while the worker is home. "
@@ -157,7 +165,12 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             setDetailSupportPanel(self, supportDisplay.title, supportDisplay.entries)
         else
             setDetailSupportPanel(self, "", {})
-            text = text .. " <RGB:0.82,0.82,0.82> Full Type: <RGB:1,1,1> " .. tostring(entry.fullType or "Unknown") .. " <LINE> "
+            if entry.kind == "category" then
+                text = text .. " <RGB:0.82,0.82,0.82> Category ID: <RGB:1,1,1> " .. tostring(entry.category or "Unknown") .. " <LINE> "
+                text = text .. " <RGB:0.82,0.82,0.82> Group: <RGB:1,1,1> " .. tostring(entry.group or "Waste") .. " <LINE> "
+            else
+                text = text .. " <RGB:0.82,0.82,0.82> Full Type: <RGB:1,1,1> " .. tostring(entry.fullType or "Unknown") .. " <LINE> "
+            end
         end
         if entry.kind == "money" then
             text = text .. " <RGB:0.82,0.82,0.82> Stored Dollars: <RGB:1,1,1> $" .. tostring(math.max(0, math.floor(tonumber(entry.amount) or 0))) .. " <LINE> "
@@ -178,12 +191,23 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
         elseif self.activeTab == Internal.Tabs.Output then
             text = text .. " <RGB:0.82,0.82,0.82> Quantity: <RGB:1,1,1> " .. tostring(entry.qty or 1) .. " <LINE> "
             text = appendWeightLine(text, entry)
-            local config = Internal.Config or {}
-            local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(self.workerData and self.workerData.jobType) or tostring(self.workerData and self.workerData.jobType or "")
-            if normalizedJob == ((config.JobTypes or {}).Scavenge)
-                and Internal.isInventoryView
-                and Internal.isInventoryView(self) then
-                text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Drop to discard this hauled item and free carry weight. <LINE> "
+            if entry.kind == "category" then
+                text = text .. " <RGB:0.82,0.82,0.82> Type: <RGB:1,1,1> Abstract warehouse category <LINE> "
+                text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Read only. Deposit real items from the left side to increase this stock. <LINE> "
+            elseif entry.kind == "special" then
+                text = text .. " <RGB:0.82,0.82,0.82> Type: <RGB:1,1,1> Literal special stock <LINE> "
+                if tostring(entry.specialStockType or "") ~= "" then
+                    text = text .. " <RGB:0.82,0.82,0.82> Purpose: <RGB:1,1,1> " .. tostring(entry.specialStockType) .. " <LINE> "
+                end
+                text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Read only. These items stay literal for systems like research specimens. <LINE> "
+            else
+                local config = Internal.Config or {}
+                local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(self.workerData and self.workerData.jobType) or tostring(self.workerData and self.workerData.jobType or "")
+                if normalizedJob == ((config.JobTypes or {}).Scavenge)
+                    and Internal.isInventoryView
+                    and Internal.isInventoryView(self) then
+                    text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Drop to discard this hauled item and free carry weight. <LINE> "
+                end
             end
         else
             if (tonumber(entry.qty) or 1) > 1 then
@@ -235,7 +259,7 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             end
         elseif self.activeTab == Internal.Tabs.Output and Internal.isWarehouseView and Internal.isWarehouseView(self) then
             text = appendWeightLine(text, entry)
-            text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Store to place this item in warehouse storage for construction and general item use. <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Store to place this item in warehouse Inventory for abstraction and building use. <LINE> "
         else
             text = appendWeightLine(text, entry)
             text = text .. " <RGB:0.82,0.82,0.82> Adds Calories: <RGB:1,1,1> " .. string.format("%.0f", entry.calories or 0) .. " <LINE> "

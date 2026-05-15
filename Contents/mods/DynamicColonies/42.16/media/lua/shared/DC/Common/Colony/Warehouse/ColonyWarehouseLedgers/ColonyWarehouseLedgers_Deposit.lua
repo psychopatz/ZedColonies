@@ -2,8 +2,6 @@ DC_Colony = DC_Colony or {}
 DC_Colony.Warehouse = DC_Colony.Warehouse or {}
 DC_Colony.Warehouse.Internal = DC_Colony.Warehouse.Internal or {}
 
-local Config = DC_Colony.Config
-local Nutrition = DC_Colony.Nutrition
 local Registry = DC_Colony.Registry
 local Warehouse = DC_Colony.Warehouse
 local Internal = Warehouse.Internal
@@ -34,50 +32,8 @@ function Warehouse.DepositHaulEntry(ownerUsername, entry)
         return 0, 0
     end
 
-    local fullType = entry.fullType
     local totalQty = math.max(1, tonumber(entry.qty) or 1)
-    local movedQty = 0
-    if Config.IsMedicalProvisionFullType and Config.IsMedicalProvisionFullType(fullType) then
-        local provisionEntry = Ledgers.BuildProvisionEntryFromFullType(fullType)
-        if provisionEntry then
-            for _ = 1, totalQty do
-                if not Warehouse.DepositProvisionEntry(ownerUsername, provisionEntry) then
-                    break
-                end
-                movedQty = movedQty + 1
-            end
-        end
-    else
-        local calories, hydration = 0, 0
-        local nutritionInternal = Nutrition and Nutrition.Internal or nil
-        if nutritionInternal and nutritionInternal.GetExpectedStaticNutritionForFullType then
-            calories, hydration = nutritionInternal.GetExpectedStaticNutritionForFullType(fullType)
-        end
-
-        if math.max(0, tonumber(calories) or 0) > 0 or math.max(0, tonumber(hydration) or 0) > 0 then
-            local provisionEntry = Ledgers.BuildProvisionEntryFromFullType(fullType)
-            if provisionEntry then
-                for _ = 1, totalQty do
-                    if not Warehouse.DepositProvisionEntry(ownerUsername, provisionEntry) then
-                        break
-                    end
-                    movedQty = movedQty + 1
-                end
-            end
-        elseif Config.IsColonyToolFullType and Config.IsColonyToolFullType(fullType) then
-            local equipmentEntry = Ledgers.BuildEquipmentEntryFromFullType(fullType)
-            if equipmentEntry then
-                for _ = 1, totalQty do
-                    if not Warehouse.DepositEquipmentEntry(ownerUsername, equipmentEntry) then
-                        break
-                    end
-                    movedQty = movedQty + 1
-                end
-            end
-        else
-            movedQty = Warehouse.DepositOutputEntry(ownerUsername, entry)
-        end
-    end
+    local movedQty = Warehouse.DepositOutputEntry(ownerUsername, entry)
 
     return movedQty, math.max(0, totalQty - movedQty)
 end

@@ -5,7 +5,7 @@ DC_Buildings.Production.Internal = DC_Buildings.Production.Internal or {}
 local Buildings = DC_Buildings
 local Production = DC_Buildings.Production
 local Internal = Production.Internal
-local Warehouse = DC_Colony and DC_Colony.Warehouse or nil
+local AbstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
 
 Internal.lastProcessedHourByOwner = Internal.lastProcessedHourByOwner or {}
 
@@ -15,15 +15,32 @@ local function getOwnerKey(ownerUsername)
 end
 
 local function canRunRecipe(ownerUsername, recipe)
-    return Warehouse
-        and Warehouse.CanConsumeCategories
-        and Warehouse.CanConsumeCategories(ownerUsername, recipe and recipe.inputs or nil)
+    if recipe and recipe.inputs and #recipe.inputs > 0 then
+        if not (AbstractInventory
+            and AbstractInventory.CanConsumeCategories
+            and AbstractInventory.CanConsumeCategories(ownerUsername, recipe.inputs)) then
+            return false
+        end
+    end
+
+    if recipe and recipe.foodNutrition then
+        return AbstractInventory
+            and AbstractInventory.CanConsumeFoodNutrition
+            and AbstractInventory.CanConsumeFoodNutrition(
+                ownerUsername,
+                { categories = recipe.foodNutrition.categories or {} },
+                recipe.foodNutrition.calories,
+                recipe.foodNutrition.hydration
+            ) == true
+    end
+
+    return true
 end
 
 local function applyOutputs(ownerUsername, recipe)
     for _, output in ipairs(recipe and recipe.outputs or {}) do
-        if output.category and Warehouse and Warehouse.AddCategory then
-            Warehouse.AddCategory(ownerUsername, output.category, output.count or 0, {
+        if output.category and AbstractInventory and AbstractInventory.AddCategory then
+            AbstractInventory.AddCategory(ownerUsername, output.category, output.count or 0, {
                 totalWeight = 0,
             })
         end
@@ -41,12 +58,34 @@ local function processBuilding(ownerUsername, instance)
         end
         if buildingLevel >= math.max(1, math.floor(tonumber(recipe.requiredLevel) or 1))
             and canRunRecipe(ownerUsername, recipe) then
-            if Warehouse and Warehouse.ConsumeCategories and Warehouse.ConsumeCategories(ownerUsername, recipe.inputs, {
+            local reasonMeta = {
                 reason = "building_production",
                 buildingID = instance and instance.buildingID,
                 buildingType = instance and instance.buildingType,
                 recipeID = recipe.id,
-            }) then
+            }
+            local consumedCategories = true
+            local consumedNutrition = true
+            if recipe.inputs and #recipe.inputs > 0 then
+                consumedCategories = AbstractInventory
+                    and AbstractInventory.ConsumeCategories
+                    and AbstractInventory.ConsumeCategories(ownerUsername, recipe.inputs, reasonMeta)
+                    or false
+            end
+            if consumedCategories and recipe.foodNutrition then
+                consumedNutrition = AbstractInventory
+                    and AbstractInventory.ConsumeFoodNutrition
+                    and AbstractInventory.ConsumeFoodNutrition(
+                        ownerUsername,
+                        { categories = recipe.foodNutrition.categories or {} },
+                        recipe.foodNutrition.calories,
+                        recipe.foodNutrition.hydration,
+                        reasonMeta
+                    )
+                    or false
+            end
+
+            if consumedCategories and consumedNutrition then
                 applyOutputs(ownerUsername, recipe)
                 cycles = cycles + 1
             end

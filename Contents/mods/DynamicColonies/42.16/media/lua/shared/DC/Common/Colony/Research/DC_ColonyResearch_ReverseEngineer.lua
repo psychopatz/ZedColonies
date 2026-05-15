@@ -4,6 +4,8 @@ DC_Colony.Research.Internal = DC_Colony.Research.Internal or {}
 
 local Research = DC_Colony.Research
 local Internal = Research.Internal
+local AbstractInventory = DC_Colony.AbstractInventory
+local Warehouse = DC_Colony.Warehouse
 
 local function hasUnlockedBuilding(ownerUsername, buildingType, buildingID)
     local buildings = DC_Buildings
@@ -38,7 +40,6 @@ function Research.CraftUnlockedItem(ownerUsername, buildingID, fullType, qty)
         return false, "Required colony building is not available."
     end
 
-    local warehouse = DC_Colony and DC_Colony.Warehouse or nil
     local count = math.max(1, math.floor(tonumber(qty) or 1))
     local requirements = {}
     for _, input in ipairs(blueprint.inputs or {}) do
@@ -48,7 +49,7 @@ function Research.CraftUnlockedItem(ownerUsername, buildingID, fullType, qty)
         }
     end
 
-    if not (warehouse and warehouse.ConsumeCategories and warehouse.ConsumeCategories(ownerUsername, requirements, {
+    if not (AbstractInventory and AbstractInventory.ConsumeCategories and AbstractInventory.ConsumeCategories(ownerUsername, requirements, {
         reason = "blueprint_craft",
         buildingID = buildingID,
         fullType = fullType,
@@ -56,8 +57,8 @@ function Research.CraftUnlockedItem(ownerUsername, buildingID, fullType, qty)
         return false, "Missing abstract inputs."
     end
 
-    if warehouse and warehouse.DepositOutputEntry then
-        warehouse.DepositOutputEntry(ownerUsername, {
+    if Warehouse and Warehouse.DepositOutputEntry then
+        Warehouse.DepositOutputEntry(ownerUsername, {
             fullType = tostring(fullType or ""),
             qty = count,
             forceLiteral = true,

@@ -45,6 +45,8 @@ function Warehouse.GetClientSummary(ownerUsername)
     end
 
     local summary = warehouse.__summary or warehouse
+    local abstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
+    local abstractSnapshot = abstractInventory and abstractInventory.GetSnapshot and abstractInventory.GetSnapshot(ownerUsername) or nil
     return {
         colonyID = summary.colonyID,
         ownerUsername = summary.ownerUsername,
@@ -60,7 +62,7 @@ function Warehouse.GetClientSummary(ownerUsername)
         upgradeLevel = summary.upgradeLevel,
         autoEquipEnabled = summary.autoEquipEnabled == true,
         counts = Registry.Internal.CopyShallow(summary.counts or {}),
-        categoryCounts = Data.BuildCategoryCountSnapshot(warehouse.abstractStock),
+        categoryCounts = abstractSnapshot and abstractSnapshot.categoryCounts or {},
     }
 end
 
@@ -86,8 +88,11 @@ function Warehouse.GetClientSnapshot(ownerUsername, includeLedgers, ledgerMask)
     if normalizedMask.output == true then
         snapshot.ledgers.output = Data.CopyArray(warehouse.ledgers.output)
     end
-    snapshot.abstractStock = Data.BuildCategoryStockSnapshot(warehouse.abstractStock)
-    snapshot.literalSpecialStock = Data.BuildLiteralSpecialSnapshot(warehouse.literalSpecialStock)
+    local abstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
+    local abstractSnapshot = abstractInventory and abstractInventory.GetSnapshot and abstractInventory.GetSnapshot(ownerUsername) or nil
+    snapshot.abstractStock = abstractSnapshot and abstractSnapshot.categoryStock or {}
+    snapshot.foodNutritionPools = abstractSnapshot and abstractSnapshot.foodNutritionPools or {}
+    snapshot.literalSpecialStock = abstractSnapshot and abstractSnapshot.literalSpecialStock or {}
     return snapshot
 end
 

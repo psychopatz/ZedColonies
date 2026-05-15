@@ -346,7 +346,7 @@ function DC_SupplyWindow:depositEntries(entries)
 
     if #selectedEntries <= 0 then
         if activeTab == Internal.Tabs.Output then
-            self:updateStatus("No valid warehouse storage items selected.")
+            self:updateStatus("No valid warehouse inventory items selected.")
         else
             self:updateStatus("No valid provisions selected.")
         end
@@ -380,7 +380,7 @@ function DC_SupplyWindow:depositEntries(entries)
     if #fittingEntries == 1 then
         local entry = fittingEntries[1]
         if activeTab == Internal.Tabs.Output then
-            local statusText = "Storing " .. tostring(entry.displayName or entry.fullType or "selected item") .. " in warehouse storage..."
+            local statusText = "Storing " .. tostring(entry.displayName or entry.fullType or "selected item") .. " in warehouse inventory..."
             if blockedCount > 0 then
                 statusText = statusText .. " " .. tostring(blockedCount) .. " did not fit."
             end
@@ -395,7 +395,7 @@ function DC_SupplyWindow:depositEntries(entries)
         end
     else
         if activeTab == Internal.Tabs.Output then
-            local statusText = "Storing " .. tostring(#fittingEntries) .. " visible items in warehouse storage..."
+            local statusText = "Storing " .. tostring(#fittingEntries) .. " visible items in warehouse inventory..."
             if blockedCount > 0 then
                 statusText = statusText .. " " .. tostring(blockedCount) .. " did not fit."
             end
@@ -503,7 +503,7 @@ function DC_SupplyWindow:onDepositSelected()
     local activeTab = self.activeTab or Internal.Tabs.Provisions
 
     if activeTab == Internal.Tabs.Output and not (Internal.isWarehouseView and Internal.isWarehouseView(self)) then
-        self:updateStatus("This tab is warehouse storage only. Open the Warehouse view to store general items.")
+        self:updateStatus("This tab is warehouse Inventory only. Open the Warehouse view to abstract general items.")
         return
     end
 
@@ -538,7 +538,7 @@ function DC_SupplyWindow:onDepositSelected()
 
     if activeTab == Internal.Tabs.Output then
         if not (Internal.canStoreInWarehouseOutput and Internal.canStoreInWarehouseOutput(selectedEntry)) then
-            self:updateStatus("That item cannot be stored in warehouse storage.")
+            self:updateStatus("That item cannot be stored in warehouse inventory.")
             return
         end
         self:depositEntries(concreteEntries)
@@ -559,7 +559,7 @@ function DC_SupplyWindow:onDepositVisible()
     local activeTab = self.activeTab or Internal.Tabs.Provisions
 
     if activeTab == Internal.Tabs.Output and not (Internal.isWarehouseView and Internal.isWarehouseView(self)) then
-        self:updateStatus("This tab is warehouse storage only. Open the Warehouse view to store general items.")
+        self:updateStatus("This tab is warehouse Inventory only. Open the Warehouse view to abstract general items.")
         return
     end
 
@@ -586,7 +586,7 @@ function DC_SupplyWindow:onDepositVisible()
         if activeTab == Internal.Tabs.Equipment then
             self:updateStatus("No visible equipment matched the current filter.")
         elseif activeTab == Internal.Tabs.Output then
-            self:updateStatus("No visible warehouse storage items matched the current filter.")
+            self:updateStatus("No visible warehouse inventory items matched the current filter.")
         elseif activeTab == Internal.Tabs.Provisions then
             self:updateStatus("No visible provisions matched the current filter. Select the cash entry to transfer money.")
         else

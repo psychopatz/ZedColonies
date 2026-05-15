@@ -46,13 +46,12 @@ function Data.NormalizeItems(colonyID, items)
     items.colonyID = tostring(colonyID)
     items.version = math.max(1, math.floor(tonumber(items.version) or 1))
     items.legacyOutputMigrationComplete = items.legacyOutputMigrationComplete == true
-    items.abstractStock = Data.NormalizeAbstractStock(items.abstractStock)
-    items.literalSpecialStock = Data.NormalizeLiteralSpecialStock(items.literalSpecialStock)
+    items.abstractStock = type(items.abstractStock) == "table" and items.abstractStock or {}
+    items.literalSpecialStock = type(items.literalSpecialStock) == "table" and items.literalSpecialStock or {}
     items.ledgers = type(items.ledgers) == "table" and items.ledgers or {}
     items.ledgers.provisions = Data.StackProvisionEntries(items.ledgers.provisions)
     items.ledgers.equipment = Data.StackEquipmentEntries(items.ledgers.equipment)
     items.ledgers.output = Data.StackOutputEntries(items.ledgers.output)
-    Data.MigrateLegacyOutputLedger(items)
     return items
 end
 
@@ -83,8 +82,6 @@ function Data.GetCombinedWarehouse(ownerUsername)
     combined.ownerUsername = owner
     combined.__summary = summary
     combined.__items = items
-    combined.abstractStock = items.abstractStock
-    combined.literalSpecialStock = items.literalSpecialStock
     combined.ledgers = items.ledgers
     return combined
 end

@@ -5,7 +5,7 @@ local Internal = DC_SupplyWindow.Internal
 
 function Internal.getOutputTabLabel(worker, window)
     if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-        return "Storage"
+        return "Inventory"
     end
 
     return "Inventory"

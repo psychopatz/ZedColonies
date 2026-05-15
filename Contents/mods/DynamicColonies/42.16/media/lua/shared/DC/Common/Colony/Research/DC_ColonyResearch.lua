@@ -12,5 +12,6 @@ require "DC/Common/Colony/Research/DC_ColonyResearch_Blueprints"
 require "DC/Common/Colony/Research/DC_ColonyResearch_Queue"
 require "DC/Common/Colony/Research/DC_ColonyResearch_ReverseEngineer"
 require "DC/Common/Colony/Research/DC_ColonyResearch_WorkerFlow"
+require "DC/Common/Colony/Research/DC_ColonyResearch_Presentation"
 
 return DC_Colony.Research

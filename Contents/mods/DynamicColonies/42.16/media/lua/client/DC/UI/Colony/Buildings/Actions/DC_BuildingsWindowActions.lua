@@ -1,6 +1,7 @@
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingActionModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingDestroyModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingPickerModal"
+require "DC/UI/Colony/Buildings/Modals/DC_ResearchStationModal"
 require "DC/UI/Colony/Buildings/Modals/BuildingProjectModal/BuildingProjectModal"
 require "DC/UI/Colony/Greenhouse/DC_GreenhouseModal"
 
@@ -23,6 +24,7 @@ function Actions.Dispatch(actionName, window, plot)
         install = Actions.OnInstallPlot,
         swapProjectBuilder = Actions.OnSwapProjectBuilder,
         manageGreenhouse = Actions.OnManageGreenhousePlot,
+        manageResearch = Actions.OnManageResearchPlot,
         destroy = Actions.OnDestroyPlot,
         debugComplete = Actions.OnDebugCompleteProject,
         plotSelected = Actions.OnPlotSelected
@@ -218,6 +220,24 @@ function Actions.OnManageGreenhousePlot(_, plot)
     DC_GreenhouseModal.Open({
         title = tostring(building.displayName or "Greenhouse") .. " Garden",
         buildingID = building.buildingID
+    })
+end
+
+function Actions.OnManageResearchPlot(window, plot)
+    local building = plot and plot.building or nil
+    if not building or tostring(building.buildingType or "") ~= "ResearchStation" then
+        return
+    end
+
+    DC_ResearchStationModal.Open({
+        title = tostring(building.displayName or "Research Station") .. " Research",
+        buildingID = building.buildingID,
+        ownerWindow = window and window:getOwnerWindow() or nil,
+        onRefreshBuildings = function()
+            if window and window.requestSnapshot then
+                window:requestSnapshot(false)
+            end
+        end
     })
 end
 

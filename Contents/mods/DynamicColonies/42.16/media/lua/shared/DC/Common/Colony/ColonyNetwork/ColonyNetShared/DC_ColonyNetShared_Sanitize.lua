@@ -10,6 +10,7 @@ if not Internal.sanitizeNetworkArgs then
         SyncPlayerWorkers = true,
         SyncWorkerDetails = true,
         SyncWarehouse = true,
+        SyncResearchSnapshot = true,
         SyncResources = true,
         SyncRecruitAttemptResult = true,
         SyncOwnedFactionStatus = true,

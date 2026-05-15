@@ -15,6 +15,11 @@ local function getRegistryInternal()
     return DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal or nil
 end
 
+local function getCategoryDefinition(categoryId)
+    local config = DC_Colony and DC_Colony.Config or nil
+    return config and config.GetItemCategoryDefinition and config.GetItemCategoryDefinition(categoryId) or nil
+end
+
 local function copyEquipmentState(target, source)
     if type(target) ~= "table" or type(source) ~= "table" then
         return target
@@ -560,6 +565,67 @@ function Internal.buildWorkerOutputEntry(entry, index)
         entryID = normalizedEntry.entryID or entry.entryID,
     }, normalizedEntry)
     return copyEquipmentState(outputEntry, normalizedEntry)
+end
+
+function Internal.buildWarehouseCategoryEntry(categoryId, stockEntry)
+    local key = tostring(categoryId or "")
+    if key == "" then
+        return nil
+    end
+
+    local definition = getCategoryDefinition(key) or {}
+    local count = 0
+    local totalWeight = 0
+    if type(stockEntry) == "table" then
+        count = math.max(0, math.floor(tonumber(stockEntry.count) or 0))
+        totalWeight = math.max(0, tonumber(stockEntry.totalWeight) or 0)
+    else
+        count = math.max(0, math.floor(tonumber(stockEntry) or 0))
+    end
+
+    if count <= 0 then
+        return nil
+    end
+
+    return {
+        kind = "category",
+        itemID = "category:" .. key,
+        ledgerIndex = "category:" .. key,
+        displayName = tostring(definition.displayName or key),
+        category = key,
+        group = tostring(definition.group or "Waste"),
+        qty = count,
+        unitWeight = count > 0 and (totalWeight / count) or 0,
+        totalWeight = totalWeight,
+        texture = nil,
+        searchText = tostring(definition.group or "") .. " " .. key,
+        readOnly = true,
+    }
+end
+
+function Internal.buildWarehouseLiteralSpecialEntry(entry, index)
+    if not entry then
+        return nil
+    end
+
+    local normalizedEntry = getNormalizedOutputEntry(entry) or entry
+    local literalEntry = copyOutputState({
+        kind = "special",
+        itemID = "special:" .. tostring(index or 0) .. ":" .. tostring(normalizedEntry.fullType or ""),
+        ledgerIndex = "special:" .. tostring(index or 0),
+        displayName = normalizedEntry.displayName or Internal.getDisplayNameForFullType(normalizedEntry.fullType),
+        fullType = normalizedEntry.fullType,
+        qty = math.max(1, tonumber(normalizedEntry.qty) or 1),
+        unitWeight = getUnitWeight(normalizedEntry.fullType),
+        totalWeight = getTotalWeight(normalizedEntry.fullType, normalizedEntry.qty),
+        texture = entry.texture or normalizedEntry.texture or (Internal.peekTextureForFullType and Internal.peekTextureForFullType(normalizedEntry.fullType) or nil),
+        entryID = normalizedEntry.entryID or entry.entryID,
+        literalSpecial = true,
+        specialStockType = normalizedEntry.specialStockType,
+        researchJobID = normalizedEntry.researchJobID,
+        readOnly = true,
+    }, normalizedEntry)
+    return copyEquipmentState(literalEntry, normalizedEntry)
 end
 
 function Internal.buildWorkerEntryFromPlayerEntry(entry)

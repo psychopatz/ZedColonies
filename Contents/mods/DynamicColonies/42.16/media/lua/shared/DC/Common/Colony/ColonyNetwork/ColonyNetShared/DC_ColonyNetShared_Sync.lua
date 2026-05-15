@@ -140,6 +140,25 @@ function Internal.syncWarehouse(player, knownVersion, includeLedgers, ledgerMask
     })
 end
 
+function Internal.syncResearchSnapshot(player, knownVersion)
+    local owner = Config.GetOwnerUsername(player)
+    local researchApi = DC_Colony and DC_Colony.Research or nil
+    local snapshot = researchApi and researchApi.GetClientSnapshot and researchApi.GetClientSnapshot(owner) or nil
+    local version = Shared.buildVersionToken(snapshot or { ownerUsername = owner, missing = true })
+    if knownVersion and tostring(knownVersion) == version then
+        Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncResearchSnapshot", {
+            version = version,
+            unchanged = true
+        })
+        return
+    end
+
+    Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncResearchSnapshot", {
+        version = version,
+        snapshot = snapshot
+    })
+end
+
 function Internal.syncResources(player, knownVersion)
     local owner = Config.GetOwnerUsername(player)
     local resourcesApi = DC_Colony and DC_Colony.Resources or nil

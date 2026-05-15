@@ -116,6 +116,23 @@ end
 function DC_BuildingsUIUtils.BuildRecipeLines(recipeEntries)
     local lines = {}
     for _, entry in ipairs(recipeEntries or {}) do
+        if entry.kind == "foodNutrition" then
+            local ready = entry.satisfied == true
+            local color = ready and "<RGB:0.76,0.92,0.76>" or "<RGB:0.95,0.62,0.62>"
+            local categories = table.concat(entry.categoryLabels or entry.categories or {}, ", ")
+            lines[#lines + 1] = color
+                .. tostring(math.floor((tonumber(entry.requiredCalories) or 0) + 0.5))
+                .. " cal / "
+                .. tostring(math.floor((tonumber(entry.requiredHydration) or 0) + 0.5))
+                .. " hyd"
+                .. " from "
+                .. tostring(categories ~= "" and categories or "food categories")
+                .. " <RGB:0.72,0.72,0.72>("
+                .. tostring(math.floor((tonumber(entry.availableCalories) or 0) + 0.5))
+                .. " cal, "
+                .. tostring(math.floor((tonumber(entry.availableHydration) or 0) + 0.5))
+                .. " hyd available)"
+        else
         local ready = entry.satisfied == true
         local availableToSupply = math.max(0, tonumber(entry.available) or 0)
         local remainingToSupply = math.max(0, tonumber(entry.remaining) or 0)
@@ -146,6 +163,7 @@ function DC_BuildingsUIUtils.BuildRecipeLines(recipeEntries)
                 .. " available)"
         end
         lines[#lines + 1] = line
+        end
     end
     if #lines <= 0 then
         lines[1] = "<RGB:0.65,0.65,0.65>No materials required."

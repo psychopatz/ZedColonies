@@ -5,6 +5,7 @@ DC_Colony.Warehouse.Internal = DC_Colony.Warehouse.Internal or {}
 local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Warehouse = DC_Colony.Warehouse
+local AbstractInventory = DC_Colony.AbstractInventory
 local Internal = Warehouse.Internal
 local Ledgers = Internal.Ledgers or {}
 
@@ -97,32 +98,11 @@ function Ledgers.MergeOutputEntry(warehouse, entry)
 
     if Internal.Data and Internal.Data.ShouldStoreAsLiteralSpecial
         and Internal.Data.ShouldStoreAsLiteralSpecial(normalized) == true then
-        local qty = math.max(1, tonumber(normalized.qty) or 1)
-        local totalWeight = Internal.GetEntryWeight(normalized.fullType, qty)
-        if totalWeight > 0 and totalWeight > Warehouse.GetRemainingCapacity(warehouse) then
-            return 0
-        end
-
-        if Warehouse.AddLiteralSpecial then
-            return Warehouse.AddLiteralSpecial(warehouse.ownerUsername, normalized)
-        end
-        return 0
+        return AbstractInventory and AbstractInventory.AddLiteralSpecial and AbstractInventory.AddLiteralSpecial(warehouse.ownerUsername, normalized) or 0
     end
 
     if normalized.forceLiteral ~= true then
-        local converted = Config.GetItemCategoryData and Config.GetItemCategoryData(normalized.fullType) or nil
-        local categoryId = tostring(converted and converted.category or "Junk")
-        local qty = math.max(1, tonumber(normalized.qty) or 1)
-        local totalWeight = Internal.GetEntryWeight(normalized.fullType, qty)
-        if totalWeight > 0 and totalWeight > Warehouse.GetRemainingCapacity(warehouse) then
-            return 0
-        end
-
-        local added = Warehouse.AddCategory and Warehouse.AddCategory(warehouse.ownerUsername, categoryId, qty, {
-            totalWeight = totalWeight,
-            sourceFullType = normalized.fullType,
-        }) or 0
-        return added
+        return AbstractInventory and AbstractInventory.DepositOutputEntry and AbstractInventory.DepositOutputEntry(warehouse.ownerUsername, normalized) or 0
     end
 
     local qty = math.max(1, tonumber(normalized.qty) or 1)

@@ -145,12 +145,14 @@ end
 
 function DC_BuildingsClientSelectors.GetManagePlotState(plot)
     local isGreenhouse = plot and plot.building and tostring(plot.building.buildingType or "") == "Greenhouse"
+    local isResearchStation = plot and plot.building and tostring(plot.building.buildingType or "") == "ResearchStation"
     local canSwap = plot and plot.project and tostring(plot.project.status or "") == "Active"
 
     return {
-        title = canSwap and "Manage" or (isGreenhouse and "Garden" or "Manage"),
-        enabled = canSwap == true or isGreenhouse == true,
+        title = canSwap and "Manage" or (isGreenhouse and "Garden" or (isResearchStation and "Research" or "Manage")),
+        enabled = canSwap == true or isGreenhouse == true or isResearchStation == true,
         isGreenhouse = isGreenhouse == true,
+        isResearchStation = isResearchStation == true,
         canSwap = canSwap == true
     }
 end
