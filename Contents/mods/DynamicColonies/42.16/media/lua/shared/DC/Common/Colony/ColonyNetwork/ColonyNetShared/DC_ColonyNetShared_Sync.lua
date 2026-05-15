@@ -279,6 +279,46 @@ function Internal.syncResources(player, knownVersion)
     })
 end
 
+function Internal.syncDebugArchiveIndex(player, knownVersion)
+    local debugArchive = DC_Colony and DC_Colony.DebugArchive or nil
+    local snapshot = debugArchive and debugArchive.GetIndexSnapshot and debugArchive.GetIndexSnapshot() or nil
+    local version = tostring(snapshot and snapshot.version or 1)
+
+    if knownVersion and tostring(knownVersion) == version then
+        Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncDebugArchiveIndex", {
+            version = version,
+            unchanged = true,
+        })
+        return
+    end
+
+    Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncDebugArchiveIndex", {
+        version = version,
+        snapshot = snapshot,
+    })
+end
+
+function Internal.syncDebugArchiveColony(player, ownerUsername, knownVersion)
+    local debugArchive = DC_Colony and DC_Colony.DebugArchive or nil
+    local snapshot = debugArchive and debugArchive.GetColonySnapshot and debugArchive.GetColonySnapshot(ownerUsername) or nil
+    local version = tostring(snapshot and snapshot.version or 1)
+
+    if knownVersion and tostring(knownVersion) == version then
+        Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncDebugArchiveColony", {
+            ownerUsername = tostring(ownerUsername or ""),
+            version = version,
+            unchanged = true,
+        })
+        return
+    end
+
+    Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncDebugArchiveColony", {
+        ownerUsername = tostring(ownerUsername or ""),
+        version = version,
+        snapshot = snapshot,
+    })
+end
+
 function Internal.syncRecruitAttemptResult(player, result)
     Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncRecruitAttemptResult", result or {})
 end

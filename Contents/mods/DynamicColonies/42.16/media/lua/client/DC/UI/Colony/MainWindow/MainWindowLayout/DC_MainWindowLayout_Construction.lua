@@ -4,6 +4,41 @@ DC_MainWindow.Internal = DC_MainWindow.Internal or {}
 local Internal = DC_MainWindow.Internal
 local MainWindowLayout = Internal.MainWindowLayout or {}
 
+local function canUseDebug()
+    if DC_System and DC_System.CanUseDebug then
+        return DC_System.CanUseDebug()
+    end
+
+    local player = nil
+    if getSpecificPlayer then
+        player = getSpecificPlayer(0)
+    elseif getPlayer then
+        player = getPlayer()
+    end
+
+    local accessLevel = nil
+    if player and player.getAccessLevel then
+        accessLevel = player:getAccessLevel()
+    end
+    local hasElevatedAccess = accessLevel and accessLevel ~= "" and accessLevel ~= "None"
+    local isSinglePlayer = (not isClient or not isClient()) and not hasElevatedAccess
+
+    if isSinglePlayer then
+        return isDebugEnabled and isDebugEnabled() == true
+    end
+
+    if DynamicTrading and DynamicTrading.Debug then
+        return true
+    end
+    if isDebugEnabled and isDebugEnabled() then
+        return true
+    end
+    if hasElevatedAccess then
+        return true
+    end
+    return false
+end
+
 local DEFAULT_ACTION_BUTTON_COLOR = { r = 0, g = 0, b = 0, a = 1 }
 local DEFAULT_ACTION_BUTTON_HOVER_COLOR = { r = 0.18, g = 0.18, b = 0.18, a = 1 }
 local DEFAULT_ACTION_BUTTON_BORDER = { r = 1, g = 1, b = 1, a = 0.1 }
@@ -144,6 +179,12 @@ function DC_MainWindow:createChildren()
     self.btnBuildings = ISButton:new(480, buttonY, 110, 28, "Colony Map", self, self.onOpenBuildings)
     self.btnBuildings:initialise()
     self:addChild(self.btnBuildings)
+
+    if canUseDebug() then
+        self.btnDebugArchive = ISButton:new(600, buttonY, 80, 28, "Debug", self, self.onOpenDebugArchive)
+        self.btnDebugArchive:initialise()
+        self:addChild(self.btnDebugArchive)
+    end
 
     self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Open Faction", self, self.onOpenFaction)
     self.btnFaction:initialise()

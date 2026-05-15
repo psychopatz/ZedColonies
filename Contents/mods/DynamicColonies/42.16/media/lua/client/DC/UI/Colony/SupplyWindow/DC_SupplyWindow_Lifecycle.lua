@@ -1,6 +1,8 @@
 DC_SupplyWindow = DC_SupplyWindow or {}
 DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
+local Internal = DC_SupplyWindow.Internal
+
 local function closeVisibleWindow(window)
     if window and window.getIsVisible and window:getIsVisible() and window.close then
         window:close()

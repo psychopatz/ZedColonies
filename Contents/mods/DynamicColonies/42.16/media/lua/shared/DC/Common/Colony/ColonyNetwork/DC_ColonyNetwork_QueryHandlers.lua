@@ -61,6 +61,39 @@ Network.Handlers.RequestResourcesSnapshot = function(player, args)
     end
 end
 
+Network.Handlers.RequestDebugArchiveIndex = function(player, args)
+    local debugArchive = DC_Colony and DC_Colony.DebugArchive or nil
+    if not (debugArchive and debugArchive.CanUseDebug and debugArchive.CanUseDebug(player)) then
+        if Network.Internal and Network.Internal.syncNotice then
+            Network.Internal.syncNotice(player, "Debug archive is unavailable for this player.", "error", true)
+        end
+        return
+    end
+
+    if Network.Internal and Network.Internal.syncDebugArchiveIndex then
+        Network.Internal.syncDebugArchiveIndex(player, args and args.knownVersion)
+    end
+end
+
+Network.Handlers.RequestDebugArchiveColony = function(player, args)
+    local debugArchive = DC_Colony and DC_Colony.DebugArchive or nil
+    if not (debugArchive and debugArchive.CanUseDebug and debugArchive.CanUseDebug(player)) then
+        if Network.Internal and Network.Internal.syncNotice then
+            Network.Internal.syncNotice(player, "Debug archive is unavailable for this player.", "error", true)
+        end
+        return
+    end
+
+    local ownerUsername = args and args.ownerUsername or nil
+    if not ownerUsername or tostring(ownerUsername) == "" then
+        return
+    end
+
+    if Network.Internal and Network.Internal.syncDebugArchiveColony then
+        Network.Internal.syncDebugArchiveColony(player, ownerUsername, args and args.knownVersion)
+    end
+end
+
 Network.Handlers.SetGreenhouseThermostat = function(player, args)
     if not args or not args.buildingID then
         return
