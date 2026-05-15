@@ -68,7 +68,7 @@ function Internal.getWarehouseLedgerMaskForTab(window, tabID)
     end
     if activeTab == Internal.Tabs.Output then
         if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-            return { output = true }
+            return nil
         end
         return nil
     end
@@ -167,6 +167,7 @@ function DC_SupplyWindow:getActiveLedgerMasks(tabID)
 end
 
 function DC_SupplyWindow:requestActiveTabDetails(bypassKnownVersions)
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     local workerLedgerMask, warehouseLedgerMask = self:getActiveLedgerMasks()
     self:requestWorkerDetails({
         workerLedgerMask = workerLedgerMask,
@@ -174,9 +175,24 @@ function DC_SupplyWindow:requestActiveTabDetails(bypassKnownVersions)
         bypassWorkerKnownVersion = bypassKnownVersions == true,
         bypassWarehouseKnownVersion = bypassKnownVersions == true,
     })
+    if self.startWarehouseInventoryFeed and Internal.isWarehouseInventoryTab and Internal.isWarehouseInventoryTab(self) then
+        self:startWarehouseInventoryFeed(bypassKnownVersions == true)
+    end
+    if Internal.debugPerf then
+        Internal.debugPerf("RequestActiveTabDetails", startedAt, 1, {
+            token = self.debugOpenToken,
+            activeTab = self.activeTab,
+            warehouseView = Internal.isWarehouseView and Internal.isWarehouseView(self) or false,
+            bypassKnown = bypassKnownVersions == true,
+        })
+    end
 end
 
 function DC_SupplyWindow:hasActiveTabWorkerDetail(tabID)
+    if Internal.isWarehouseView and Internal.isWarehouseView(self) and (tabID or self.activeTab) == Internal.Tabs.Output then
+        return type(self.workerData) == "table" and type(self.workerData.warehouse) == "table"
+    end
+
     local workerLedgerMask, warehouseLedgerMask = self:getActiveLedgerMasks(tabID)
     if hasWorkerLedgerMask(self.workerData, workerLedgerMask) and hasWarehouseLedgerMask(self.workerData, warehouseLedgerMask) then
         return true
@@ -206,6 +222,7 @@ function DC_SupplyWindow:onRefresh()
 end
 
 function DC_SupplyWindow:requestWorkerDetails(options)
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     if not self.workerID then
         return
     end
@@ -228,6 +245,17 @@ function DC_SupplyWindow:requestWorkerDetails(options)
         includeLedgers = includeWarehouseLedgers,
         ledgerMask = warehouseLedgerMask
     })
+    if Internal.debugPerf then
+        Internal.debugPerf("RequestWorkerDetails", startedAt, 1, {
+            token = self.debugOpenToken,
+            workerID = self.workerID,
+            warehouseView = Internal.isWarehouseView and Internal.isWarehouseView(self) or false,
+            includeWorkerLedgers = includeWorkerLedgers == true,
+            includeWarehouseLedgers = includeWarehouseLedgers == true,
+            workerMask = Internal.getWorkerSyncVersionKey and Internal.getWorkerSyncVersionKey(workerLedgerMask, nil) or "nil",
+            warehouseMask = Internal.getWarehouseSyncVersionKey and Internal.getWarehouseSyncVersionKey(warehouseLedgerMask) or "nil",
+        })
+    end
 end
 
 function DC_SupplyWindow:hasCanonicalWorkerDetail()

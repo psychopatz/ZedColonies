@@ -16,24 +16,6 @@ local function cloneOptions(options)
     return merged
 end
 
-local function buildFactionOption(ui)
-    local status = System.GetOwnedFactionStatus and System.GetOwnedFactionStatus() or nil
-    if not status or status.faction or status.canCreate ~= true then
-        return nil
-    end
-
-    return {
-        text = "Spread your Created Faction",
-        message = "I actually have a faction, Tell them that were open for business and looking for members!",
-        onSelect = function(conversationUI)
-            local _, msg = System.PromptCreateFaction()
-            if msg and msg ~= "" then
-                conversationUI:speak(msg)
-            end
-            conversationUI:updateOptions(conversationUI.baseOptions or {})
-        end
-    }
-end
 
 local function appendDebugChatOptions(ui, merged)
     if not ui or not ui.interactionObj or not System.CanUseDebug() then
@@ -63,11 +45,6 @@ function System.BuildConversationOptions(ui, options)
 
     if menuID ~= "root" then
         return merged
-    end
-
-    local factionOption = buildFactionOption(ui)
-    if factionOption then
-        merged[#merged + 1] = factionOption
     end
 
     return merged

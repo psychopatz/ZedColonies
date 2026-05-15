@@ -26,6 +26,7 @@ local function getListBuildFields(side)
 end
 
 function DC_SupplyWindow:beginChunkedListBuild(side, rows, selectedKey)
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     local fields = getListBuildFields(side)
     local list = self[fields.list]
     if not list then
@@ -44,6 +45,14 @@ function DC_SupplyWindow:beginChunkedListBuild(side, rows, selectedKey)
     self[fields.selectedRowIndex] = nil
 
     self:processChunkedListBuild(side, Internal.LIST_BUILD_BATCH_SIZE)
+    if Internal.debugPerf then
+        Internal.debugPerf("ListBuildStart", startedAt, 6, {
+            token = self.debugOpenToken,
+            side = side,
+            rows = #(rows or {}),
+            selectedKey = selectedKey and "yes" or "no",
+        })
+    end
 end
 
 function DC_SupplyWindow:processChunkedListBuild(side, batchSize)
@@ -77,6 +86,16 @@ function DC_SupplyWindow:processChunkedListBuild(side, batchSize)
             and Internal.isTimeBudgetExceeded(startedAt, Internal.LIST_BUILD_TIME_BUDGET_MS) then
             break
         end
+    end
+
+    if Internal.debugPerf then
+        Internal.debugPerf("ListBuildBatch", startedAt, 8, {
+            token = self.debugOpenToken,
+            side = side,
+            added = added,
+            nextIndex = nextIndex,
+            totalRows = #rows,
+        })
     end
 
     self[fields.nextIndex] = nextIndex
@@ -129,11 +148,18 @@ function DC_SupplyWindow:syncSearchFilters()
     local workerFilter = Internal.normalizeFilterText(Internal.getSearchText(self.workerSearch))
     if workerFilter ~= (self.lastWorkerFilter or "") then
         self.lastWorkerFilter = workerFilter
-        self:rebuildWorkerList()
+        if self.startWarehouseInventoryFeed
+            and Internal.isWarehouseInventoryTab
+            and Internal.isWarehouseInventoryTab(self) then
+            self:startWarehouseInventoryFeed(true)
+        else
+            self:rebuildWorkerList()
+        end
     end
 end
 
 function DC_SupplyWindow:update()
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     ISCollapsableWindow.update(self)
     self:syncSearchFilters()
     self.detailRefreshTicks = (tonumber(self.detailRefreshTicks) or 0) + 1
@@ -184,6 +210,10 @@ function DC_SupplyWindow:update()
         self:processPlayerEntryFinalize(Internal.LIST_BUILD_BATCH_SIZE)
     end
 
+    if self.processWarehouseInventoryFeed then
+        self:processWarehouseInventoryFeed()
+    end
+
     self:processPendingListBuilds(Internal.LIST_BUILD_BATCH_SIZE)
     if Internal.processTextureQueue then
         Internal.processTextureQueue(Internal.ICON_RESOLVE_BATCH_SIZE)
@@ -216,5 +246,18 @@ function DC_SupplyWindow:update()
         if self.requestActiveTabDetails then
             self:requestActiveTabDetails(false)
         end
+    end
+
+    if Internal.debugPerf then
+        Internal.debugPerf("WindowUpdate", startedAt, 12, {
+            token = self.debugOpenToken,
+            activeTab = self.activeTab,
+            scanning = self.scanning == true,
+            playerHydration = self.playerHydrationState and "yes" or "no",
+            playerFinalize = self.playerFinalizeState and "yes" or "no",
+            pendingPlayer = self.pendingPlayerListRows and "yes" or "no",
+            pendingWorker = self.pendingWorkerListRows and "yes" or "no",
+            warehouseFeedLoading = self.warehouseInventoryFeedState and self.warehouseInventoryFeedState.loading == true,
+        })
     end
 end

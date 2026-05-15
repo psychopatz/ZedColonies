@@ -10,7 +10,47 @@ local Data = Internal.Data or {}
 
 Internal.Data = Data
 
+local function getPerfNowMs()
+    if getTimestampMs then
+        return getTimestampMs()
+    end
+    if getTimestamp then
+        return math.floor((tonumber(getTimestamp()) or 0) * 1000)
+    end
+    return math.floor(os.clock() * 1000)
+end
+
+local function isDebugLoggingEnabled()
+    if DynamicTrading and DynamicTrading.Debug then
+        return true
+    end
+    if isDebugEnabled and isDebugEnabled() then
+        return true
+    end
+    return false
+end
+
+local function debugPerf(tag, startMs, thresholdMs, fields)
+    if not isDebugLoggingEnabled() then
+        return 0
+    end
+
+    local elapsed = math.max(0, getPerfNowMs() - math.max(0, tonumber(startMs) or 0))
+    if elapsed < math.max(0, tonumber(thresholdMs) or 0) then
+        return elapsed
+    end
+
+    local parts = {}
+    for key, value in pairs(fields or {}) do
+        parts[#parts + 1] = tostring(key) .. "=" .. tostring(value)
+    end
+    table.sort(parts)
+    print("[DynamicColonies][Warehouse][" .. tostring(tag or "Perf") .. "] " .. table.concat(parts, " ") .. " ms=" .. tostring(elapsed))
+    return elapsed
+end
+
 function Warehouse.Recalculate(warehouse)
+    local startedAt = getPerfNowMs()
     if not warehouse then
         return nil
     end
@@ -30,7 +70,7 @@ function Warehouse.Recalculate(warehouse)
 
     summary.ownerUsername = Config.GetOwnerUsername(summary.ownerUsername)
     local abstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
-    local abstractSnapshot = abstractInventory and abstractInventory.GetSnapshot and abstractInventory.GetSnapshot(summary.ownerUsername) or nil
+    local abstractSummary = abstractInventory and abstractInventory.GetSummary and abstractInventory.GetSummary(summary.ownerUsername) or nil
     summary.buildingCapacityBonus = Data.GetBuildingCapacityBonus(summary.ownerUsername)
     summary.capacityBonus = summary.manualCapacityBonus + summary.buildingCapacityBonus
     summary.maxWeight = summary.capacityBase + summary.capacityBonus
@@ -39,26 +79,23 @@ function Warehouse.Recalculate(warehouse)
     local provisionCount = 0
     local equipmentCount = 0
     local outputCount = 0
-    local categoryCount = 0
-    local specialCount = 0
-    local abstractWeight = 0
-    local literalSpecialWeight = 0
-
-    if abstractSnapshot then
-        for _categoryId, entry in pairs(abstractSnapshot.categoryStock or {}) do
-            categoryCount = categoryCount + math.max(0, tonumber(entry and entry.count) or 0)
-            abstractWeight = abstractWeight + math.max(0, tonumber(entry and entry.totalWeight) or 0)
-        end
-        for _, entry in ipairs(abstractSnapshot.literalSpecialStock or {}) do
-            specialCount = specialCount + math.max(0, tonumber(entry and entry.qty) or 0)
-            literalSpecialWeight = literalSpecialWeight + Data.GetEntryWeight(entry and entry.fullType, math.max(0, tonumber(entry and entry.qty) or 0))
-        end
-    end
+    local provisionCalories = 0
+    local provisionHydration = 0
 
     for _, entry in ipairs(items.ledgers.provisions or {}) do
         local qty = math.max(1, tonumber(entry and entry.qty) or 1)
         provisionCount = provisionCount + qty
         usedWeight = usedWeight + Data.GetEntryWeight(entry and entry.fullType, qty)
+        provisionCalories = provisionCalories + math.max(
+            0,
+            tonumber(entry and entry.totalCaloriesRemaining)
+                or ((tonumber(entry and entry.caloriesRemaining) or 0) * qty)
+        )
+        provisionHydration = provisionHydration + math.max(
+            0,
+            tonumber(entry and entry.totalHydrationRemaining)
+                or ((tonumber(entry and entry.hydrationRemaining) or 0) * qty)
+        )
     end
 
     for _, entry in ipairs(items.ledgers.equipment or {}) do
@@ -73,16 +110,29 @@ function Warehouse.Recalculate(warehouse)
         usedWeight = usedWeight + Data.GetEntryWeight(entry and entry.fullType, qty)
     end
 
-    usedWeight = usedWeight + abstractWeight
-    usedWeight = usedWeight + literalSpecialWeight
+    usedWeight = usedWeight + math.max(0, tonumber(abstractSummary and abstractSummary.totalWeight) or 0)
 
     summary.usedWeight = usedWeight
     summary.remainingWeight = math.max(0, summary.maxWeight - summary.usedWeight)
     summary.counts.provisions = provisionCount
     summary.counts.equipment = equipmentCount
     summary.counts.output = outputCount
-    summary.counts.categories = categoryCount
-    summary.counts.special = specialCount
+    summary.counts.categories = math.max(0, tonumber(abstractSummary and abstractSummary.totalItemCount) or 0)
+        - math.max(0, tonumber(abstractSummary and abstractSummary.literalSpecialCount) or 0)
+    summary.counts.special = math.max(0, tonumber(abstractSummary and abstractSummary.literalSpecialCount) or 0)
+    summary.inventoryVersion = math.max(1, math.floor(tonumber(abstractSummary and abstractSummary.version) or 1))
+    summary.inventoryItemCount = math.max(0, tonumber(abstractSummary and abstractSummary.totalItemCount) or 0)
+    summary.inventoryCategoryCount = math.max(0, tonumber(abstractSummary and abstractSummary.totalCategoryCount) or 0)
+    summary.inventoryLiteralSpecialCount = math.max(0, tonumber(abstractSummary and abstractSummary.literalSpecialCount) or 0)
+    summary.inventoryRowCount = math.max(0, tonumber(abstractSummary and abstractSummary.inventoryRowCount) or 0)
+    summary.inventoryWeight = math.max(0, tonumber(abstractSummary and abstractSummary.totalWeight) or 0)
+    summary.inventoryCalories = math.max(0, tonumber(abstractSummary and abstractSummary.totalCalories) or 0)
+    summary.inventoryHydration = math.max(0, tonumber(abstractSummary and abstractSummary.totalHydration) or 0)
+    summary.provisionCalories = provisionCalories
+    summary.provisionHydration = provisionHydration
+    summary.totalItemCount = provisionCount + equipmentCount + outputCount + summary.inventoryItemCount
+    summary.totalCalories = provisionCalories + summary.inventoryCalories
+    summary.totalHydration = provisionHydration + summary.inventoryHydration
 
     warehouse.colonyID = summary.colonyID
     warehouse.ownerUsername = summary.ownerUsername
@@ -99,10 +149,30 @@ function Warehouse.Recalculate(warehouse)
     warehouse.usedWeight = summary.usedWeight
     warehouse.remainingWeight = summary.remainingWeight
     warehouse.counts = summary.counts
-    warehouse.abstractStock = abstractSnapshot and abstractSnapshot.categoryStock or {}
-    warehouse.foodNutritionPools = abstractSnapshot and abstractSnapshot.foodNutritionPools or {}
-    warehouse.literalSpecialStock = abstractSnapshot and abstractSnapshot.literalSpecialStock or {}
+    warehouse.inventoryVersion = summary.inventoryVersion
+    warehouse.inventoryItemCount = summary.inventoryItemCount
+    warehouse.inventoryCategoryCount = summary.inventoryCategoryCount
+    warehouse.inventoryLiteralSpecialCount = summary.inventoryLiteralSpecialCount
+    warehouse.inventoryRowCount = summary.inventoryRowCount
+    warehouse.inventoryWeight = summary.inventoryWeight
+    warehouse.inventoryCalories = summary.inventoryCalories
+    warehouse.inventoryHydration = summary.inventoryHydration
+    warehouse.provisionCalories = summary.provisionCalories
+    warehouse.provisionHydration = summary.provisionHydration
+    warehouse.totalItemCount = summary.totalItemCount
+    warehouse.totalCalories = summary.totalCalories
+    warehouse.totalHydration = summary.totalHydration
     warehouse.ledgers = items.ledgers
+    debugPerf("Recalculate", startedAt, 5, {
+        owner = summary.ownerUsername,
+        provisions = provisionCount,
+        equipment = equipmentCount,
+        output = outputCount,
+        inventoryItems = summary.inventoryItemCount,
+        inventoryRows = summary.inventoryRowCount,
+        usedWeight = summary.usedWeight,
+        maxWeight = summary.maxWeight,
+    })
     return warehouse
 end
 

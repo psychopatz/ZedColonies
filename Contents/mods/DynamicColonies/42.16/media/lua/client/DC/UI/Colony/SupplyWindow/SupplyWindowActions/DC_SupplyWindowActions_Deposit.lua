@@ -119,12 +119,15 @@ function DC_SupplyWindow:onSupplyTransferResult(args)
     local acceptedCount = 0
     local rejectedCount = 0
     local hasMissingItems = false
+    local refreshPlayerInventory = args.refreshPlayerInventory == true
 
     for _, itemID in ipairs(args.acceptedItemIDs or {}) do
         acceptedMap[itemID] = true
         acceptedMap[tostring(itemID)] = true
         acceptedCount = acceptedCount + 1
-        self:removePlayerEntryByID(itemID)
+        if refreshPlayerInventory ~= true then
+            self:removePlayerEntryByID(itemID)
+        end
     end
 
     for _index, _entry in ipairs(args.rejected or {}) do
@@ -162,9 +165,13 @@ function DC_SupplyWindow:onSupplyTransferResult(args)
         self:updateStatus(status)
     end
 
-    if hasMissingItems and self.refreshAfterMissingTransfer then
+    if (hasMissingItems or refreshPlayerInventory == true) and self.refreshAfterMissingTransfer then
         self:refreshAfterMissingTransfer()
-        self:updateStatus("Player inventory changed while transferring equipment. Refreshing inventory and companion details...")
+        if hasMissingItems then
+            self:updateStatus("Player inventory changed while transferring equipment. Refreshing inventory and companion details...")
+        elseif status ~= "" then
+            self:updateStatus(status)
+        end
     end
 end
 

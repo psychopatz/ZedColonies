@@ -29,6 +29,7 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
     local eligibleCount = 0
     local movedCount = 0
     local blockedCount = 0
+    local refreshPlayerInventory = false
     for _, lock in ipairs(reserved) do
         local itemID = lock.itemID
         local invItem = Internal.getInventoryItemByID(player, itemID)
@@ -64,6 +65,9 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
                     Deposit.consumeInventoryItemQuantity(invItem, movedQty)
                     movedCount = movedCount + movedQty
                     acceptedItemIDs[#acceptedItemIDs + 1] = itemID
+                    if movedQty < qty then
+                        refreshPlayerInventory = true
+                    end
                 else
                     blockedCount = blockedCount + 1
                     Deposit.rejectItem(rejected, itemID, "capacity")
@@ -80,6 +84,7 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
         acceptedItemIDs = acceptedItemIDs,
         rejected = rejected,
         movedCount = movedCount,
+        refreshPlayerInventory = refreshPlayerInventory,
         message = Deposit.buildTransferMessage(tostring(FlavorText.warehouseStorageLabel or "warehouse storage"), movedCount, #rejected),
     })
 

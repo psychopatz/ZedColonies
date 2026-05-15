@@ -211,6 +211,17 @@ function DC_SupplyWindow.Open(worker, viewMode, options)
     window.warehouseSummaryVersion = nil
     window.warehouseVersion = nil
     window.warehouseVersionsByKey = {}
+    if window.invalidateWarehouseInventoryFeed then
+        window:invalidateWarehouseInventoryFeed()
+    end
+    window.debugOpenToken = tostring(worker.workerID or "worker") .. ":" .. tostring(window.viewMode or "inventory") .. ":" .. tostring(Internal.getPerfNowMs and Internal.getPerfNowMs() or 0)
+    if Internal.debugLog then
+        Internal.debugLog("Open", "opened supply window", {
+            token = window.debugOpenToken,
+            view = window.viewMode,
+            workerID = worker.workerID,
+        })
+    end
     window.initialSummarySyncPending = true
     window.deferredEquipmentPreloadPending = true
     window.deferredEquipmentPreloadTicks = 0
@@ -266,6 +277,7 @@ function DC_SupplyWindow:new(x, y, width, height)
     o.workerExpandedGroups = {}
     o.playerVisibleEntries = {}
     o.workerVisibleEntries = {}
+    o.warehouseInventoryFeedState = nil
     o.pendingPlayerListRows = nil
     o.pendingPlayerListNextIndex = nil
     o.pendingPlayerListSelectedKey = nil

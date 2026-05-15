@@ -13,16 +13,6 @@ local function getLedgerWeight(entries)
     return totalWeight
 end
 
-local function getCategoryStockWeight(stock)
-    local totalWeight = 0
-    for _, entry in pairs(stock or {}) do
-        if type(entry) == "table" then
-            totalWeight = totalWeight + math.max(0, tonumber(entry.totalWeight) or 0)
-        end
-    end
-    return totalWeight
-end
-
 function Internal.getWorkerSupplyTotals(entries)
     local totals = {
         count = 0,
@@ -104,7 +94,5 @@ function Internal.getWarehouseLedgerWeight(worker, tabID)
         return getLedgerWeight(ledgers.equipment)
     end
 
-    return getCategoryStockWeight(warehouse and warehouse.abstractStock)
-        + getLedgerWeight(warehouse and warehouse.literalSpecialStock)
-        + getLedgerWeight(ledgers.output)
+    return math.max(0, tonumber(warehouse and warehouse.inventoryWeight) or 0)
 end

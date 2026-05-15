@@ -65,8 +65,108 @@ function Data.BuildEmptyData(colonyID, ownerUsername)
         categoryStock = {},
         foodNutritionPools = {},
         literalSpecialStock = {},
+        summaryTotals = {
+            ownerUsername = Config.GetOwnerUsername and Config.GetOwnerUsername(ownerUsername) or tostring(ownerUsername or ""),
+            colonyID = tostring(colonyID or ""),
+            version = 1,
+            totalItemCount = 0,
+            totalCategoryCount = 0,
+            totalWeight = 0,
+            totalCalories = 0,
+            totalHydration = 0,
+            literalSpecialCount = 0,
+            literalSpecialEntryCount = 0,
+            inventoryRowCount = 0,
+        },
+        summaryTotalsDirty = false,
         legacyWarehouseMigrationComplete = false,
     }
+end
+
+function Data.NormalizeSummaryTotals(summaryTotals, colonyID, ownerUsername, version)
+    local normalized = type(summaryTotals) == "table" and summaryTotals or {}
+    return {
+        ownerUsername = Config.GetOwnerUsername and Config.GetOwnerUsername(normalized.ownerUsername or ownerUsername) or tostring(normalized.ownerUsername or ownerUsername or ""),
+        colonyID = tostring(normalized.colonyID or colonyID or ""),
+        version = math.max(1, math.floor(tonumber(normalized.version) or tonumber(version) or 1)),
+        totalItemCount = normalizePositiveInteger(normalized.totalItemCount),
+        totalCategoryCount = normalizePositiveInteger(normalized.totalCategoryCount),
+        totalWeight = normalizePositiveNumber(normalized.totalWeight),
+        totalCalories = normalizePositiveNumber(normalized.totalCalories),
+        totalHydration = normalizePositiveNumber(normalized.totalHydration),
+        literalSpecialCount = normalizePositiveInteger(normalized.literalSpecialCount),
+        literalSpecialEntryCount = normalizePositiveInteger(normalized.literalSpecialEntryCount),
+        inventoryRowCount = normalizePositiveInteger(normalized.inventoryRowCount),
+    }
+end
+
+function Data.CopySummaryTotals(summaryTotals, ownerData)
+    local normalized = Data.NormalizeSummaryTotals(
+        summaryTotals,
+        ownerData and ownerData.colonyID or nil,
+        ownerData and ownerData.ownerUsername or nil,
+        ownerData and ownerData.version or nil
+    )
+    local copy = {}
+    for key, value in pairs(normalized) do
+        copy[key] = value
+    end
+    return copy
+end
+
+function Data.RebuildSummaryTotals(ownerData)
+    if type(ownerData) ~= "table" then
+        return Data.NormalizeSummaryTotals(nil)
+    end
+
+    local totalItemCount = 0
+    local totalCategoryCount = 0
+    local totalWeight = 0
+    local totalCalories = 0
+    local totalHydration = 0
+    local literalSpecialCount = 0
+    local literalSpecialEntryCount = 0
+
+    for _categoryId, entry in pairs(ownerData.categoryStock or {}) do
+        local normalizedEntry = Data.NormalizeCategoryStockEntry(entry)
+        if normalizedEntry.count > 0 then
+            totalCategoryCount = totalCategoryCount + 1
+            totalItemCount = totalItemCount + normalizedEntry.count
+            totalWeight = totalWeight + normalizedEntry.totalWeight
+        end
+    end
+
+    for _categoryId, entry in pairs(ownerData.foodNutritionPools or {}) do
+        local normalizedEntry = Data.NormalizeFoodNutritionEntry(entry)
+        totalCalories = totalCalories + normalizedEntry.calories
+        totalHydration = totalHydration + normalizedEntry.hydration
+    end
+
+    for _, entry in ipairs(ownerData.literalSpecialStock or {}) do
+        local qty = math.max(0, math.floor(tonumber(entry and entry.qty) or 0))
+        if qty > 0 then
+            literalSpecialEntryCount = literalSpecialEntryCount + 1
+            literalSpecialCount = literalSpecialCount + qty
+            totalItemCount = totalItemCount + qty
+            totalWeight = totalWeight + Data.GetEntryWeight(entry and entry.fullType, qty)
+        end
+    end
+
+    ownerData.summaryTotals = Data.NormalizeSummaryTotals({
+        ownerUsername = ownerData.ownerUsername,
+        colonyID = ownerData.colonyID,
+        version = ownerData.version,
+        totalItemCount = totalItemCount,
+        totalCategoryCount = totalCategoryCount,
+        totalWeight = totalWeight,
+        totalCalories = totalCalories,
+        totalHydration = totalHydration,
+        literalSpecialCount = literalSpecialCount,
+        literalSpecialEntryCount = literalSpecialEntryCount,
+        inventoryRowCount = totalCategoryCount + literalSpecialEntryCount,
+    }, ownerData.colonyID, ownerData.ownerUsername, ownerData.version)
+    ownerData.summaryTotalsDirty = false
+    return ownerData.summaryTotals
 end
 
 function Data.NormalizeCategoryStockEntry(entry)

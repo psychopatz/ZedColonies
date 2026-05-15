@@ -4,6 +4,7 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 local Internal = DC_SupplyWindow.Internal
 
 function DC_SupplyWindow:startInventoryScan()
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     local player = Internal.getLocalPlayer()
     local rootContainer = player and player.getInventory and player:getInventory() or nil
     local targetTab = self.activeTab or Internal.Tabs.Provisions
@@ -39,11 +40,27 @@ function DC_SupplyWindow:startInventoryScan()
     }
     self.scanning = true
     self:updateStatus("Scanning inventory for labour supplies...")
+    if Internal.debugLog then
+        Internal.debugLog("PlayerScan", "started inventory scan", {
+            token = self.debugOpenToken,
+            tab = targetTab,
+            rootContainer = rootContainer and "yes" or "no",
+            ms = startedAt and math.max(0, (Internal.getPerfNowMs() or 0) - startedAt) or nil,
+        })
+    end
 end
 
 function DC_SupplyWindow:finishInventoryScan()
     self.scanning = false
     local builtCount = #(self.playerEntries or {})
+    if Internal.debugLog then
+        Internal.debugLog("PlayerScan", "finished inventory scan", {
+            token = self.debugOpenToken,
+            scanned = self.scanProcessed or 0,
+            built = builtCount,
+            activeTab = self.scanTargetTabKey or self.activeTab,
+        })
+    end
     self:beginPlayerEntryFinalize(
         self.scanTargetTabKey or self.activeTab or Internal.Tabs.Provisions,
         "Loaded "
@@ -101,6 +118,16 @@ function DC_SupplyWindow:processInventoryScan(batchSize)
             and Internal.isTimeBudgetExceeded(startedAt, Internal.SCAN_TIME_BUDGET_MS) then
             break
         end
+    end
+
+    if Internal.debugPerf then
+        Internal.debugPerf("PlayerScanBatch", startedAt, 8, {
+            token = self.debugOpenToken,
+            visibleProcessed = visibleProcessed,
+            rawSteps = rawSteps,
+            scanned = self.scanProcessed or 0,
+            stackDepth = #self.scanStack,
+        })
     end
 
     if #self.scanStack <= 0 then

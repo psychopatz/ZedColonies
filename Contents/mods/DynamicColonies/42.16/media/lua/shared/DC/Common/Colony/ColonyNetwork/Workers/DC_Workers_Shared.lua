@@ -118,6 +118,7 @@ function Shared.syncSupplyTransferResult(player, args, result)
         rejected = result.rejected or {},
         movedCount = math.max(0, tonumber(result.movedCount) or #(result.acceptedItemIDs or {})),
         message = result.message,
+        refreshPlayerInventory = result.refreshPlayerInventory == true,
     })
 end
 

@@ -6,6 +6,7 @@ local Buildings = DC_Buildings
 local Production = DC_Buildings.Production
 local Internal = Production.Internal
 local AbstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
+local Config = DC_Colony and DC_Colony.Config or nil
 
 Internal.lastProcessedHourByOwner = Internal.lastProcessedHourByOwner or {}
 
@@ -37,14 +38,47 @@ local function canRunRecipe(ownerUsername, recipe)
     return true
 end
 
-local function applyOutputs(ownerUsername, recipe)
+local function isFoodCategory(categoryId)
+    local definition = Config and Config.GetItemCategoryDefinition and Config.GetItemCategoryDefinition(categoryId) or nil
+    return tostring(definition and definition.group or "") == "Food"
+end
+
+local function applyOutputs(ownerUsername, recipe, capture)
+    local totalOutputUnits = 0
+    local totalFoodOutputUnits = 0
     for _, output in ipairs(recipe and recipe.outputs or {}) do
-        if output.category and AbstractInventory and AbstractInventory.AddCategory then
-            AbstractInventory.AddCategory(ownerUsername, output.category, output.count or 0, {
-                totalWeight = 0,
-            })
+        local count = math.max(0, math.floor(tonumber(output and output.count) or 0))
+        totalOutputUnits = totalOutputUnits + count
+        if output and output.category and isFoodCategory(output.category) then
+            totalFoodOutputUnits = totalFoodOutputUnits + count
         end
     end
+
+    local totalWeightConsumed = math.max(0, tonumber(capture and capture.totalWeightConsumed) or 0)
+    local totalCaloriesConsumed = math.max(0, tonumber(capture and capture.totalCaloriesConsumed) or 0)
+    local totalHydrationConsumed = math.max(0, tonumber(capture and capture.totalHydrationConsumed) or 0)
+
+    for _, output in ipairs(recipe and recipe.outputs or {}) do
+        if output.category and AbstractInventory and AbstractInventory.AddCategory then
+            local outputCount = math.max(0, math.floor(tonumber(output.count) or 0))
+            local totalWeight = totalOutputUnits > 0 and (totalWeightConsumed * (outputCount / totalOutputUnits)) or 0
+            local totalCalories = 0
+            local totalHydration = 0
+            if isFoodCategory(output.category) and totalFoodOutputUnits > 0 then
+                totalCalories = totalCaloriesConsumed * (outputCount / totalFoodOutputUnits)
+                totalHydration = totalHydrationConsumed * (outputCount / totalFoodOutputUnits)
+            end
+            local added = AbstractInventory.AddCategory(ownerUsername, output.category, outputCount, {
+                totalWeight = totalWeight,
+                totalCalories = totalCalories,
+                totalHydration = totalHydration,
+            })
+            if added <= 0 then
+                return false
+            end
+        end
+    end
+    return true
 end
 
 local function processBuilding(ownerUsername, instance)
@@ -63,6 +97,7 @@ local function processBuilding(ownerUsername, instance)
                 buildingID = instance and instance.buildingID,
                 buildingType = instance and instance.buildingType,
                 recipeID = recipe.id,
+                capture = {},
             }
             local consumedCategories = true
             local consumedNutrition = true
@@ -86,8 +121,9 @@ local function processBuilding(ownerUsername, instance)
             end
 
             if consumedCategories and consumedNutrition then
-                applyOutputs(ownerUsername, recipe)
-                cycles = cycles + 1
+                if applyOutputs(ownerUsername, recipe, reasonMeta.capture) then
+                    cycles = cycles + 1
+                end
             end
         end
     end

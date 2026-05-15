@@ -72,12 +72,16 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             rightPaneDescription = "the colony warehouse currently holds " .. string.lower(tostring(workerTabLabel or "storage"))
         end
         local transferGuidance = ""
+        local warehouseFeedLoading = isWarehouseOutputTab
+            and self.warehouseInventoryFeedState
+            and self.warehouseInventoryFeedState.loading == true
         if isWarehouseOutputTab then
             transferGuidance =
                 "<LINE> <RGB:0.62,0.62,0.62> This warehouse Inventory tab shows abstract colony categories and literal special stock. "
                 .. "<LINE> <RGB:0.62,0.62,0.62> Use "
                 .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> on the left side to deposit real items. Provisions and Equipment stay literal in their own tabs, while items deposited here are abstracted for colony systems. "
                 .. "<LINE> <RGB:0.62,0.62,0.62> Category rows on the right side are read-only and cannot be withdrawn as literal items. "
+                .. (warehouseFeedLoading and "<LINE> <RGB:0.85,0.72,0.38> Warehouse inventory is still loading rows in the background. " or "")
         elseif transferAllowed then
             transferGuidance =
                 "<LINE> <RGB:0.62,0.62,0.62> Use "

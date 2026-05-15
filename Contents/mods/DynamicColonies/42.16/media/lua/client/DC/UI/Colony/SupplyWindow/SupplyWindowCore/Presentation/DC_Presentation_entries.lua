@@ -349,6 +349,17 @@ end
 
 function Internal.getWorkerTabSummary(window, entries)
     local activeTab = window and window.activeTab or Internal.Tabs.Provisions
+    local warehouse = window and window.workerData and window.workerData.warehouse or nil
+
+    if Internal.isWarehouseView and Internal.isWarehouseView(window) and type(warehouse) == "table" then
+        return table.concat({
+            "Inventory",
+            tostring(math.max(0, math.floor(tonumber(warehouse.totalItemCount) or 0))) .. " total",
+            string.format("%.0f cal", math.max(0, tonumber(warehouse.totalCalories) or 0)),
+            string.format("%.0f hyd", math.max(0, tonumber(warehouse.totalHydration) or 0)),
+            Internal.formatWeightValue(warehouse.usedWeight) .. " / " .. Internal.formatWeightValue(warehouse.maxWeight),
+        }, " | ")
+    end
 
     if activeTab == Internal.Tabs.Equipment then
         local equippedCount = 0

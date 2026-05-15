@@ -39,6 +39,12 @@ function Transport.getWarehouseItemsVersion(ownerUsername)
     return math.max(1, math.floor(tonumber(summary and summary.itemsVersion) or 1))
 end
 
+function Transport.getWarehouseInventoryVersion(ownerUsername)
+    local Warehouse = DC_Colony and DC_Colony.Warehouse or nil
+    local summary = Warehouse and Warehouse.GetClientSummary and Warehouse.GetClientSummary(ownerUsername) or nil
+    return math.max(1, math.floor(tonumber(summary and summary.inventoryVersion) or 1))
+end
+
 function Transport.getResourcesVersion(ownerUsername)
     local ownerData = Resources.EnsureOwner and Resources.EnsureOwner(ownerUsername) or nil
     return math.max(1, math.floor(tonumber(ownerData and ownerData.version) or 1))
@@ -139,6 +145,7 @@ function Transport.buildVersions(ownerUsername)
         workerList = Transport.getWorkerListVersion(ownerUsername),
         warehouseSummary = Transport.getWarehouseSummaryVersion(ownerUsername),
         warehouseItems = Transport.getWarehouseItemsVersion(ownerUsername),
+        warehouseInventory = Transport.getWarehouseInventoryVersion(ownerUsername),
         resources = Transport.getResourcesVersion(ownerUsername),
         factionStatus = Transport.getFactionStatusVersion(ownerUsername),
     }

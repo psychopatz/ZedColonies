@@ -4,6 +4,45 @@ DC_Colony.Network = DC_Colony.Network or {}
 local Network = DC_Colony.Network
 local Internal = Network.Internal or {}
 local Shared = Internal.ColonyNetShared or {}
+
+local function getPerfNowMs()
+    if getTimestampMs then
+        return getTimestampMs()
+    end
+    if getTimestamp then
+        return math.floor((tonumber(getTimestamp()) or 0) * 1000)
+    end
+    return math.floor(os.clock() * 1000)
+end
+
+local function isDebugLoggingEnabled()
+    if DynamicTrading and DynamicTrading.Debug then
+        return true
+    end
+    if isDebugEnabled and isDebugEnabled() then
+        return true
+    end
+    return false
+end
+
+local function debugPerf(tag, startMs, thresholdMs, fields)
+    if not isDebugLoggingEnabled() then
+        return 0
+    end
+
+    local elapsed = math.max(0, getPerfNowMs() - math.max(0, tonumber(startMs) or 0))
+    if elapsed < math.max(0, tonumber(thresholdMs) or 0) then
+        return elapsed
+    end
+
+    local parts = {}
+    for key, value in pairs(fields or {}) do
+        parts[#parts + 1] = tostring(key) .. "=" .. tostring(value)
+    end
+    table.sort(parts)
+    print("[DynamicColonies][ColonySync][" .. tostring(tag or "Perf") .. "] " .. table.concat(parts, " ") .. " ms=" .. tostring(elapsed))
+    return elapsed
+end
 local Config = Shared.Config or {}
 local Registry = Shared.Registry or {}
 
@@ -137,6 +176,68 @@ function Internal.syncWarehouse(player, knownVersion, includeLedgers, ledgerMask
         includeLedgers = normalizedMask ~= nil,
         ledgerMask = normalizedMask,
         warehouse = warehouse
+    })
+end
+
+function Internal.syncWarehouseInventoryFeed(player, knownVersion, cursor, limit, filterText)
+    local startedAt = getPerfNowMs()
+    local owner = Config.GetOwnerUsername(player)
+    local abstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
+    local summary = abstractInventory and abstractInventory.GetSummary and abstractInventory.GetSummary(owner) or nil
+    local version = tostring(summary and summary.version or 1)
+    local normalizedCursor = math.max(0, math.floor(tonumber(cursor) or 0))
+    local normalizedLimit = math.max(1, math.min(64, math.floor(tonumber(limit) or 24)))
+    local normalizedFilter = tostring(filterText or "")
+
+    if normalizedCursor <= 0 and knownVersion and tostring(knownVersion) == version then
+        Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWarehouseInventoryFeed", {
+            version = version,
+            cursor = 0,
+            filterText = normalizedFilter,
+            unchanged = true,
+        })
+        debugPerf("SyncWarehouseInventoryFeed", startedAt, 4, {
+            owner = owner,
+            unchanged = true,
+            version = version,
+            cursor = normalizedCursor,
+        })
+        return
+    end
+
+    local response = abstractInventory and abstractInventory.GetInventoryRows and abstractInventory.GetInventoryRows(
+        owner,
+        normalizedCursor,
+        normalizedLimit,
+        normalizedFilter
+    ) or {
+        version = tonumber(version) or 1,
+        cursor = normalizedCursor,
+        nextCursor = nil,
+        hasMore = false,
+        totalRows = 0,
+        rows = {},
+        filterText = normalizedFilter,
+    }
+
+    Internal.sendResponse(player, Config.COMMAND_MODULE, "SyncWarehouseInventoryFeed", {
+        version = tostring(response.version or version),
+        cursor = math.max(0, math.floor(tonumber(response.cursor) or normalizedCursor)),
+        nextCursor = response.nextCursor ~= nil and math.max(0, math.floor(tonumber(response.nextCursor) or 0)) or nil,
+        hasMore = response.hasMore == true,
+        totalRows = math.max(0, math.floor(tonumber(response.totalRows) or 0)),
+        rows = response.rows or {},
+        filterText = tostring(response.filterText or normalizedFilter),
+    })
+    debugPerf("SyncWarehouseInventoryFeed", startedAt, 6, {
+        owner = owner,
+        unchanged = false,
+        version = tostring(response.version or version),
+        cursor = normalizedCursor,
+        limit = normalizedLimit,
+        rowCount = #(response.rows or {}),
+        totalRows = tonumber(response.totalRows) or 0,
+        hasMore = response.hasMore == true,
     })
 end
 

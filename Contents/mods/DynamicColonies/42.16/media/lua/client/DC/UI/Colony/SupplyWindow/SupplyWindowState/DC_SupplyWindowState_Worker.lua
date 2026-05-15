@@ -4,87 +4,22 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 local Internal = DC_SupplyWindow.Internal
 
 function DC_SupplyWindow:refreshWorkerEntries()
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     self.workerEntries = {}
 
     local worker = self.workerData
     local isWarehouseView = Internal.isWarehouseView and Internal.isWarehouseView(self)
     local activeTab = self.activeTab or Internal.Tabs.Provisions
     local warehouse = worker and worker.warehouse or nil
-    local warehouseLedgers = warehouse and warehouse.ledgers or {}
-    local config = Internal.Config or {}
-    local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker and worker.jobType) or tostring(worker and worker.jobType or "")
-
-    if activeTab == Internal.Tabs.Equipment then
-        local ledger = isWarehouseView and (warehouseLedgers.equipment or {}) or (worker and worker.toolLedger or {})
-        local realEquipmentSignatures = {}
-        if not isWarehouseView then
-            for _, ledgerEntry in ipairs(ledger) do
-                if ledgerEntry and ledgerEntry.pending ~= true then
-                    realEquipmentSignatures[Internal.getEquipmentPendingDedupeSignature(ledgerEntry)] = true
-                end
-            end
-        end
-        for index, ledgerEntry in ipairs(ledger) do
-            local skipPendingDuplicate = not isWarehouseView
-                and ledgerEntry
-                and ledgerEntry.pending == true
-                and realEquipmentSignatures[Internal.getEquipmentPendingDedupeSignature(ledgerEntry)] == true
-            local entry = not skipPendingDuplicate and Internal.buildWorkerToolEntry(ledgerEntry, index) or nil
-            if entry then
-                self.workerEntries[#self.workerEntries + 1] = entry
-            end
-        end
-
-        if not isWarehouseView then
-            for _, placeholderEntry in ipairs(Internal.getMissingEquipmentPlaceholderEntries(worker)) do
-                self.workerEntries[#self.workerEntries + 1] = placeholderEntry
-            end
-        end
-    elseif activeTab == Internal.Tabs.Output then
-        if isWarehouseView then
-            local abstractStock = warehouse and (warehouse.abstractStock or warehouse.categoryCounts) or {}
-            local literalSpecialStock = warehouse and warehouse.literalSpecialStock or {}
-            for categoryId, stockEntry in pairs(abstractStock or {}) do
-                local entry = Internal.buildWarehouseCategoryEntry(categoryId, stockEntry)
-                if entry then
-                    self.workerEntries[#self.workerEntries + 1] = entry
-                end
-            end
-            for index, literalEntry in ipairs(literalSpecialStock or {}) do
-                local entry = Internal.buildWarehouseLiteralSpecialEntry(literalEntry, index)
-                if entry then
-                    self.workerEntries[#self.workerEntries + 1] = entry
-                end
-            end
-        else
-            local ledger = nil
-            if normalizedJob == ((config.JobTypes or {}).Scavenge) then
-                ledger = worker and worker.haulLedger or {}
-            else
-                ledger = worker and worker.outputLedger or {}
-            end
-            for index, ledgerEntry in ipairs(ledger) do
-                local entry = Internal.buildWorkerOutputEntry(ledgerEntry, index)
-                if entry then
-                    self.workerEntries[#self.workerEntries + 1] = entry
-                end
-            end
-        end
+    if isWarehouseView then
+        Internal.populateWarehouseWorkerEntries(self, self.workerEntries, warehouse, activeTab)
     else
-        local moneyEntry = (not isWarehouseView) and Internal.buildWorkerMoneyEntry(worker) or nil
-        if moneyEntry then
-            self.workerEntries[#self.workerEntries + 1] = moneyEntry
-        end
-        local ledger = isWarehouseView and (warehouseLedgers.provisions or {}) or (worker and worker.nutritionLedger or {})
-        for index, ledgerEntry in ipairs(ledger) do
-            local entry = Internal.buildWorkerSupplyEntry(ledgerEntry, index)
-            if entry then
-                self.workerEntries[#self.workerEntries + 1] = entry
-            end
-        end
+        Internal.populateCompanionWorkerEntries(self, self.workerEntries, worker, activeTab)
     end
 
-    table.sort(self.workerEntries, Internal.compareEntries)
+    if not (isWarehouseView and activeTab == Internal.Tabs.Output) then
+        table.sort(self.workerEntries, Internal.compareEntries)
+    end
     if self.bumpPresentationCacheVersion then
         self:bumpPresentationCacheVersion()
     end
@@ -95,9 +30,19 @@ function DC_SupplyWindow:refreshWorkerEntries()
     if self.updateTransferControls then
         self:updateTransferControls()
     end
+    if Internal.debugPerf then
+        Internal.debugPerf("WorkerEntriesRefresh", startedAt, 6, {
+            token = self.debugOpenToken,
+            activeTab = activeTab,
+            warehouseView = isWarehouseView == true,
+            count = #(self.workerEntries or {}),
+            feedRows = self.warehouseInventoryFeedState and #(self.warehouseInventoryFeedState.rows or {}) or 0,
+        })
+    end
 end
 
 function DC_SupplyWindow:rebuildWorkerList()
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     if not self.workerList then
         return
     end
@@ -118,9 +63,18 @@ function DC_SupplyWindow:rebuildWorkerList()
         Internal.buildGroupedRows(visibleEntries, self.activeTab or Internal.Tabs.Provisions, "worker", self),
         selectedKey
     )
+    if Internal.debugPerf then
+        Internal.debugPerf("WorkerListRebuild", startedAt, 6, {
+            token = self.debugOpenToken,
+            activeTab = self.activeTab,
+            visible = #visibleEntries,
+            total = #(self.workerEntries or {}),
+        })
+    end
 end
 
 function DC_SupplyWindow:setWorkerData(worker)
+    local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     self.workerData = worker
     if Internal.isWarehouseView and Internal.isWarehouseView(self) then
         local warehouseName = Internal.getWarehouseDisplayName and Internal.getWarehouseDisplayName(self) or tostring(self.workerName or self.workerID or "Warehouse")
@@ -135,4 +89,11 @@ function DC_SupplyWindow:setWorkerData(worker)
         self:bumpPresentationCacheVersion()
     end
     self:refreshWorkerEntries()
+    if Internal.debugPerf then
+        Internal.debugPerf("SetWorkerData", startedAt, 8, {
+            token = self.debugOpenToken,
+            activeTab = self.activeTab,
+            hasWarehouse = type(worker and worker.warehouse) == "table",
+        })
+    end
 end

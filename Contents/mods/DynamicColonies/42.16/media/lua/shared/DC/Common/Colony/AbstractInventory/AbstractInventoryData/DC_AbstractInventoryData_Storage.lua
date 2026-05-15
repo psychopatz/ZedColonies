@@ -98,6 +98,7 @@ local function getStaticFoodNutrition(fullType)
 end
 
 function Data.NormalizeData(colonyID, ownerUsername, data)
+    local hadSummaryTotals = type(data.summaryTotals) == "table"
     data.schemaVersion = math.max(Data.GetSchemaVersion(), math.floor(tonumber(data.schemaVersion) or 0))
     data.colonyID = tostring(colonyID or data.colonyID or "")
     data.ownerUsername = Config.GetOwnerUsername and Config.GetOwnerUsername(ownerUsername or data.ownerUsername) or tostring(ownerUsername or data.ownerUsername or "")
@@ -105,6 +106,8 @@ function Data.NormalizeData(colonyID, ownerUsername, data)
     data.categoryStock = Data.NormalizeCategoryStock(data.categoryStock)
     data.foodNutritionPools = Data.NormalizeFoodNutritionPools(data.foodNutritionPools)
     data.literalSpecialStock = Data.NormalizeLiteralSpecialStock(data.literalSpecialStock)
+    data.summaryTotals = Data.NormalizeSummaryTotals(data.summaryTotals, data.colonyID, data.ownerUsername, data.version)
+    data.summaryTotalsDirty = data.summaryTotalsDirty == true or hadSummaryTotals ~= true
     data.legacyWarehouseMigrationComplete = data.legacyWarehouseMigrationComplete == true
     return data
 end
@@ -112,6 +115,9 @@ end
 function Data.Touch(ownerUsername)
     local data = Data.EnsureOwnerData(ownerUsername)
     data.version = math.max(1, math.floor(tonumber(data.version) or 1)) + 1
+    if type(data.summaryTotals) == "table" then
+        data.summaryTotals.version = data.version
+    end
     return data.version
 end
 
@@ -208,6 +214,7 @@ function Data.EnsureOwnerData(ownerUsername)
     local data = registryInternal and registryInternal.EnsureModDataTable and registryInternal.EnsureModDataTable(key, Data.BuildEmptyData(colonyID, owner)) or Data.BuildEmptyData(colonyID, owner)
     Data.NormalizeData(colonyID, owner, data)
     if Data.MigrateWarehouseData(owner, data) then
+        Data.RebuildSummaryTotals(data)
         Data.Touch(owner)
         local warehouse = getWarehouse()
         if warehouse and warehouse.TouchItemsVersion then
@@ -216,6 +223,8 @@ function Data.EnsureOwnerData(ownerUsername)
         if warehouse and warehouse.TouchSummaryVersion then
             warehouse.TouchSummaryVersion(owner)
         end
+    elseif data.summaryTotalsDirty == true then
+        Data.RebuildSummaryTotals(data)
     end
     return data
 end

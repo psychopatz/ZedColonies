@@ -4,6 +4,8 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 require "DC/UI/Colony/DC_ColonyQuantityModal"
 
 -- Keep explicit load order so shared action helpers exist before dependent handlers.
+require "DC/UI/Colony/SupplyWindow/SupplyWindowActions/SyncModes/DC_SupplyWindowSync_Companion"
+require "DC/UI/Colony/SupplyWindow/SupplyWindowActions/SyncModes/DC_SupplyWindowSync_Warehouse"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowActions/DC_SupplyWindowActions_WorkerSync"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowActions/DC_SupplyWindowActions_TransferState"
 require "DC/UI/Colony/SupplyWindow/SupplyWindowActions/DC_SupplyWindowActions_Money"

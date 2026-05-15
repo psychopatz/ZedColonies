@@ -8,5 +8,6 @@ require "DC/Common/Colony/AbstractInventory/AbstractInventoryData/DC_AbstractInv
 require "DC/Common/Colony/AbstractInventory/AbstractInventoryData/DC_AbstractInventoryData_Storage"
 require "DC/Common/Colony/AbstractInventory/AbstractInventoryData/DC_AbstractInventoryData_Entries"
 require "DC/Common/Colony/AbstractInventory/AbstractInventoryData/DC_AbstractInventoryData_Client"
+require "DC/Common/Colony/AbstractInventory/AbstractInventoryData/DC_AbstractInventoryData_Presentation"
 
 return AbstractInventory

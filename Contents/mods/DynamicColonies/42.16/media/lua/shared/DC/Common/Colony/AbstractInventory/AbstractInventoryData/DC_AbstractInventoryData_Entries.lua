@@ -169,6 +169,7 @@ function AbstractInventory.DepositItem(ownerUsername, fullType, qty, meta)
         applyFoodNutrition(ownerData, categoryId, count, normalizedFullType, appliedMeta)
     end
 
+    Data.RebuildSummaryTotals(ownerData)
     Data.Touch(owner)
     local warehouse = getWarehouse()
     if warehouse and warehouse.TouchSummaryVersion then
@@ -226,8 +227,13 @@ function AbstractInventory.AddCategory(ownerUsername, categoryId, amount, source
         return 0
     end
 
+    local totalWeight = math.max(0, tonumber(sourceMeta and sourceMeta.totalWeight) or 0)
+    if totalWeight > 0 and totalWeight > getRemainingWarehouseCapacity(owner) then
+        return 0
+    end
+
     local ownerData = Data.EnsureOwnerData(owner)
-    addCategoryStockEntry(ownerData, key, count, sourceMeta and sourceMeta.totalWeight or 0)
+    addCategoryStockEntry(ownerData, key, count, totalWeight)
     if resolveFoodCategory(key) and sourceMeta and ((tonumber(sourceMeta.totalCalories) or 0) > 0 or (tonumber(sourceMeta.totalHydration) or 0) > 0) then
         applyFoodNutrition(ownerData, key, count, key, {
             totalCalories = sourceMeta.totalCalories,
@@ -235,6 +241,7 @@ function AbstractInventory.AddCategory(ownerUsername, categoryId, amount, source
         })
     end
 
+    Data.RebuildSummaryTotals(ownerData)
     Data.Touch(owner)
     local warehouse = getWarehouse()
     if warehouse and warehouse.TouchSummaryVersion then
@@ -285,6 +292,7 @@ function AbstractInventory.ConsumeFoodNutrition(ownerUsername, filters, calories
     end
 
     local ownerData = Data.EnsureOwnerData(owner)
+    local capture = type(_reasonMeta) == "table" and type(_reasonMeta.capture) == "table" and _reasonMeta.capture or nil
     local allowed = {}
     local categories = {}
     local restrict = false
@@ -341,7 +349,18 @@ function AbstractInventory.ConsumeFoodNutrition(ownerUsername, filters, calories
                     estimatedCount = math.min(countBefore, math.max(1, math.ceil(estimatedCount - 0.0001)))
                 end
                 entry.count = math.max(0, countBefore - estimatedCount)
+                local stockEntry = Data.NormalizeCategoryStockEntry(ownerData.categoryStock[key] or nil)
+                local averageWeight = stockEntry.count > 0 and (stockEntry.totalWeight / stockEntry.count) or 0
+                local actualTaken = math.min(stockEntry.count, estimatedCount)
                 consumeFoodCategoryCount(ownerData, key, estimatedCount)
+                if capture then
+                    capture.totalWeightConsumed = math.max(0, tonumber(capture.totalWeightConsumed) or 0) + (averageWeight * actualTaken)
+                    capture.totalItemCountConsumed = math.max(0, tonumber(capture.totalItemCountConsumed) or 0) + actualTaken
+                end
+            end
+            if capture then
+                capture.totalCaloriesConsumed = math.max(0, tonumber(capture.totalCaloriesConsumed) or 0) + usedCalories
+                capture.totalHydrationConsumed = math.max(0, tonumber(capture.totalHydrationConsumed) or 0) + usedHydration
             end
             if entry.calories <= 0 and entry.hydration <= 0 and entry.count <= 0 then
                 ownerData.foodNutritionPools[key] = nil
@@ -351,6 +370,7 @@ function AbstractInventory.ConsumeFoodNutrition(ownerUsername, filters, calories
         end
     end
 
+    Data.RebuildSummaryTotals(ownerData)
     Data.Touch(owner)
     local warehouse = getWarehouse()
     if warehouse and warehouse.TouchSummaryVersion then
@@ -397,6 +417,7 @@ function AbstractInventory.AddLiteralSpecial(ownerUsername, entry)
     normalized.qty = qty
     local ownerData = Data.EnsureOwnerData(owner)
     ownerData.literalSpecialStock[#ownerData.literalSpecialStock + 1] = normalized
+    Data.RebuildSummaryTotals(ownerData)
     Data.Touch(owner)
     local warehouse = getWarehouse()
     if warehouse and warehouse.TouchSummaryVersion then
@@ -445,6 +466,7 @@ function AbstractInventory.TakeLiteralSpecial(ownerUsername, requestedQty, filte
     end
 
     if taken > 0 then
+        Data.RebuildSummaryTotals(ownerData)
         Data.Touch(owner)
         local warehouse = getWarehouse()
         if warehouse and warehouse.TouchSummaryVersion then
@@ -476,6 +498,7 @@ function AbstractInventory.ConsumeCategories(ownerUsername, requirements, _reaso
     end
 
     local ownerData = Data.EnsureOwnerData(owner)
+    local capture = type(_reasonMeta) == "table" and type(_reasonMeta.capture) == "table" and _reasonMeta.capture or nil
     for _, requirement in ipairs(requirements or {}) do
         local categoryId = tostring(requirement and requirement.category or "")
         local needed = math.max(0, math.floor(tonumber(requirement and requirement.count) or 0))
@@ -487,6 +510,10 @@ function AbstractInventory.ConsumeCategories(ownerUsername, requirements, _reaso
             local taken = math.min(countBefore, needed)
             entry.count = math.max(0, entry.count - taken)
             entry.totalWeight = math.max(0, totalWeightBefore - (averageWeight * taken))
+            if capture then
+                capture.totalWeightConsumed = math.max(0, tonumber(capture.totalWeightConsumed) or 0) + (averageWeight * taken)
+                capture.totalItemCountConsumed = math.max(0, tonumber(capture.totalItemCountConsumed) or 0) + taken
+            end
             if entry.count <= 0 then
                 ownerData.categoryStock[categoryId] = nil
             else
@@ -495,6 +522,7 @@ function AbstractInventory.ConsumeCategories(ownerUsername, requirements, _reaso
         end
     end
 
+    Data.RebuildSummaryTotals(ownerData)
     Data.Touch(owner)
     local warehouse = getWarehouse()
     if warehouse and warehouse.TouchSummaryVersion then
@@ -527,6 +555,7 @@ function AbstractInventory.TakeCategoryUnits(ownerUsername, categoryId, amount)
         ownerData.categoryStock[key] = entry
     end
 
+    Data.RebuildSummaryTotals(ownerData)
     Data.Touch(owner)
     local warehouse = getWarehouse()
     if warehouse and warehouse.TouchSummaryVersion then

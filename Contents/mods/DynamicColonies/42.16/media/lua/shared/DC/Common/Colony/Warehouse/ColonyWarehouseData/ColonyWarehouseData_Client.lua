@@ -45,8 +45,6 @@ function Warehouse.GetClientSummary(ownerUsername)
     end
 
     local summary = warehouse.__summary or warehouse
-    local abstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
-    local abstractSnapshot = abstractInventory and abstractInventory.GetSnapshot and abstractInventory.GetSnapshot(ownerUsername) or nil
     return {
         colonyID = summary.colonyID,
         ownerUsername = summary.ownerUsername,
@@ -62,7 +60,19 @@ function Warehouse.GetClientSummary(ownerUsername)
         upgradeLevel = summary.upgradeLevel,
         autoEquipEnabled = summary.autoEquipEnabled == true,
         counts = Registry.Internal.CopyShallow(summary.counts or {}),
-        categoryCounts = abstractSnapshot and abstractSnapshot.categoryCounts or {},
+        inventoryVersion = math.max(1, math.floor(tonumber(summary.inventoryVersion) or 1)),
+        inventoryItemCount = math.max(0, math.floor(tonumber(summary.inventoryItemCount) or 0)),
+        inventoryCategoryCount = math.max(0, math.floor(tonumber(summary.inventoryCategoryCount) or 0)),
+        inventoryLiteralSpecialCount = math.max(0, math.floor(tonumber(summary.inventoryLiteralSpecialCount) or 0)),
+        inventoryRowCount = math.max(0, math.floor(tonumber(summary.inventoryRowCount) or 0)),
+        inventoryWeight = math.max(0, tonumber(summary.inventoryWeight) or 0),
+        inventoryCalories = math.max(0, tonumber(summary.inventoryCalories) or 0),
+        inventoryHydration = math.max(0, tonumber(summary.inventoryHydration) or 0),
+        provisionCalories = math.max(0, tonumber(summary.provisionCalories) or 0),
+        provisionHydration = math.max(0, tonumber(summary.provisionHydration) or 0),
+        totalItemCount = math.max(0, math.floor(tonumber(summary.totalItemCount) or 0)),
+        totalCalories = math.max(0, tonumber(summary.totalCalories) or 0),
+        totalHydration = math.max(0, tonumber(summary.totalHydration) or 0),
     }
 end
 
@@ -88,11 +98,6 @@ function Warehouse.GetClientSnapshot(ownerUsername, includeLedgers, ledgerMask)
     if normalizedMask.output == true then
         snapshot.ledgers.output = Data.CopyArray(warehouse.ledgers.output)
     end
-    local abstractInventory = DC_Colony and DC_Colony.AbstractInventory or nil
-    local abstractSnapshot = abstractInventory and abstractInventory.GetSnapshot and abstractInventory.GetSnapshot(ownerUsername) or nil
-    snapshot.abstractStock = abstractSnapshot and abstractSnapshot.categoryStock or {}
-    snapshot.foodNutritionPools = abstractSnapshot and abstractSnapshot.foodNutritionPools or {}
-    snapshot.literalSpecialStock = abstractSnapshot and abstractSnapshot.literalSpecialStock or {}
     return snapshot
 end
 

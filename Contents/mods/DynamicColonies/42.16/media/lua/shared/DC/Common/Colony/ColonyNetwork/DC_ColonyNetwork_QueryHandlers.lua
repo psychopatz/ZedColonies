@@ -43,6 +43,18 @@ Network.Handlers.RequestWarehouse = function(player, args)
     )
 end
 
+Network.Handlers.RequestWarehouseInventoryFeed = function(player, args)
+    if Network.Internal and Network.Internal.syncWarehouseInventoryFeed then
+        Network.Internal.syncWarehouseInventoryFeed(
+            player,
+            args and args.knownVersion,
+            args and args.cursor,
+            args and args.limit,
+            args and args.filterText
+        )
+    end
+end
+
 Network.Handlers.RequestResourcesSnapshot = function(player, args)
     if Network.Internal and Network.Internal.syncResources then
         Network.Internal.syncResources(player, args and args.knownVersion)
