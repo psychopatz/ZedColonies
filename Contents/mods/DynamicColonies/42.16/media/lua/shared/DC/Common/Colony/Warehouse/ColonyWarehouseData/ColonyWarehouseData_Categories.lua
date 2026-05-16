@@ -38,6 +38,21 @@ function Warehouse.GetCategoryCount(ownerUsername, categoryId)
     return abstractInventory and abstractInventory.GetCategoryCount and abstractInventory.GetCategoryCount(ownerUsername, categoryId) or 0
 end
 
+function Warehouse.GetItemCount(ownerUsername, fullType)
+    local abstractInventory = getAbstractInventory()
+    return abstractInventory and abstractInventory.GetItemCount and abstractInventory.GetItemCount(ownerUsername, fullType) or 0
+end
+
+function Warehouse.GetItemCounts(ownerUsername)
+    local abstractInventory = getAbstractInventory()
+    return abstractInventory and abstractInventory.GetItemCounts and abstractInventory.GetItemCounts(ownerUsername) or {}
+end
+
+function Warehouse.GetItemStockSnapshot(ownerUsername)
+    local abstractInventory = getAbstractInventory()
+    return abstractInventory and abstractInventory.GetItemStockSnapshot and abstractInventory.GetItemStockSnapshot(ownerUsername) or {}
+end
+
 function Warehouse.GetCategoryStock(ownerUsername, categoryId)
     local abstractInventory = getAbstractInventory()
     return abstractInventory and abstractInventory.GetCategoryStock and abstractInventory.GetCategoryStock(ownerUsername, categoryId) or { count = 0, totalWeight = 0 }

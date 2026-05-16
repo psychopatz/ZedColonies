@@ -124,6 +124,63 @@ function Internal.BuildOutputEntryFromInventoryItem(invItem, overrideDisplayName
     return Internal.NormalizeOutputEntry(entry)
 end
 
+function Internal.IsWarehouseInventoryItemPristine(invItem)
+    if not invItem or not invItem.getFullType then
+        return false
+    end
+
+    local fullType = tostring(invItem:getFullType() or "")
+    if fullType == "" or fullType == "Base.Money" or fullType == "Base.MoneyBundle" then
+        return false
+    end
+
+    local normalized = Internal.BuildOutputEntryFromInventoryItem(invItem)
+    if not normalized then
+        return false
+    end
+
+    if normalized.isRottenProvision == true or tostring(normalized.provisionBlockedReason or "") ~= "" then
+        return false
+    end
+
+    local conditionMax = math.max(0, tonumber(normalized.conditionMax) or 0)
+    if conditionMax > 0 and math.max(0, tonumber(normalized.condition) or 0) + 0.0001 < conditionMax then
+        return false
+    end
+
+    local headConditionMax = math.max(0, tonumber(normalized.headConditionMax) or 0)
+    if headConditionMax > 0 and math.max(0, tonumber(normalized.headCondition) or 0) + 0.0001 < headConditionMax then
+        return false
+    end
+
+    if normalized.isDrainable == true and math.max(0, tonumber(normalized.usedDelta) or 0) + 0.0001 < 1 then
+        return false
+    end
+
+    local fluidCapacity = math.max(0, tonumber(normalized.fluidCapacity) or 0)
+    if fluidCapacity > 0 and math.max(0, tonumber(normalized.fluidAmount) or 0) + 0.0001 < fluidCapacity then
+        return false
+    end
+
+    local equipmentEntry = Internal.BuildEquipmentEntryFromInventoryItem and Internal.BuildEquipmentEntryFromInventoryItem(invItem) or nil
+    if equipmentEntry then
+        local staticMetadata = Internal.GetEquipmentStaticMetadata and Internal.GetEquipmentStaticMetadata(fullType) or {}
+        local defaultQuality = tonumber(staticMetadata and staticMetadata.quality)
+        local currentQuality = tonumber(equipmentEntry.quality)
+        if currentQuality ~= nil and defaultQuality ~= nil and currentQuality ~= defaultQuality then
+            return false
+        end
+
+        local defaultRepairs = math.max(0, tonumber(staticMetadata and staticMetadata.haveBeenRepaired) or 0)
+        local currentRepairs = math.max(0, tonumber(equipmentEntry.haveBeenRepaired) or 0)
+        if currentRepairs > defaultRepairs then
+            return false
+        end
+    end
+
+    return true
+end
+
 function Internal.BuildOutputAddItemCustomData(entry)
     local normalized = Internal.NormalizeOutputEntry(entry)
     if not normalized then

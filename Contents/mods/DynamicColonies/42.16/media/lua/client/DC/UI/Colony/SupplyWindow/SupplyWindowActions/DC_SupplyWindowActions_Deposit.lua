@@ -510,7 +510,7 @@ function DC_SupplyWindow:onDepositSelected()
     local activeTab = self.activeTab or Internal.Tabs.Provisions
 
     if activeTab == Internal.Tabs.Output and not (Internal.isWarehouseView and Internal.isWarehouseView(self)) then
-        self:updateStatus("This tab is warehouse Inventory only. Open the Warehouse view to abstract general items.")
+        self:updateStatus("This tab is warehouse Inventory only. Open the Warehouse view to store literal item stacks.")
         return
     end
 
@@ -566,7 +566,7 @@ function DC_SupplyWindow:onDepositVisible()
     local activeTab = self.activeTab or Internal.Tabs.Provisions
 
     if activeTab == Internal.Tabs.Output and not (Internal.isWarehouseView and Internal.isWarehouseView(self)) then
-        self:updateStatus("This tab is warehouse Inventory only. Open the Warehouse view to abstract general items.")
+        self:updateStatus("This tab is warehouse Inventory only. Open the Warehouse view to store literal item stacks.")
         return
     end
 

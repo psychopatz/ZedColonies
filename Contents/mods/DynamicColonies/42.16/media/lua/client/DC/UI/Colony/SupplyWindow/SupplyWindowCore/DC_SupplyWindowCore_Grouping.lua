@@ -162,6 +162,16 @@ function Internal.toggleGroupExpanded(window, side, entry)
 end
 
 function Internal.buildGroupedRows(entries, activeTab, side, window)
+    if activeTab == Internal.Tabs.Output
+        and Internal.isWarehouseView
+        and Internal.isWarehouseView(window) then
+        local rows = {}
+        for _, entry in ipairs(entries or {}) do
+            rows[#rows + 1] = entry
+        end
+        return rows
+    end
+
     local grouped = {}
     local sequence = {}
     local rows = {}

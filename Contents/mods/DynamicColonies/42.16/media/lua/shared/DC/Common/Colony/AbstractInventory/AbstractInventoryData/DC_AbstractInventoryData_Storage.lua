@@ -44,6 +44,25 @@ local function isFoodCategory(categoryId, group)
     return tostring(converted and converted.group or "") == "Food"
 end
 
+local function mergeItemStock(target, source)
+    for fullType, entry in pairs(source or {}) do
+        local fallbackFullType = tostring(fullType or "")
+        local sourceEntry = Data.NormalizeItemStockEntry(entry)
+        if sourceEntry.fullType == "" then
+            sourceEntry.fullType = fallbackFullType
+        end
+        if sourceEntry.fullType ~= "" and sourceEntry.qty > 0 then
+            local existing = Data.NormalizeItemStockEntry(target[sourceEntry.fullType] or nil)
+            existing.fullType = sourceEntry.fullType
+            existing.category = sourceEntry.category ~= "" and sourceEntry.category or existing.category
+            existing.group = sourceEntry.group ~= "" and sourceEntry.group or existing.group
+            existing.qty = existing.qty + sourceEntry.qty
+            existing.totalWeight = existing.totalWeight + sourceEntry.totalWeight
+            target[sourceEntry.fullType] = existing
+        end
+    end
+end
+
 local function mergeCategoryStock(target, source)
     for categoryId, entry in pairs(source or {}) do
         local key = tostring(categoryId or "")
@@ -97,12 +116,46 @@ local function getStaticFoodNutrition(fullType)
     return 0, 0
 end
 
+local function addMigratedLiteralItem(data, fullType, qty, categoryId, group)
+    local key = tostring(fullType or "")
+    local count = math.max(0, math.floor(tonumber(qty) or 0))
+    if key == "" or count <= 0 then
+        return
+    end
+
+    local normalizedCategory = tostring(categoryId or "")
+    local normalizedGroup = tostring(group or "")
+    local totalWeight = Data.GetEntryWeight(key, count)
+    local itemEntry = Data.NormalizeItemStockEntry(data.itemStock[key] or nil)
+    itemEntry.fullType = key
+    itemEntry.category = normalizedCategory
+    itemEntry.group = normalizedGroup
+    itemEntry.qty = itemEntry.qty + count
+    itemEntry.totalWeight = itemEntry.totalWeight + totalWeight
+    data.itemStock[key] = itemEntry
+
+    local categoryEntry = Data.NormalizeCategoryStockEntry(data.categoryStock[normalizedCategory] or nil)
+    categoryEntry.count = categoryEntry.count + count
+    categoryEntry.totalWeight = categoryEntry.totalWeight + totalWeight
+    data.categoryStock[normalizedCategory] = categoryEntry
+
+    if isFoodGroup(normalizedGroup) then
+        local caloriesPerItem, hydrationPerItem = getStaticFoodNutrition(key)
+        local foodEntry = Data.NormalizeFoodNutritionEntry(data.foodNutritionPools[normalizedCategory] or nil)
+        foodEntry.calories = foodEntry.calories + (caloriesPerItem * count)
+        foodEntry.hydration = foodEntry.hydration + (hydrationPerItem * count)
+        foodEntry.count = foodEntry.count + count
+        data.foodNutritionPools[normalizedCategory] = foodEntry
+    end
+end
+
 function Data.NormalizeData(colonyID, ownerUsername, data)
     local hadSummaryTotals = type(data.summaryTotals) == "table"
     data.schemaVersion = math.max(Data.GetSchemaVersion(), math.floor(tonumber(data.schemaVersion) or 0))
     data.colonyID = tostring(colonyID or data.colonyID or "")
     data.ownerUsername = Config.GetOwnerUsername and Config.GetOwnerUsername(ownerUsername or data.ownerUsername) or tostring(ownerUsername or data.ownerUsername or "")
     data.version = math.max(1, math.floor(tonumber(data.version) or 1))
+    data.itemStock = Data.NormalizeItemStock(data.itemStock)
     data.categoryStock = Data.NormalizeCategoryStock(data.categoryStock)
     data.foodNutritionPools = Data.NormalizeFoodNutritionPools(data.foodNutritionPools)
     data.literalSpecialStock = Data.NormalizeLiteralSpecialStock(data.literalSpecialStock)
@@ -149,6 +202,14 @@ function Data.MigrateWarehouseData(ownerUsername, data)
 
     local changed = false
 
+    if type(rawItems.itemStock) == "table" then
+        mergeItemStock(data.itemStock, rawItems.itemStock)
+        if hasAnyEntries(rawItems.itemStock) then
+            changed = true
+        end
+        rawItems.itemStock = {}
+    end
+
     if type(rawItems.abstractStock) == "table" then
         mergeCategoryStock(data.categoryStock, rawItems.abstractStock)
         if hasAnyEntries(rawItems.abstractStock) then
@@ -177,20 +238,7 @@ function Data.MigrateWarehouseData(ownerUsername, data)
                 local converted = getConvertedItem(fullType)
                 local categoryId = tostring(converted and converted.category or "Junk")
                 local group = tostring(converted and converted.group or "Waste")
-                local totalWeight = Data.GetEntryWeight(fullType, qty)
-                local categoryEntry = Data.NormalizeCategoryStockEntry(data.categoryStock[categoryId] or nil)
-                categoryEntry.count = categoryEntry.count + qty
-                categoryEntry.totalWeight = categoryEntry.totalWeight + totalWeight
-                data.categoryStock[categoryId] = categoryEntry
-
-                if isFoodGroup(group) then
-                    local caloriesPerItem, hydrationPerItem = getStaticFoodNutrition(fullType)
-                    local foodEntry = Data.NormalizeFoodNutritionEntry(data.foodNutritionPools[categoryId] or nil)
-                    foodEntry.calories = foodEntry.calories + (caloriesPerItem * qty)
-                    foodEntry.hydration = foodEntry.hydration + (hydrationPerItem * qty)
-                    foodEntry.count = foodEntry.count + qty
-                    data.foodNutritionPools[categoryId] = foodEntry
-                end
+                addMigratedLiteralItem(data, fullType, qty, categoryId, group)
             end
         else
             remainingOutput[#remainingOutput + 1] = rawEntry

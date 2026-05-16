@@ -91,9 +91,35 @@ function Internal.getTransferBlockedReason(worker)
 end
 
 function Internal.canStoreInWarehouseOutput(entry)
-    return entry ~= nil
-        and entry.kind ~= "money"
-        and tostring(entry.fullType or "") ~= ""
+    if not entry or entry.kind == "money" or tostring(entry.fullType or "") == "" then
+        return false
+    end
+
+    local registryInternal = DC_Colony and DC_Colony.Registry and DC_Colony.Registry.Internal or nil
+    if registryInternal and registryInternal.IsWarehouseInventoryItemPristine and entry.invItem then
+        return registryInternal.IsWarehouseInventoryItemPristine(entry.invItem) == true
+    end
+
+    local conditionMax = math.max(0, tonumber(entry.conditionMax) or 0)
+    if conditionMax > 0 and math.max(0, tonumber(entry.condition) or 0) + 0.0001 < conditionMax then
+        return false
+    end
+
+    local headConditionMax = math.max(0, tonumber(entry.headConditionMax) or 0)
+    if headConditionMax > 0 and math.max(0, tonumber(entry.headCondition) or 0) + 0.0001 < headConditionMax then
+        return false
+    end
+
+    local fluidCapacity = math.max(0, tonumber(entry.fluidCapacity) or 0)
+    if fluidCapacity > 0 and math.max(0, tonumber(entry.fluidAmount) or 0) + 0.0001 < fluidCapacity then
+        return false
+    end
+
+    if entry.isDrainable == true and math.max(0, tonumber(entry.usedDelta) or 0) + 0.0001 < 1 then
+        return false
+    end
+
+    return entry.isRottenProvision ~= true and tostring(entry.provisionBlockedReason or "") == ""
 end
 
 function Internal.shouldShowPlayerEntry(entry, activeTab, window)

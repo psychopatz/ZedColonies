@@ -9,7 +9,7 @@ local Data = Internal.Data or {}
 
 Internal.Data = Data
 
-local ABSTRACT_INVENTORY_SCHEMA_VERSION = 1
+local ABSTRACT_INVENTORY_SCHEMA_VERSION = 2
 
 local function normalizePositiveInteger(value)
     return math.max(0, math.floor(tonumber(value) or 0))
@@ -62,6 +62,7 @@ function Data.BuildEmptyData(colonyID, ownerUsername)
         colonyID = tostring(colonyID or ""),
         ownerUsername = Config.GetOwnerUsername and Config.GetOwnerUsername(ownerUsername) or tostring(ownerUsername or ""),
         version = 1,
+        itemStock = {},
         categoryStock = {},
         foodNutritionPools = {},
         literalSpecialStock = {},
@@ -124,15 +125,31 @@ function Data.RebuildSummaryTotals(ownerData)
     local totalWeight = 0
     local totalCalories = 0
     local totalHydration = 0
+    local totalLiteralRowCount = 0
+    local totalReserveRowCount = 0
     local literalSpecialCount = 0
     local literalSpecialEntryCount = 0
+    local itemBackedCategoryStock = Data.BuildItemBackedCategoryStock(ownerData.itemStock)
+
+    for _fullType, entry in pairs(ownerData.itemStock or {}) do
+        local normalizedEntry = Data.NormalizeItemStockEntry(entry)
+        if normalizedEntry.qty > 0 then
+            totalLiteralRowCount = totalLiteralRowCount + 1
+            totalItemCount = totalItemCount + normalizedEntry.qty
+            totalWeight = totalWeight + normalizedEntry.totalWeight
+        end
+    end
 
     for _categoryId, entry in pairs(ownerData.categoryStock or {}) do
         local normalizedEntry = Data.NormalizeCategoryStockEntry(entry)
+        local itemBackedEntry = Data.NormalizeCategoryStockEntry(itemBackedCategoryStock[_categoryId] or nil)
         if normalizedEntry.count > 0 then
             totalCategoryCount = totalCategoryCount + 1
-            totalItemCount = totalItemCount + normalizedEntry.count
-            totalWeight = totalWeight + normalizedEntry.totalWeight
+        end
+        if normalizedEntry.count > itemBackedEntry.count or normalizedEntry.totalWeight > itemBackedEntry.totalWeight then
+            totalReserveRowCount = totalReserveRowCount + 1
+            totalItemCount = totalItemCount + math.max(0, normalizedEntry.count - itemBackedEntry.count)
+            totalWeight = totalWeight + math.max(0, normalizedEntry.totalWeight - itemBackedEntry.totalWeight)
         end
     end
 
@@ -163,10 +180,74 @@ function Data.RebuildSummaryTotals(ownerData)
         totalHydration = totalHydration,
         literalSpecialCount = literalSpecialCount,
         literalSpecialEntryCount = literalSpecialEntryCount,
-        inventoryRowCount = totalCategoryCount + literalSpecialEntryCount,
+        inventoryRowCount = totalLiteralRowCount + totalReserveRowCount + literalSpecialEntryCount,
     }, ownerData.colonyID, ownerData.ownerUsername, ownerData.version)
     ownerData.summaryTotalsDirty = false
     return ownerData.summaryTotals
+end
+
+function Data.NormalizeItemStockEntry(entry)
+    if type(entry) ~= "table" then
+        return {
+            fullType = "",
+            qty = normalizePositiveInteger(entry),
+            totalWeight = 0,
+            category = "",
+            group = "",
+        }
+    end
+
+    local fullType = tostring(entry.fullType or "")
+    local category = tostring(entry.category or "")
+    local group = tostring(entry.group or "")
+    local qty = normalizePositiveInteger(entry.qty or entry.count)
+    local totalWeight = normalizePositiveNumber(entry.totalWeight)
+    if totalWeight <= 0 and fullType ~= "" and qty > 0 then
+        totalWeight = Data.GetEntryWeight(fullType, qty)
+    end
+
+    return {
+        fullType = fullType,
+        qty = qty,
+        totalWeight = totalWeight,
+        category = category,
+        group = group,
+    }
+end
+
+function Data.NormalizeItemStock(stock)
+    local normalized = {}
+    for fullType, entry in pairs(type(stock) == "table" and stock or {}) do
+        local fallbackFullType = tostring(fullType or "")
+        local normalizedEntry = Data.NormalizeItemStockEntry(entry)
+        if normalizedEntry.fullType == "" then
+            normalizedEntry.fullType = fallbackFullType
+        end
+        if normalizedEntry.fullType ~= "" and normalizedEntry.qty > 0 then
+            normalized[normalizedEntry.fullType] = normalizedEntry
+        end
+    end
+    return normalized
+end
+
+function Data.BuildItemBackedCategoryStock(stock)
+    local snapshot = {}
+    for fullType, entry in pairs(type(stock) == "table" and stock or {}) do
+        local normalizedEntry = Data.NormalizeItemStockEntry(entry)
+        local resolvedFullType = normalizedEntry.fullType ~= "" and normalizedEntry.fullType or tostring(fullType or "")
+        local categoryId = tostring(normalizedEntry.category or "")
+        if categoryId == "" and Config.GetItemCategoryData then
+            local converted = Config.GetItemCategoryData(resolvedFullType)
+            categoryId = tostring(converted and converted.category or "")
+        end
+        if resolvedFullType ~= "" and categoryId ~= "" and normalizedEntry.qty > 0 then
+            local categoryEntry = Data.NormalizeCategoryStockEntry(snapshot[categoryId] or nil)
+            categoryEntry.count = categoryEntry.count + normalizedEntry.qty
+            categoryEntry.totalWeight = categoryEntry.totalWeight + normalizedEntry.totalWeight
+            snapshot[categoryId] = categoryEntry
+        end
+    end
+    return snapshot
 end
 
 function Data.NormalizeCategoryStockEntry(entry)
@@ -253,6 +334,32 @@ function Data.BuildCategoryCountSnapshot(stock)
     return snapshot
 end
 
+function Data.BuildItemCountSnapshot(stock)
+    local snapshot = {}
+    for fullType, entry in pairs(type(stock) == "table" and stock or {}) do
+        local key = tostring(fullType or "")
+        local normalizedEntry = Data.NormalizeItemStockEntry(entry)
+        if key ~= "" and normalizedEntry.qty > 0 then
+            snapshot[key] = normalizedEntry.qty
+        end
+    end
+    return snapshot
+end
+
+function Data.BuildItemStockSnapshot(stock)
+    local snapshot = {}
+    for fullType, entry in pairs(type(stock) == "table" and stock or {}) do
+        local normalizedEntry = Data.NormalizeItemStockEntry(entry)
+        if normalizedEntry.fullType == "" then
+            normalizedEntry.fullType = tostring(fullType or "")
+        end
+        if normalizedEntry.fullType ~= "" then
+            snapshot[normalizedEntry.fullType] = normalizedEntry
+        end
+    end
+    return snapshot
+end
+
 function Data.BuildCategoryStockSnapshot(stock)
     local snapshot = {}
     for categoryId, entry in pairs(type(stock) == "table" and stock or {}) do
@@ -304,10 +411,36 @@ function Data.GetCategoryStockCount(stock, categoryId)
     return math.max(0, tonumber(entry and entry.count) or 0)
 end
 
+function Data.GetItemStockCount(stock, fullType)
+    local key = tostring(fullType or "")
+    local entry = type(stock) == "table" and stock[key] or nil
+    return math.max(0, tonumber(entry and entry.qty) or tonumber(entry and entry.count) or 0)
+end
+
 function Data.GetCategoryStockTotalCount(stock)
     local total = 0
     for _, entry in pairs(type(stock) == "table" and stock or {}) do
         total = total + math.max(0, tonumber(entry and entry.count) or 0)
+    end
+    return total
+end
+
+function Data.GetItemStockTotalCount(stock)
+    local total = 0
+    for _, entry in pairs(type(stock) == "table" and stock or {}) do
+        total = total + math.max(0, tonumber(entry and entry.qty) or tonumber(entry and entry.count) or 0)
+    end
+    return total
+end
+
+function Data.GetItemStockTotalWeight(stock)
+    local total = 0
+    for fullType, entry in pairs(type(stock) == "table" and stock or {}) do
+        local normalizedEntry = Data.NormalizeItemStockEntry(entry)
+        if normalizedEntry.fullType == "" then
+            normalizedEntry.fullType = tostring(fullType or "")
+        end
+        total = total + normalizedEntry.totalWeight
     end
     return total
 end

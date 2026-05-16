@@ -96,29 +96,86 @@ local function matchesFilter(row, filterText)
     return false
 end
 
-local function buildCategoryRows(ownerData)
+local function buildItemRows(ownerData)
     local rows = {}
+    for fullType, entry in pairs(ownerData and ownerData.itemStock or {}) do
+        local normalizedEntry = Data.NormalizeItemStockEntry(entry)
+        local resolvedFullType = normalizedEntry.fullType ~= "" and normalizedEntry.fullType or tostring(fullType or "")
+        if resolvedFullType ~= "" and normalizedEntry.qty > 0 then
+            local categoryId = tostring(normalizedEntry.category or "")
+            local group = tostring(normalizedEntry.group or "")
+            if categoryId == "" or group == "" then
+                local converted = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetItemCategoryData
+                    and DC_Colony.Config.GetItemCategoryData(resolvedFullType) or nil
+                if categoryId == "" then
+                    categoryId = tostring(converted and converted.category or "")
+                end
+                if group == "" then
+                    group = tostring(converted and converted.group or "Waste")
+                end
+            end
+
+            rows[#rows + 1] = {
+                kind = "inventory",
+                itemID = "item:" .. resolvedFullType,
+                ledgerIndex = "item:" .. resolvedFullType,
+                displayName = getDisplayNameForFullType(resolvedFullType),
+                fullType = resolvedFullType,
+                category = categoryId,
+                group = group,
+                qty = normalizedEntry.qty,
+                unitWeight = normalizedEntry.qty > 0 and (normalizedEntry.totalWeight / normalizedEntry.qty) or 0,
+                totalWeight = normalizedEntry.totalWeight,
+                texture = nil,
+                searchText = table.concat({
+                    resolvedFullType,
+                    categoryId,
+                    group,
+                }, " "),
+                readOnly = true,
+            }
+        end
+    end
+
+    table.sort(rows, function(a, b)
+        local aName = string.lower(tostring(a and a.displayName or ""))
+        local bName = string.lower(tostring(b and b.displayName or ""))
+        if aName == bName then
+            return tostring(a and a.fullType or "") < tostring(b and b.fullType or "")
+        end
+        return aName < bName
+    end)
+
+    return rows
+end
+
+local function buildCategoryReserveRows(ownerData)
+    local rows = {}
+    local itemBackedCategoryStock = Data.BuildItemBackedCategoryStock(ownerData and ownerData.itemStock or nil)
     for categoryId, stockEntry in pairs(ownerData and ownerData.categoryStock or {}) do
         local key = tostring(categoryId or "")
         if key ~= "" then
-            local definition = getCategoryDefinition(key) or {}
             local normalizedStock = Data.NormalizeCategoryStockEntry(stockEntry)
-            if normalizedStock.count > 0 then
+            local itemBackedEntry = Data.NormalizeCategoryStockEntry(itemBackedCategoryStock[key] or nil)
+            local remainingCount = math.max(0, normalizedStock.count - itemBackedEntry.count)
+            local remainingWeight = math.max(0, normalizedStock.totalWeight - itemBackedEntry.totalWeight)
+            if remainingCount > 0 or remainingWeight > 0 then
+                local definition = getCategoryDefinition(key) or {}
                 local foodEntry = Data.NormalizeFoodNutritionEntry(ownerData.foodNutritionPools and ownerData.foodNutritionPools[key] or nil)
                 rows[#rows + 1] = {
                     kind = "category",
                     itemID = "category:" .. key,
                     ledgerIndex = "category:" .. key,
-                    displayName = tostring(definition.displayName or key),
+                    displayName = tostring(definition.displayName or key) .. " Reserve",
                     category = key,
                     group = tostring(definition.group or "Waste"),
-                    qty = normalizedStock.count,
-                    unitWeight = normalizedStock.count > 0 and (normalizedStock.totalWeight / normalizedStock.count) or 0,
-                    totalWeight = normalizedStock.totalWeight,
+                    qty = remainingCount,
+                    unitWeight = remainingCount > 0 and (remainingWeight / remainingCount) or 0,
+                    totalWeight = remainingWeight,
                     totalCalories = foodEntry.calories,
                     totalHydration = foodEntry.hydration,
                     texture = nil,
-                    searchText = tostring(definition.group or "") .. " " .. key,
+                    searchText = tostring(definition.group or "") .. " " .. key .. " reserve",
                     readOnly = true,
                 }
             end
@@ -203,9 +260,13 @@ function AbstractInventory.GetInventoryRows(ownerUsername, cursor, limit, filter
         }
     end
 
-    local rows = buildCategoryRows(ownerData)
-    local literalRows = buildLiteralSpecialRows(ownerData)
-    for _, row in ipairs(literalRows) do
+    local rows = buildItemRows(ownerData)
+    local reserveRows = buildCategoryReserveRows(ownerData)
+    local specialRows = buildLiteralSpecialRows(ownerData)
+    for _, row in ipairs(reserveRows) do
+        rows[#rows + 1] = row
+    end
+    for _, row in ipairs(specialRows) do
         rows[#rows + 1] = row
     end
 
@@ -237,8 +298,9 @@ function AbstractInventory.GetInventoryRows(ownerUsername, cursor, limit, filter
     }
     debugPerf("GetInventoryRows", startedAt, 8, {
         owner = ownerUsername,
-        categoryRows = #rows - #literalRows,
-        literalRows = #literalRows,
+        itemRows = #rows - #reserveRows - #specialRows,
+        reserveRows = #reserveRows,
+        specialRows = #specialRows,
         filteredRows = #filteredRows,
         pageRows = #pageRows,
         cursor = normalizedCursor,

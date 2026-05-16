@@ -5,6 +5,7 @@ DC_Colony.Network.Workers = DC_Colony.Network.Workers or {}
 local Config = DC_Colony.Config
 local Nutrition = DC_Colony.Nutrition
 local AbstractInventory = DC_Colony.AbstractInventory
+local Registry = DC_Colony.Registry
 local Network = DC_Colony.Network
 local Internal = Network.Internal or {}
 local Shared = (Network.Workers or {}).Shared or {}
@@ -36,41 +37,40 @@ Network.Handlers.DepositWarehouseOutput = function(player, args)
         if invItem then
             local fullType = invItem:getFullType()
             if fullType ~= "Base.Money" and fullType ~= "Base.MoneyBundle" then
-                eligibleCount = eligibleCount + 1
-                local qty = Deposit.getInventoryItemQuantity(invItem)
-                local calories = 0
-                local hydration = 0
-                if Nutrition and Nutrition.GetItemNutrition then
-                    calories, hydration = Nutrition.GetItemNutrition(invItem)
-                end
+                local registryInternal = Registry and Registry.Internal or nil
+                if registryInternal and registryInternal.IsWarehouseInventoryItemPristine
+                    and registryInternal.IsWarehouseInventoryItemPristine(invItem) == true then
+                    eligibleCount = eligibleCount + 1
+                    local qty = Deposit.getInventoryItemQuantity(invItem)
+                    local calories = 0
+                    local hydration = 0
+                    if Nutrition and Nutrition.GetItemNutrition then
+                        calories, hydration = Nutrition.GetItemNutrition(invItem)
+                    end
 
-                local depositMeta = {
-                    qty = qty,
-                    totalWeight = (Config.GetItemWeight and Config.GetItemWeight(fullType) or 0) * qty,
-                    totalCalories = math.max(0, tonumber(calories) or 0) * qty,
-                    totalHydration = math.max(0, tonumber(hydration) or 0) * qty,
-                }
-                if Nutrition and Nutrition.IsRottenProvisionItem and Nutrition.IsRottenProvisionItem(invItem, calories, hydration) then
-                    depositMeta.overrideCategory = "RottenFood"
-                    depositMeta.overrideGroup = "Waste"
-                    depositMeta.skipFoodNutrition = true
-                    depositMeta.totalCalories = 0
-                    depositMeta.totalHydration = 0
-                end
+                    local depositMeta = {
+                        qty = qty,
+                        totalWeight = (Config.GetItemWeight and Config.GetItemWeight(fullType) or 0) * qty,
+                        totalCalories = math.max(0, tonumber(calories) or 0) * qty,
+                        totalHydration = math.max(0, tonumber(hydration) or 0) * qty,
+                    }
 
-                local movedQty = AbstractInventory and AbstractInventory.DepositItem
-                    and AbstractInventory.DepositItem(owner, fullType, qty, depositMeta)
-                    or 0
-                if movedQty > 0 then
-                    Deposit.consumeInventoryItemQuantity(invItem, movedQty)
-                    movedCount = movedCount + movedQty
-                    acceptedItemIDs[#acceptedItemIDs + 1] = itemID
-                    if movedQty < qty then
-                        refreshPlayerInventory = true
+                    local movedQty = AbstractInventory and AbstractInventory.DepositItem
+                        and AbstractInventory.DepositItem(owner, fullType, qty, depositMeta)
+                        or 0
+                    if movedQty > 0 then
+                        Deposit.consumeInventoryItemQuantity(invItem, movedQty)
+                        movedCount = movedCount + movedQty
+                        acceptedItemIDs[#acceptedItemIDs + 1] = itemID
+                        if movedQty < qty then
+                            refreshPlayerInventory = true
+                        end
+                    else
+                        blockedCount = blockedCount + 1
+                        Deposit.rejectItem(rejected, itemID, "capacity")
                     end
                 else
-                    blockedCount = blockedCount + 1
-                    Deposit.rejectItem(rejected, itemID, "capacity")
+                    Deposit.rejectItem(rejected, itemID, "state")
                 end
             else
                 Deposit.rejectItem(rejected, itemID, "money")

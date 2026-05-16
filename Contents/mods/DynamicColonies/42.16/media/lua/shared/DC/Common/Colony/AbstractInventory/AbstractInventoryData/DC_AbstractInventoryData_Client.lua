@@ -18,6 +18,8 @@ function AbstractInventory.GetSnapshot(ownerUsername)
         ownerUsername = tostring(ownerData.ownerUsername or ""),
         colonyID = tostring(ownerData.colonyID or ""),
         version = math.max(1, math.floor(tonumber(ownerData.version) or 1)),
+        itemStock = Data.BuildItemStockSnapshot(ownerData.itemStock),
+        itemCounts = Data.BuildItemCountSnapshot(ownerData.itemStock),
         categoryStock = Data.BuildCategoryStockSnapshot(ownerData.categoryStock),
         categoryCounts = Data.BuildCategoryCountSnapshot(ownerData.categoryStock),
         foodNutritionPools = Data.BuildFoodNutritionSnapshot(ownerData.foodNutritionPools),

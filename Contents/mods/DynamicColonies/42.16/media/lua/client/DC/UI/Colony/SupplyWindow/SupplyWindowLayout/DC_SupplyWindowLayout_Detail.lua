@@ -77,10 +77,10 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             and self.warehouseInventoryFeedState.loading == true
         if isWarehouseOutputTab then
             transferGuidance =
-                "<LINE> <RGB:0.62,0.62,0.62> This warehouse Inventory tab shows abstract colony categories and literal special stock. "
+                "<LINE> <RGB:0.62,0.62,0.62> This warehouse Inventory tab shows compressed literal item stock by full type, plus any read-only colony reserve rows that came from older or system-generated abstract stock. "
                 .. "<LINE> <RGB:0.62,0.62,0.62> Use "
-                .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> on the left side to deposit real items. Provisions and Equipment stay literal in their own tabs, while items deposited here are abstracted for colony systems. "
-                .. "<LINE> <RGB:0.62,0.62,0.62> Category rows on the right side are read-only and cannot be withdrawn as literal items. "
+                .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> on the left side to deposit pristine, full-state items only. Matching items are merged into one row with a quantity count for performance. "
+                .. "<LINE> <RGB:0.62,0.62,0.62> Provisions and Equipment keep their richer tracked state in their own tabs. Inventory rows on the right side are read-only and feed colony material systems. "
                 .. (warehouseFeedLoading and "<LINE> <RGB:0.85,0.72,0.38> Warehouse inventory is still loading rows in the background. " or "")
         elseif transferAllowed then
             transferGuidance =
@@ -124,7 +124,7 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
                 .. ". "
                 .. transferGuidance
                 .. ((isWarehouseOutputTab)
-                        and "<LINE> <RGB:0.62,0.62,0.62> Warehouse weight shows total used capacity across Provisions, Inventory, and Equipment, not just the currently visible abstract rows. "
+                        and "<LINE> <RGB:0.62,0.62,0.62> Warehouse weight shows total used capacity across Provisions, Inventory, Equipment, and any hidden legacy reserve, not just the currently visible rows. "
                     or "")
                 .. (((self.activeTab == Internal.Tabs.Equipment) and Internal.isInventoryView and Internal.isInventoryView(self))
                         and "<LINE> <RGB:0.62,0.62,0.62> Use <RGB:1,1,1> Auto Equip <RGB:0.62,0.62,0.62> to fill missing gear from warehouse storage, and <RGB:1,1,1> Auto On/Off <RGB:0.62,0.62,0.62> to control automatic warehouse equipping while the worker is home. "
@@ -196,8 +196,8 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             text = text .. " <RGB:0.82,0.82,0.82> Quantity: <RGB:1,1,1> " .. tostring(entry.qty or 1) .. " <LINE> "
             text = appendWeightLine(text, entry)
             if entry.kind == "category" then
-                text = text .. " <RGB:0.82,0.82,0.82> Type: <RGB:1,1,1> Abstract warehouse category <LINE> "
-                text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Read only. Deposit real items from the left side to increase this stock. <LINE> "
+                text = text .. " <RGB:0.82,0.82,0.82> Type: <RGB:1,1,1> Colony reserve category <LINE> "
+                text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Read only. This row represents legacy or system-generated abstract reserve that does not map to one literal item stack. <LINE> "
             elseif entry.kind == "special" then
                 text = text .. " <RGB:0.82,0.82,0.82> Type: <RGB:1,1,1> Literal special stock <LINE> "
                 if tostring(entry.specialStockType or "") ~= "" then
@@ -205,12 +205,15 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
                 end
                 text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Read only. These items stay literal for systems like research specimens. <LINE> "
             else
+                text = text .. " <RGB:0.82,0.82,0.82> Type: <RGB:1,1,1> Literal warehouse item stock <LINE> "
                 local config = Internal.Config or {}
                 local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(self.workerData and self.workerData.jobType) or tostring(self.workerData and self.workerData.jobType or "")
                 if normalizedJob == ((config.JobTypes or {}).Scavenge)
                     and Internal.isInventoryView
                     and Internal.isInventoryView(self) then
                     text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Drop to discard this hauled item and free carry weight. <LINE> "
+                else
+                    text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Read only. Matching pristine deposits merge into this stack automatically. <LINE> "
                 end
             end
         else
@@ -263,7 +266,7 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
             end
         elseif self.activeTab == Internal.Tabs.Output and Internal.isWarehouseView and Internal.isWarehouseView(self) then
             text = appendWeightLine(text, entry)
-            text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Store to place this item in warehouse Inventory for abstraction and building use. <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Store to add this pristine item into the warehouse inventory as a compressed literal stack for colony use. <LINE> "
         else
             text = appendWeightLine(text, entry)
             text = text .. " <RGB:0.82,0.82,0.82> Adds Calories: <RGB:1,1,1> " .. string.format("%.0f", entry.calories or 0) .. " <LINE> "

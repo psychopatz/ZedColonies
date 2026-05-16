@@ -19,6 +19,13 @@ function Materials.GetWarehouseOutputCounts(ownerUsername)
         end
     end
 
+    if warehouseApi and warehouseApi.GetItemCounts then
+        for fullType, qty in pairs(warehouseApi.GetItemCounts(ownerUsername) or {}) do
+            local key = Materials.GetMaterialCountKeyForFullType(fullType)
+            counts[key] = (counts[key] or 0) + math.max(0, math.floor(tonumber(qty) or 0))
+        end
+    end
+
     for _, entry in ipairs(warehouse and warehouse.ledgers and warehouse.ledgers.output or {}) do
         local fullType = tostring(entry.fullType or "")
         local qty = math.max(0, math.floor(tonumber(entry.qty) or 0))
