@@ -7,6 +7,8 @@ local Internal = DC_Buildings.Internal
 -- These are presentation-only; no state is read or mutated here.
 local DescriptionTexts = {
     Headquarters = "Establishes the settlement core. Unsafe-zone growth expands in circular frontier rings as you secure barricades around the perimeter.",
+    ResearchStation = "Analyzes physical craftable specimens and unlocks colony blueprints based on their real crafting recipes.",
+    Recycler = "Breaks down crafted items into recoverable ingredients. Better colony crafters reclaim more of the original materials.",
     Barracks = "Provides housing for your workers and improves recovery for the occupants living inside.",
     Warehouse = "Expands total warehouse storage for your settlement. Higher levels unlock extra storage installations.",
     WaterCollector = "A unique colony rain catcher that stores water and passively fills whenever it rains.",
@@ -14,6 +16,15 @@ local DescriptionTexts = {
     Greenhouse = "Protected crop beds for the Farmer job. Plant seeds, set the thermostat, and spend water to raise harvests indoors.",
     ElectricityGenerator = "Reserved for the future electricity grid. The resource card exists now, but power modules are still placeholder.",
     Infirmary = "Treats injured workers while they sleep. Beds expand capacity, and Doctors can use medical provisions to speed recovery.",
+    FabricationBench = "General fabrication station for craftable utility and mixed-material items.",
+    Forge = "Heavy metalworking station for ore, scrap, ingots, and forged hardware.",
+    Cookhouse = "Food preparation station for drinks, preserved goods, cookware recipes, and perishable meals.",
+    TextileRoom = "Tailoring and leatherworking room for clothing, bags, and textile components.",
+    Woodshop = "Woodworking station for lumber goods, containers, and durable shop tools.",
+    TinkerBench = "Electronics bench for batteries, radios, generators, light sources, and small gadgets.",
+    Armory = "Weapons workshop for melee arms, firearms, ammo, accessories, explosives, and battlefield chemicals.",
+    ProvisionYard = "Field supply yard for farming, fishing, and fresh produce processing.",
+    FuelDepot = "Fuel handling depot for solid, liquid, and gas energy stock.",
 }
 
 -- Builds the effectLines list for a known buildingType using live effects values.
@@ -65,6 +76,29 @@ local function buildEffectLines(buildingType, effects)
         if effects.infirmaryCapacityCap then
             lines[#lines + 1] = "Medical Slot Cap: " .. tostring(effects.infirmaryCapacityCap)
         end
+    elseif buildingType == "ResearchStation" then
+        if effects.researchQueueSlots then
+            lines[#lines + 1] = "Research Queue Slots: " .. tostring(effects.researchQueueSlots)
+        end
+        lines[#lines + 1] = "Accepts craftable Dynamic Trading items with a resolvable recipe."
+    elseif buildingType == "Recycler" then
+        if effects.recyclerSlots then
+            lines[#lines + 1] = "Recycler Slots: +" .. tostring(effects.recyclerSlots)
+        end
+        lines[#lines + 1] = "Reclaims a random share of recipe materials from supported crafted items."
+    elseif buildingType == "FabricationBench"
+        or buildingType == "Forge"
+        or buildingType == "Cookhouse"
+        or buildingType == "TextileRoom"
+        or buildingType == "Woodshop"
+        or buildingType == "TinkerBench"
+        or buildingType == "Armory"
+        or buildingType == "ProvisionYard"
+        or buildingType == "FuelDepot" then
+        if effects.productionSlots then
+            lines[#lines + 1] = "Production Slots: +" .. tostring(effects.productionSlots)
+        end
+        lines[#lines + 1] = "Used as a dedicated crafting station for researched real-item blueprints."
     end
 
     return lines

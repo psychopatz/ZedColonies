@@ -32,6 +32,38 @@ Network.Handlers.RequestResearchSnapshot = function(player, args)
     end
 end
 
+Network.Handlers.CraftUnlockedBlueprint = function(player, args)
+    local owner = getAuthorityOwner(player)
+    local fullType = tostring(args and args.fullType or "")
+    local buildingID = tostring(args and args.buildingID or "")
+    local qty = math.max(1, math.floor(tonumber(args and args.qty) or 1))
+
+    if fullType == "" then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "Choose a researched blueprint first.", "error", true)
+        end
+        return
+    end
+
+    local ok, reason = Research and Research.CraftUnlockedItem and Research.CraftUnlockedItem(owner, buildingID, fullType, qty)
+    if ok ~= true then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, reason or "Unable to craft that blueprint.", "error", true)
+        end
+    else
+        if Internal.syncNotice then
+            Internal.syncNotice(player, "Blueprint crafted successfully.", "info", false)
+        end
+    end
+
+    if Internal.syncResearchSnapshot then
+        Internal.syncResearchSnapshot(player)
+    end
+    if Internal.syncWarehouse then
+        Internal.syncWarehouse(player, nil, true, { output = true })
+    end
+end
+
 Network.Handlers.SubmitResearchSpecimen = function(player, args)
     if not args or not args.itemID then
         if Internal.syncNotice then

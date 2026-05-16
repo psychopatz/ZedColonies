@@ -35,6 +35,55 @@ function Internal.EnsureOwnerData(ownerUsername)
         data.version = math.max(1, math.floor(tonumber(data.version) or 1))
         data.lastProcessedHour = tonumber(data.lastProcessedHour) or -1
         data.nextJobID = math.max(1, math.floor(tonumber(data.nextJobID) or 1))
+
+        for index, job in ipairs(data.queue) do
+            local blueprint = job and job.blueprint or nil
+            if (not blueprint or tostring(blueprint.fullType or "") == "") and Research and Research.Internal and Research.Internal.BuildBlueprintRecord then
+                blueprint = Research.Internal.BuildBlueprintRecord(job and job.fullType)
+                if blueprint then
+                    job.blueprint = blueprint
+                end
+            end
+
+            local requiredWork = math.max(
+                1,
+                math.floor(
+                    tonumber(job and job.requiredWork)
+                    or tonumber(blueprint and blueprint.workCost)
+                    or tonumber(Research and Research.Config and Research.Config.GetBaseWork and Research.Config.GetBaseWork())
+                    or 1000
+                )
+            )
+            if tonumber(job and job.progressWork) == nil then
+                local oldProgress = math.max(0, tonumber(job and job.progressHours) or 0)
+                local oldRequired = math.max(1, tonumber(job and job.requiredHours) or 1)
+                job.progressWork = requiredWork * math.max(0, math.min(1, oldProgress / oldRequired))
+            end
+
+            job.requiredWork = requiredWork
+            job.sampleCount = math.max(1, math.floor(tonumber(job and job.sampleCount) or 1))
+            job.category = tostring(job and job.category or blueprint and blueprint.category or "")
+            job.group = tostring(job and job.group or blueprint and blueprint.group or "")
+            job.buildingType = tostring(job and job.buildingType or blueprint and blueprint.buildingType or "")
+            job.recipeName = tostring(job and job.recipeName or blueprint and blueprint.recipeName or "")
+            job.lastWorkRate = math.max(0, tonumber(job and job.lastWorkRate) or 0)
+            job.lastSampleMultiplier = math.max(1, tonumber(job and job.lastSampleMultiplier) or job.sampleCount)
+            job.lastIntelligenceMultiplier = math.max(1, tonumber(job and job.lastIntelligenceMultiplier) or 1)
+            job.lastResearcherLevel = math.max(0, tonumber(job and job.lastResearcherLevel) or 0)
+            job.lastResearcherName = tostring(job and job.lastResearcherName or "")
+            data.queue[index] = job
+        end
+
+        for fullType, blueprint in pairs(data.blueprints) do
+            if Research and Research.Internal and Research.Internal.BuildBlueprintRecord then
+                local refreshed = Research.Internal.BuildBlueprintRecord(fullType)
+                if refreshed then
+                    data.blueprints[fullType] = refreshed
+                else
+                    data.blueprints[fullType] = blueprint
+                end
+            end
+        end
     end
     return data
 end

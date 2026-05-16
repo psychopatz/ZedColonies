@@ -59,5 +59,8 @@
     "Sandbox_DynamicColonies.PlayerOwnedNPCToolDurability_tooltip": "If enabled, colony-managed tools and drainable utility items assigned to player-owned NPCs can lose condition or charges from work. Disable it to freeze worker tool wear.",
 
     "Sandbox_DynamicColonies.PlayerOwnedNPCAmmoConsumption": "Player-Owned NPC Ammo Consumption",
-    "Sandbox_DynamicColonies.PlayerOwnedNPCAmmoConsumption_tooltip": "If enabled, player-owned NPCs spend their tracked ranged ammo during combat and reloading. Non-player-owned NPCs always keep unlimited ammo."
+    "Sandbox_DynamicColonies.PlayerOwnedNPCAmmoConsumption_tooltip": "If enabled, player-owned NPCs spend their tracked ranged ammo during combat and reloading. Non-player-owned NPCs always keep unlimited ammo.",
+
+    "Sandbox_DynamicColonies.ColonyResearchWorkAmount": "Research Work Amount",
+    "Sandbox_DynamicColonies.ColonyResearchWorkAmount_tooltip": "Sets the total work required to unlock one researched recipe before intelligence and extra samples accelerate it."
 }

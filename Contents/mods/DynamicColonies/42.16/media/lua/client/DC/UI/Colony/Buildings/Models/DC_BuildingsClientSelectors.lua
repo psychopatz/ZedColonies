@@ -143,16 +143,30 @@ function DC_BuildingsClientSelectors.CanDestroyPlot(plot)
     return plot and plot.building and plot.building.canDestroy == true
 end
 
+function DC_BuildingsClientSelectors.IsProductionStationType(buildingType)
+    local stations = DC_Buildings and DC_Buildings.Production and DC_Buildings.Production.Config
+        and DC_Buildings.Production.Config.ColonyProductionStations or nil
+    return type(stations) == "table" and stations[tostring(buildingType or "")] ~= nil
+end
+
 function DC_BuildingsClientSelectors.GetManagePlotState(plot)
     local isGreenhouse = plot and plot.building and tostring(plot.building.buildingType or "") == "Greenhouse"
     local isResearchStation = plot and plot.building and tostring(plot.building.buildingType or "") == "ResearchStation"
+    local isRecycler = plot and plot.building and tostring(plot.building.buildingType or "") == "Recycler"
+    local isProductionStation = plot and plot.building and DC_BuildingsClientSelectors.IsProductionStationType(plot.building.buildingType) == true
     local canSwap = plot and plot.project and tostring(plot.project.status or "") == "Active"
 
     return {
-        title = canSwap and "Manage" or (isGreenhouse and "Garden" or (isResearchStation and "Research" or "Manage")),
-        enabled = canSwap == true or isGreenhouse == true or isResearchStation == true,
+        title = canSwap and "Manage"
+            or (isGreenhouse and "Garden"
+            or (isResearchStation and "Research"
+            or (isRecycler and "Recycle"
+            or (isProductionStation and "Craft" or "Manage")))),
+        enabled = canSwap == true or isGreenhouse == true or isResearchStation == true or isRecycler == true or isProductionStation == true,
         isGreenhouse = isGreenhouse == true,
         isResearchStation = isResearchStation == true,
+        isRecycler = isRecycler == true,
+        isProductionStation = isProductionStation == true,
         canSwap = canSwap == true
     }
 end

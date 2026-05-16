@@ -20,6 +20,8 @@ require "DC/Common/Colony/ColonyNetwork/ColonyNetRecruitment/DC_ColonyNetRecruit
 require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_StarterWorkers"
 require "DC/Common/Colony/ColonyNetwork/DC_ColonyNetwork_QueryHandlers"
 require "DC/Common/Colony/Research/DC_ColonyResearch_Network"
+require "DC/Common/Colony/Recycler/DC_ColonyRecycler"
+require "DC/Common/Colony/Recycler/DC_ColonyRecycler_Network"
 require "DC/Common/Colony/ColonyNetwork/Workers/DC_Workers"
 require "DC/Common/Buildings/Network/DC_BuildingsNetwork"
 require "DC/Common/Zone/ZoneNetwork/DC_ZoneNetwork"

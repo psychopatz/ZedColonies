@@ -15,6 +15,8 @@ require "DC/Common/Buildings/Config/BuildingType/Headquarters/DC_BuildingsHeadqu
 require "DC/Common/Buildings/Config/BuildingType/Infirmary/DC_BuildingsInfirmaryConfig"
 require "DC/Common/Buildings/Config/BuildingType/Kitchen/DC_BuildingsKitchenConfig"
 require "DC/Common/Buildings/Config/BuildingType/Laboratory/DC_BuildingsLaboratoryConfig"
+require "DC/Common/Buildings/Config/BuildingType/ProductionStations/DC_BuildingsProductionStationsConfig"
+require "DC/Common/Buildings/Config/BuildingType/Recycler/DC_BuildingsRecyclerConfig"
 require "DC/Common/Buildings/Config/BuildingType/ResearchStation/DC_BuildingsResearchStationConfig"
 require "DC/Common/Buildings/Config/BuildingType/TradeStand/DC_BuildingsTradeStandConfig"
 require "DC/Common/Buildings/Config/BuildingType/WaterCollector/DC_BuildingsWaterCollectorConfig"

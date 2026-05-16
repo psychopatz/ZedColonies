@@ -1,6 +1,8 @@
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingActionModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingDestroyModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingPickerModal"
+require "DC/UI/Colony/Buildings/Modals/DC_BlueprintCraftModal"
+require "DC/UI/Colony/Buildings/Modals/DC_RecyclerModal"
 require "DC/UI/Colony/Buildings/Modals/DC_ResearchStationModal"
 require "DC/UI/Colony/Buildings/Modals/BuildingProjectModal/BuildingProjectModal"
 require "DC/UI/Colony/Greenhouse/DC_GreenhouseModal"
@@ -25,6 +27,8 @@ function Actions.Dispatch(actionName, window, plot)
         swapProjectBuilder = Actions.OnSwapProjectBuilder,
         manageGreenhouse = Actions.OnManageGreenhousePlot,
         manageResearch = Actions.OnManageResearchPlot,
+        manageBlueprintCraft = Actions.OnManageBlueprintCraftPlot,
+        manageRecycler = Actions.OnManageRecyclerPlot,
         destroy = Actions.OnDestroyPlot,
         debugComplete = Actions.OnDebugCompleteProject,
         plotSelected = Actions.OnPlotSelected
@@ -238,6 +242,38 @@ function Actions.OnManageResearchPlot(window, plot)
                 window:requestSnapshot(false)
             end
         end
+    })
+end
+
+function Actions.OnManageBlueprintCraftPlot(window, plot)
+    local building = plot and plot.building or nil
+    if not building then
+        return
+    end
+
+    DC_BlueprintCraftModal.Open({
+        title = tostring(building.displayName or building.buildingType or "Station") .. " Crafting",
+        buildingID = building.buildingID,
+        buildingType = tostring(building.buildingType or ""),
+        ownerWindow = window and window:getOwnerWindow() or nil,
+        onRefreshBuildings = function()
+            if window and window.requestSnapshot then
+                window:requestSnapshot(false)
+            end
+        end
+    })
+end
+
+function Actions.OnManageRecyclerPlot(window, plot)
+    local building = plot and plot.building or nil
+    if not building or tostring(building.buildingType or "") ~= "Recycler" then
+        return
+    end
+
+    DC_RecyclerModal.Open({
+        title = tostring(building.displayName or "Recycler") .. " Recycling",
+        buildingID = building.buildingID,
+        ownerWindow = window and window:getOwnerWindow() or nil,
     })
 end
 

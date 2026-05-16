@@ -6,22 +6,14 @@ local Research = DC_Colony.Research
 local Internal = Research.Internal
 local AbstractInventory = DC_Colony.AbstractInventory
 
-local function canResearchConvertedItem(converted)
-    local group = tostring(converted and converted.group or "")
-    local category = tostring(converted and converted.category or "")
-    if converted == nil or converted.isFallback == true then
-        return false
+local function findQueuedJobByFullType(queue, fullType)
+    local wanted = tostring(fullType or "")
+    for _, job in ipairs(queue or {}) do
+        if tostring(job and job.fullType or "") == wanted then
+            return job
+        end
     end
-    if group == "Research" or group == "Trade" then
-        return false
-    end
-    if group == "Waste" or category == "Junk" or category == "QuestGoods" or category == "ContaminatedMaterial" then
-        return false
-    end
-    if category == "ResearchData" or category == "Blueprints" or category == "Currency" then
-        return false
-    end
-    return true
+    return nil
 end
 
 function Research.SubmitResearchItem(ownerUsername, fullType, itemMeta)
@@ -34,17 +26,17 @@ function Research.SubmitResearchItem(ownerUsername, fullType, itemMeta)
     end
 
     local data = Internal.EnsureOwnerData(ownerUsername)
-    if #data.queue >= math.max(1, math.floor(tonumber(Research.Config and Research.Config.MaxQueueSize) or 1)) then
+    local blueprint = Internal.BuildBlueprintRecord and Internal.BuildBlueprintRecord(normalizedFullType) or nil
+    if not blueprint then
+        return false, "That item needs a valid craft recipe before it can be researched."
+    end
+
+    local existingJob = findQueuedJobByFullType(data.queue, normalizedFullType)
+    if not existingJob and #data.queue >= (Research.Config and Research.Config.GetMaxQueueSize and Research.Config.GetMaxQueueSize() or 1) then
         return false, "Research queue is full."
     end
 
-    local converted = DC_Colony and DC_Colony.Config and DC_Colony.Config.GetItemCategoryData
-        and DC_Colony.Config.GetItemCategoryData(normalizedFullType) or nil
-    if not canResearchConvertedItem(converted) then
-        return false, "That item cannot be reverse engineered yet."
-    end
-
-    local jobID = Internal.NextJobID(ownerUsername)
+    local jobID = existingJob and existingJob.jobID or Internal.NextJobID(ownerUsername)
     if itemMeta == nil or itemMeta.storeSpecimen ~= false then
         local added = AbstractInventory and AbstractInventory.AddLiteralSpecial and AbstractInventory.AddLiteralSpecial(ownerUsername, {
             fullType = normalizedFullType,
@@ -59,15 +51,35 @@ function Research.SubmitResearchItem(ownerUsername, fullType, itemMeta)
         end
     end
 
-    data.queue[#data.queue + 1] = {
-        jobID = jobID,
-        fullType = normalizedFullType,
-        submittedAt = itemMeta and itemMeta.submittedAt or 0,
-        progressHours = 0,
-        requiredHours = math.max(1, math.floor(tonumber(Research.Config and Research.Config.BaseHours) or 8)),
-        category = converted.category,
-        group = converted.group,
-    }
+    if existingJob then
+        existingJob.sampleCount = math.max(1, math.floor(tonumber(existingJob.sampleCount) or 1)) + 1
+        existingJob.submittedAt = itemMeta and itemMeta.submittedAt or existingJob.submittedAt
+        existingJob.blueprint = blueprint
+        existingJob.requiredWork = math.max(1, math.floor(tonumber(blueprint and blueprint.workCost) or 1))
+        existingJob.buildingType = blueprint.buildingType
+        existingJob.recipeName = blueprint.recipeName
+        existingJob.category = blueprint.category
+        existingJob.group = blueprint.group
+    else
+        data.queue[#data.queue + 1] = {
+            jobID = jobID,
+            fullType = normalizedFullType,
+            submittedAt = itemMeta and itemMeta.submittedAt or 0,
+            progressWork = 0,
+            requiredWork = math.max(1, math.floor(tonumber(blueprint and blueprint.workCost) or 1)),
+            sampleCount = 1,
+            category = blueprint.category,
+            group = blueprint.group,
+            buildingType = blueprint.buildingType,
+            recipeName = blueprint.recipeName,
+            blueprint = blueprint,
+            lastWorkRate = 0,
+            lastSampleMultiplier = 1,
+            lastIntelligenceMultiplier = 1,
+            lastResearcherLevel = 0,
+            lastResearcherName = "",
+        }
+    end
     Internal.Touch(ownerUsername)
     return true, nil
 end

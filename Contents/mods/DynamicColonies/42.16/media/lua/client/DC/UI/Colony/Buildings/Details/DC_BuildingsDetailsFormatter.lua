@@ -184,10 +184,18 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
             if building.activeResearch then
                 text = text .. " <RGB:0.72,0.72,0.72> Active Study: <RGB:1,1,1> " .. tostring(building.activeResearch.displayName or building.activeResearch.fullType or "Unknown") .. " <LINE> "
                 text = text .. " <RGB:0.72,0.72,0.72> Progress: <RGB:1,1,1> "
-                    .. tostring(math.floor((tonumber(building.activeResearch.progressHours) or 0) + 0.5))
+                    .. tostring(math.floor((tonumber(building.activeResearch.progressWork) or 0) + 0.5))
                     .. " / "
-                    .. tostring(math.floor((tonumber(building.activeResearch.requiredHours) or 0) + 0.5))
-                    .. " hours <LINE> "
+                    .. tostring(math.floor((tonumber(building.activeResearch.requiredWork) or 0) + 0.5))
+                    .. " WP <LINE> "
+                text = text .. " <RGB:0.72,0.72,0.72> Samples: <RGB:1,1,1> " .. tostring(building.activeResearch.sampleCount or 1) .. "x <LINE> "
+                if tostring(building.activeResearch.leadResearcherName or "") ~= "" then
+                    text = text .. " <RGB:0.72,0.72,0.72> Lead Researcher: <RGB:1,1,1> "
+                        .. tostring(building.activeResearch.leadResearcherName)
+                        .. " (Int "
+                        .. tostring(building.activeResearch.leadResearcherLevel or 0)
+                        .. ") <LINE> "
+                end
             else
                 text = text .. " <RGB:0.62,0.62,0.62> No active research job. <LINE> "
             end
@@ -202,11 +210,15 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
                 end
             end
             text = text .. " <RGB:0.82,0.82,0.82> Use the Research button to submit specimens and inspect the unlock queue. <LINE> "
+        elseif building.buildingType == "Recycler" then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Recycling <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Use the Recycle button to break crafted items into recipe materials. Higher colony Crafting skill improves reclaim rates. <LINE> "
         elseif tonumber(building.unlockedBlueprintCountForBuilding or 0) > 0 then
             text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Blueprint Unlocks <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Research Recipes Available Here: <RGB:1,1,1> "
                 .. tostring(building.unlockedBlueprintCountForBuilding or 0)
                 .. " <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Use the Craft button to turn researched blueprints into real warehouse items at this station. <LINE> "
         end
 
         text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Occupants <LINE> "

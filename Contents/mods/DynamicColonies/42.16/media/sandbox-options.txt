@@ -173,3 +173,13 @@ option DynamicColonies.PlayerOwnedNPCAmmoConsumption
     page = DynamicColoniesRoster,
     translation = DynamicColonies.PlayerOwnedNPCAmmoConsumption,
 }
+
+option DynamicColonies.ColonyResearchWorkAmount
+{
+    type = integer,
+    default = 1000,
+    min = 1,
+    max = 10000,
+    page = DynamicColoniesColony,
+    translation = DynamicColonies.ColonyResearchWorkAmount,
+}
