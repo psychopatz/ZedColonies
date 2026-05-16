@@ -22,6 +22,13 @@ local function canDropHaulEntries(window)
     return normalizedJob == ((config.JobTypes or {}).Scavenge)
 end
 
+local function canWithdrawWarehouseInventoryEntry(entry)
+    return entry
+        and entry.kind == "inventory"
+        and tostring(entry.fullType or "") ~= ""
+        and math.max(0, tonumber(entry.qty) or 0) > 0
+end
+
 function DC_SupplyWindow:canTransferWithWorker(showStatus)
     if self:hasPendingSupplyTransfers() then
         if showStatus ~= false then
@@ -71,6 +78,15 @@ function DC_SupplyWindow:updateTransferControls()
     local hasWorkerEntries = #(self.workerEntries or {}) > 0
     local dropEnabled = canDropHaulEntries(self) and hasWorkerEntries
     local withdrawEnabled = transferAllowed and hasWorkerEntries and not isWarehouseOutputTab
+    if isWarehouseOutputTab then
+        withdrawEnabled = false
+        for _, entry in ipairs(self.workerEntries or {}) do
+            if canWithdrawWarehouseInventoryEntry(entry) then
+                withdrawEnabled = transferAllowed
+                break
+            end
+        end
+    end
 
     self.btnWithdrawSelected:setEnable(withdrawEnabled)
     self.btnDepositSelected:setEnable(depositEnabled)

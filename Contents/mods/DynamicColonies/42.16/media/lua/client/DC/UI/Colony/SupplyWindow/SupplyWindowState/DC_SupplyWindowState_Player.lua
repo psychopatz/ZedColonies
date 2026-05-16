@@ -61,6 +61,32 @@ local function removeProvisionEntryFromHeader(header, entry)
     header.qty = header.totalQty
 end
 
+local function getOutputAggregateKey(entry)
+    return table.concat({
+        tostring(entry and entry.displayName or ""),
+        tostring(entry and entry.fullType or ""),
+    }, "|")
+end
+
+local function addOutputEntryToHeader(header, entry, invItem)
+    header.totalWeight = header.totalWeight + math.max(0, tonumber(entry.totalWeight) or tonumber(entry.unitWeight) or 0)
+    header.totalQty = header.totalQty + math.max(1, tonumber(entry.qty) or 1)
+    header.qty = header.totalQty
+    header.pending = header.pending or entry.pending == true
+    header.transferPending = header.transferPending or entry.transferPending == true
+    header.sourceItems[#header.sourceItems + 1] = invItem
+    if invItem and invItem.getID and type(header.sourceEntriesByID) == "table" then
+        header.sourceEntriesByID[invItem:getID()] = entry
+    end
+    header.childEntries = nil
+end
+
+local function removeOutputEntryFromHeader(header, entry)
+    header.totalWeight = math.max(0, header.totalWeight - math.max(0, tonumber(entry.totalWeight) or tonumber(entry.unitWeight) or 0))
+    header.totalQty = math.max(0, header.totalQty - math.max(1, tonumber(entry.qty) or 1))
+    header.qty = header.totalQty
+end
+
 function DC_SupplyWindow:bumpPresentationCacheVersion()
     self.presentationCacheVersion = math.max(0, math.floor(tonumber(self.presentationCacheVersion) or 0)) + 1
     self.cachedRightHeaderTitle = nil
@@ -192,6 +218,86 @@ function DC_SupplyWindow:addProvisionAggregatedEntry(entry, invItem)
     end
 
     addProvisionEntryToHeader(header, entry, invItem)
+    return true
+end
+
+function DC_SupplyWindow:createOutputAggregateHeader(entry, invItem)
+    local groupKey = getOutputAggregateKey(entry)
+    local sourceEntriesByID = {}
+    if invItem and invItem.getID then
+        sourceEntriesByID[invItem:getID()] = entry
+    end
+    local header = {
+        kind = "group",
+        side = "player",
+        groupKey = groupKey,
+        displayName = entry.displayName,
+        fullType = entry.fullType,
+        texture = entry.texture,
+        childEntries = nil,
+        childEntriesLoader = function(groupEntry)
+            local children = {}
+            for _, sourceItem in ipairs(groupEntry.sourceItems or {}) do
+                local childEntry = Internal.buildInventoryEntryForTab
+                    and Internal.buildInventoryEntryForTab(sourceItem, Internal.Tabs.Output, self)
+                    or nil
+                if childEntry and Internal.canStoreInWarehouseOutput and Internal.canStoreInWarehouseOutput(childEntry) then
+                    children[#children + 1] = childEntry
+                end
+            end
+            return children
+        end,
+        sourceItems = { invItem },
+        sourceEntriesByID = sourceEntriesByID,
+        childCount = 1,
+        totalWeight = math.max(0, tonumber(entry.totalWeight) or tonumber(entry.unitWeight) or 0),
+        totalCalories = 0,
+        totalHydration = 0,
+        totalTreatmentUnits = 0,
+        totalQty = math.max(1, tonumber(entry.qty) or 1),
+        calories = 0,
+        hydration = 0,
+        treatmentUnits = 0,
+        qty = math.max(1, tonumber(entry.qty) or 1),
+        amount = 0,
+        canDeposit = false,
+        canAssignTool = false,
+        provisionBlockedReason = entry.provisionBlockedReason,
+        isRottenProvision = entry.isRottenProvision == true,
+        hasEquipmentRequirementMatch = false,
+        isUsableEquipment = false,
+        pending = entry.pending == true,
+        tags = entry.tags or {},
+        condition = entry.condition,
+        conditionMax = entry.conditionMax,
+        isDrainable = entry.isDrainable == true,
+        useDelta = entry.useDelta,
+        usedDelta = entry.usedDelta,
+        fluidAmount = entry.fluidAmount,
+        fluidCapacity = entry.fluidCapacity,
+        keepOnDeplete = entry.keepOnDeplete == true,
+        transferPending = entry.transferPending == true,
+    }
+    return header
+end
+
+function DC_SupplyWindow:addOutputAggregatedEntry(entry, invItem)
+    self.playerOutputGroups = self.playerOutputGroups or {}
+    local itemID = invItem and invItem.getID and invItem:getID() or nil
+    if itemID ~= nil then
+        self.playerEntriesByID[itemID] = entry or true
+    end
+    local groupKey = getOutputAggregateKey(entry)
+    local header = self.playerOutputGroups[groupKey]
+    if not header then
+        header = self:createOutputAggregateHeader(entry, invItem)
+        self.playerOutputGroups[groupKey] = header
+        self.playerEntries[#self.playerEntries + 1] = header
+        return true
+    end
+
+    header.childCount = header.childCount + 1
+    addOutputEntryToHeader(header, entry, invItem)
     return true
 end
 
@@ -336,6 +442,8 @@ function DC_SupplyWindow:beginPlayerTabHydration(tabKey)
     self.playerDataReady[tabKey] = false
     if tabKey == Internal.Tabs.Provisions then
         self.playerProvisionGroups = {}
+    elseif tabKey == Internal.Tabs.Output then
+        self.playerOutputGroups = {}
     end
     self:clearPlayerListUI()
 
@@ -369,12 +477,16 @@ function DC_SupplyWindow:processPlayerTabHydration(batchSize)
             if descriptor and (descriptor.canDeposit == true or tostring(descriptor.provisionBlockedReason or "") ~= "") then
                 entry = descriptor
             end
+        elseif state.tabKey == Internal.Tabs.Output then
+            entry = invItem and Internal.buildInventoryEntryForTab and Internal.buildInventoryEntryForTab(invItem, state.tabKey, self) or nil
         else
             entry = invItem and Internal.buildInventoryEntryForTab and Internal.buildInventoryEntryForTab(invItem, state.tabKey, self) or nil
         end
         if entry then
             if state.tabKey == Internal.Tabs.Provisions then
                 self:addProvisionAggregatedEntry(entry, invItem)
+            elseif state.tabKey == Internal.Tabs.Output then
+                self:addOutputAggregatedEntry(entry, invItem)
             else
                 self.playerEntries[#self.playerEntries + 1] = entry
                 self.playerEntriesByID[entry.itemID] = entry
@@ -459,6 +571,9 @@ function DC_SupplyWindow:addScannedItem(invItem)
 
     if tabKey == Internal.Tabs.Provisions then
         return self:addProvisionAggregatedEntry(entry, invItem)
+    end
+    if tabKey == Internal.Tabs.Output then
+        return self:addOutputAggregatedEntry(entry, invItem)
     end
 
     self.playerEntries[#self.playerEntries + 1] = entry
@@ -571,6 +686,47 @@ function DC_SupplyWindow:removePlayerEntryByID(itemID)
                                 self.playerProvisionGroups[header.groupKey] = nil
                             end
                             table.remove(provisionSet, index)
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    local outputSet = self.playerEntrySets and self.playerEntrySets[Internal.Tabs.Output] or nil
+    if type(outputSet) == "table" then
+        for index = #outputSet, 1, -1 do
+            local header = outputSet[index]
+            if header and header.kind == "group" and type(header.sourceItems) == "table" then
+                for sourceIndex = #header.sourceItems, 1, -1 do
+                    local sourceItem = header.sourceItems[sourceIndex]
+                    if sourceItem and sourceItem.getID and sourceItem:getID() == itemID then
+                        local sourceEntry = header.sourceEntriesByID and header.sourceEntriesByID[itemID] or nil
+                        if sourceEntry then
+                            removeOutputEntryFromHeader(header, sourceEntry)
+                        else
+                            header.childCount = math.max(0, header.childCount - 1)
+                        end
+                        if type(header.sourceEntriesByID) == "table" then
+                            header.sourceEntriesByID[itemID] = nil
+                        end
+                        table.remove(header.sourceItems, sourceIndex)
+                        if type(header.childEntries) == "table" then
+                            for childIndex = #header.childEntries, 1, -1 do
+                                local child = header.childEntries[childIndex]
+                                if child and child.itemID == itemID then
+                                    table.remove(header.childEntries, childIndex)
+                                    break
+                                end
+                            end
+                        end
+                        header.childCount = math.max(0, #(header.sourceItems or {}))
+                        if header.childCount <= 0 then
+                            if self.playerOutputGroups then
+                                self.playerOutputGroups[header.groupKey] = nil
+                            end
+                            table.remove(outputSet, index)
                         end
                         break
                     end

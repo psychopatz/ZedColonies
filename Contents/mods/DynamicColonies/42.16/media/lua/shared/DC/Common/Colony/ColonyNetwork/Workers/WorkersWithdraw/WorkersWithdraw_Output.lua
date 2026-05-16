@@ -2,6 +2,7 @@ DC_Colony = DC_Colony or {}
 DC_Colony.Network = DC_Colony.Network or {}
 DC_Colony.Network.Workers = DC_Colony.Network.Workers or {}
 
+local AbstractInventory = DC_Colony.AbstractInventory
 local Registry = DC_Colony.Registry
 local Warehouse = DC_Colony.Warehouse
 local Network = DC_Colony.Network
@@ -40,6 +41,27 @@ function Withdraw.withdrawWarehouseOutputEntries(ownerUsername, inventory, index
         if entry and entry.fullType and (tonumber(entry.qty) or 0) > 0 then
             Internal.addInventoryItem(inventory, entry.fullType, entry.qty, getOutputCustomData(entry))
             moved = moved + 1
+        end
+    end
+    return moved
+end
+
+function Withdraw.withdrawWarehouseInventoryEntries(ownerUsername, inventory, requests)
+    local moved = 0
+    for _, request in ipairs(requests or {}) do
+        local requestKind = tostring(request and request.kind or "")
+        if requestKind == "inventory" then
+            local fullType = tostring(request and request.fullType or "")
+            local requestedQty = math.max(0, math.floor(tonumber(request and request.qty) or 0))
+            if fullType ~= "" and requestedQty > 0 then
+                local takenQty = AbstractInventory and AbstractInventory.TakeItemStock
+                    and AbstractInventory.TakeItemStock(ownerUsername, fullType, requestedQty)
+                    or 0
+                if takenQty > 0 then
+                    Internal.addInventoryItem(inventory, fullType, takenQty)
+                    moved = moved + takenQty
+                end
+            end
         end
     end
     return moved

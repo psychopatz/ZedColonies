@@ -80,7 +80,9 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
                 "<LINE> <RGB:0.62,0.62,0.62> This warehouse Inventory tab shows compressed literal item stock by full type, plus any read-only colony reserve rows that came from older or system-generated abstract stock. "
                 .. "<LINE> <RGB:0.62,0.62,0.62> Use "
                 .. "<RGB:1,1,1> > <RGB:0.62,0.62,0.62> on the left side to deposit pristine, full-state items only. Matching items are merged into one row with a quantity count for performance. "
-                .. "<LINE> <RGB:0.62,0.62,0.62> Provisions and Equipment keep their richer tracked state in their own tabs. Inventory rows on the right side are read-only and feed colony material systems. "
+                .. "<LINE> <RGB:0.62,0.62,0.62> Literal item rows on the right side can be taken back with "
+                .. "<RGB:1,1,1> < <RGB:0.62,0.62,0.62>; only abstract reserve rows remain read-only. "
+                .. "<LINE> <RGB:0.62,0.62,0.62> Provisions and Equipment keep their richer tracked state in their own tabs. "
                 .. (warehouseFeedLoading and "<LINE> <RGB:0.85,0.72,0.38> Warehouse inventory is still loading rows in the background. " or "")
         elseif transferAllowed then
             transferGuidance =
@@ -213,7 +215,7 @@ function DC_SupplyWindow:updateItemDetail(entry, side)
                     and Internal.isInventoryView(self) then
                     text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use Drop to discard this hauled item and free carry weight. <LINE> "
                 else
-                    text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Read only. Matching pristine deposits merge into this stack automatically. <LINE> "
+                    text = text .. " <RGB:0.82,0.82,0.82> Action: <RGB:1,1,1> Use < to take literal items back to the player. Matching pristine deposits merge into this stack automatically. <LINE> "
                 end
             end
         else

@@ -315,6 +315,75 @@ function AbstractInventory.GetItemStockSnapshot(ownerUsername)
     return Data.BuildItemStockSnapshot(ownerData and ownerData.itemStock or nil)
 end
 
+function AbstractInventory.TakeItemStock(ownerUsername, fullType, requestedQty)
+    local owner = normalizeOwner(ownerUsername)
+    local normalizedFullType = tostring(fullType or "")
+    local normalizedQty = math.max(0, math.floor(tonumber(requestedQty) or 0))
+    if normalizedFullType == "" or normalizedQty <= 0 then
+        return 0
+    end
+
+    local ownerData = Data.EnsureOwnerData(owner)
+    local itemEntry = Data.NormalizeItemStockEntry(ownerData.itemStock[normalizedFullType] or nil)
+    if itemEntry.qty <= 0 then
+        return 0
+    end
+
+    local categoryId = getStoredItemCategory(normalizedFullType, itemEntry)
+    local itemGroup = tostring(itemEntry.group or "")
+    if itemGroup == "" then
+        local converted = Config.GetItemCategoryData and Config.GetItemCategoryData(normalizedFullType) or nil
+        itemGroup = tostring(converted and converted.group or "")
+    end
+
+    local taken, consumedWeight = removeItemStockUnits(ownerData, normalizedFullType, normalizedQty)
+    if taken <= 0 then
+        return 0
+    end
+
+    local stockEntry = Data.NormalizeCategoryStockEntry(ownerData.categoryStock[categoryId] or nil)
+    if stockEntry.count > 0 or stockEntry.totalWeight > 0 then
+        stockEntry.count = math.max(0, stockEntry.count - taken)
+        stockEntry.totalWeight = math.max(0, stockEntry.totalWeight - math.max(0, tonumber(consumedWeight) or 0))
+        if stockEntry.count <= 0 and stockEntry.totalWeight <= 0 then
+            ownerData.categoryStock[categoryId] = nil
+        else
+            ownerData.categoryStock[categoryId] = stockEntry
+        end
+    end
+
+    if isFoodGroup(itemGroup) then
+        local foodCategory = resolveFoodCategory(categoryId)
+        if foodCategory then
+            local nutritionEntry = Data.NormalizeFoodNutritionEntry(ownerData.foodNutritionPools[foodCategory] or nil)
+            if nutritionEntry.count > 0 or nutritionEntry.calories > 0 or nutritionEntry.hydration > 0 then
+                local consumedCalories, consumedHydration = getStaticFoodNutrition(normalizedFullType)
+                consumedCalories = math.max(0, consumedCalories * taken)
+                consumedHydration = math.max(0, consumedHydration * taken)
+
+                if consumedCalories <= 0 and consumedHydration <= 0 and nutritionEntry.count > 0 then
+                    local ratio = math.min(1, taken / math.max(1, nutritionEntry.count))
+                    consumedCalories = math.max(0, nutritionEntry.calories * ratio)
+                    consumedHydration = math.max(0, nutritionEntry.hydration * ratio)
+                end
+
+                nutritionEntry.calories = math.max(0, nutritionEntry.calories - consumedCalories)
+                nutritionEntry.hydration = math.max(0, nutritionEntry.hydration - consumedHydration)
+                nutritionEntry.count = math.max(0, nutritionEntry.count - taken)
+                if nutritionEntry.count <= 0 and nutritionEntry.calories <= 0 and nutritionEntry.hydration <= 0 then
+                    ownerData.foodNutritionPools[foodCategory] = nil
+                else
+                    ownerData.foodNutritionPools[foodCategory] = nutritionEntry
+                end
+            end
+        end
+    end
+
+    Data.RebuildSummaryTotals(ownerData)
+    touchWarehouse(owner)
+    return taken
+end
+
 function AbstractInventory.GetCategoryCount(ownerUsername, categoryId)
     local ownerData = Data.EnsureOwnerData(ownerUsername)
     return Data.GetCategoryStockCount(ownerData and ownerData.categoryStock or nil, categoryId)

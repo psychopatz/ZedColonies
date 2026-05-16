@@ -21,6 +21,13 @@ local function getWithdrawSourceLabel(window)
     return tostring(window and (window.workerName or window.workerID) or "worker")
 end
 
+local function isWithdrawableWarehouseInventoryEntry(entry)
+    return entry
+        and entry.kind == "inventory"
+        and tostring(entry.fullType or "") ~= ""
+        and math.max(0, tonumber(entry.qty) or 0) > 0
+end
+
 local function copyEntry(entry)
     local copied = {}
     for key, value in pairs(entry or {}) do
@@ -56,11 +63,64 @@ function DC_SupplyWindow:withdrawWorkerEntries(entries)
         self:updateStatus("No worker selected.")
         return
     end
-    if Internal.isWarehouseView and Internal.isWarehouseView(self) and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output then
-        self:updateStatus("Abstract warehouse categories cannot be withdrawn as literal items.")
+    if not self:canTransferWithWorker(true) then
         return
     end
-    if not self:canTransferWithWorker(true) then
+
+    local activeTab = self.activeTab or Internal.Tabs.Provisions
+    if Internal.isWarehouseView and Internal.isWarehouseView(self) and activeTab == Internal.Tabs.Output then
+        local inventoryRequests = {}
+        local selectedEntries = {}
+        for _, entry in ipairs(entries or {}) do
+            if isWithdrawableWarehouseInventoryEntry(entry) then
+                local requestQty = math.max(1, math.floor(tonumber(entry.requestedQty) or tonumber(entry.qty) or 1))
+                inventoryRequests[#inventoryRequests + 1] = {
+                    kind = "inventory",
+                    fullType = entry.fullType,
+                    qty = requestQty,
+                }
+                selectedEntries[#selectedEntries + 1] = {
+                    displayName = entry.displayName,
+                    fullType = entry.fullType,
+                    qty = requestQty,
+                }
+            end
+        end
+
+        if #selectedEntries <= 0 then
+            self:updateStatus("No literal warehouse items are available for transfer.")
+            return
+        end
+
+        local command = getWithdrawCommand(self, activeTab)
+        if not self:sendColonyCommand(command, {
+                workerID = self.workerID,
+                inventoryRequests = inventoryRequests,
+            }) then
+            self:updateStatus("Unable to collect items from " .. getWithdrawSourceLabel(self) .. ".")
+            return
+        end
+
+        if #selectedEntries == 1 then
+            local selectedEntry = selectedEntries[1]
+            local qtyText = math.max(1, tonumber(selectedEntry.qty) or 1)
+            if qtyText > 1 then
+                self:updateStatus(
+                    "Taking " .. tostring(qtyText) .. " " .. tostring(selectedEntry.displayName or selectedEntry.fullType or "item")
+                        .. " from "
+                        .. getWithdrawSourceLabel(self)
+                        .. "..."
+                )
+            else
+                self:updateStatus(
+                    "Taking " .. tostring(selectedEntry.displayName or selectedEntry.fullType or "item") .. " from "
+                        .. getWithdrawSourceLabel(self)
+                        .. "..."
+                )
+            end
+        else
+            self:updateStatus("Taking " .. tostring(#selectedEntries) .. " warehouse inventory rows from " .. getWithdrawSourceLabel(self) .. "...")
+        end
         return
     end
 
@@ -90,7 +150,6 @@ function DC_SupplyWindow:withdrawWorkerEntries(entries)
         return
     end
 
-    local activeTab = self.activeTab or Internal.Tabs.Provisions
     local command = getWithdrawCommand(self, activeTab)
 
     local payload = {}
@@ -129,8 +188,16 @@ function DC_SupplyWindow:onWithdrawSelected()
         return
     end
     if Internal.isWarehouseView and Internal.isWarehouseView(self) and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output then
-        self:updateStatus("Abstract warehouse categories cannot be withdrawn as literal items.")
-        return
+        if not isWithdrawableWarehouseInventoryEntry(selectedEntry) then
+            if selectedEntry.kind == "category" then
+                self:updateStatus("That warehouse reserve row is abstract colony stock and cannot be withdrawn as a literal item.")
+            elseif selectedEntry.kind == "special" then
+                self:updateStatus("That literal special row is reserved for colony systems and cannot be withdrawn here.")
+            else
+                self:updateStatus("Only literal warehouse item rows can be withdrawn from this tab.")
+            end
+            return
+        end
     end
 
     if selectedEntry.kind == "money" then
@@ -153,20 +220,24 @@ function DC_SupplyWindow:onWithdrawSelected()
 end
 
 function DC_SupplyWindow:onWithdrawVisible()
-    if Internal.isWarehouseView and Internal.isWarehouseView(self) and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output then
-        self:updateStatus("Abstract warehouse categories cannot be withdrawn as literal items.")
-        return
-    end
     local visibleEntries = {}
     for _, entry in ipairs(self.workerVisibleEntries or {}) do
-        if entry and entry.kind ~= "money" and entry.kind ~= "placeholder" then
+        if entry
+            and entry.kind ~= "money"
+            and entry.kind ~= "placeholder"
+            and (not (Internal.isWarehouseView and Internal.isWarehouseView(self) and (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output)
+                or isWithdrawableWarehouseInventoryEntry(entry)) then
             visibleEntries[#visibleEntries + 1] = entry
         end
     end
 
     if #visibleEntries <= 0 then
         if Internal.isWarehouseView and Internal.isWarehouseView(self) then
-            self:updateStatus("No visible warehouse items matched the current filter.")
+            if (self.activeTab or Internal.Tabs.Provisions) == Internal.Tabs.Output then
+                self:updateStatus("No visible literal warehouse inventory rows matched the current filter.")
+            else
+                self:updateStatus("No visible warehouse items matched the current filter.")
+            end
         else
             self:updateStatus("No visible NPC inventory items matched the current filter. Select the cash entry to transfer money.")
         end

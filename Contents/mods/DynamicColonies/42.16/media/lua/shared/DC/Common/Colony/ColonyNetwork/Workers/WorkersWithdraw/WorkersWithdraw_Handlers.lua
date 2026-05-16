@@ -95,12 +95,17 @@ Network.Handlers.WithdrawWarehouseOutput = function(player, args)
         return
     end
 
-    local moved = Withdraw.withdrawWarehouseOutputEntries(owner, inventory, Shared.normalizeLedgerIndexes(args))
+    local moved = 0
+    if type(args and args.inventoryRequests) == "table" and #(args.inventoryRequests or {}) > 0 then
+        moved = Withdraw.withdrawWarehouseInventoryEntries(owner, inventory, args.inventoryRequests)
+    else
+        moved = Withdraw.withdrawWarehouseOutputEntries(owner, inventory, Shared.normalizeLedgerIndexes(args))
+    end
     if moved <= 0 then
         return
     end
 
-    Shared.saveAndRefreshBasic(player, worker)
+    Shared.saveAndRefreshBasic(player, worker, true)
 end
 
 return Withdraw
