@@ -469,6 +469,19 @@ function RealBase.ResolveGathererTarget(worker)
     )
 end
 
+function RealBase.ResolveCorpseDumpTarget(worker)
+    if not worker then
+        return nil
+    end
+
+    return RealBase.ResolveJobTypeTarget(
+        worker.ownerUsername,
+        "CorpseRemoval",
+        worker.homeX or worker.workX,
+        worker.homeY or worker.workY
+    )
+end
+
 function RealBase.ResolvePatrolAnchorTarget(worker)
     if not worker then
         return nil

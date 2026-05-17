@@ -59,6 +59,14 @@ local function getDefaultZoneType(buildingType)
     return "roaming"
 end
 
+local function getJobZoneLabels(jobType)
+    local normalized = tostring(jobType or "")
+    if normalized == "CorpseRemoval" then
+        return "Corpse Dump Zone", "Corpse Dump Area"
+    end
+    return normalized .. " Zone", normalized .. " Area"
+end
+
 local function findZoneByPredicate(zones, predicate)
     for _, zone in ipairs(zones or {}) do
         if predicate(zone) then
@@ -184,7 +192,7 @@ end
 
 function RealBase.ShouldCreateJobZone(jobType)
     local normalized = tostring(jobType or "")
-    return normalized == "Gatherer" or normalized == "Patrol"
+    return normalized == "Gatherer" or normalized == "Patrol" or normalized == "CorpseRemoval"
 end
 
 function RealBase.BuildBaseZone(colonyId)
@@ -228,13 +236,14 @@ function RealBase.EnsureBaseZoneForOwner(ownerUsername, colonyId)
 end
 
 function RealBase.BuildJobTypeZone(colonyId, jobType)
-    local zone = DC_ZoneData.createZone(tostring(jobType or "Job") .. " Zone", "roaming", colonyId)
+    local zoneLabel, areaLabel = getJobZoneLabels(jobType)
+    local zone = DC_ZoneData.createZone(zoneLabel, "roaming", colonyId)
     zone.zoneKind = "jobType"
     zone.sourceJobType = tostring(jobType or "")
     zone.areaSlots = {
         RealBase.BuildAreaSlot({
             areaID = "dcjob_" .. tostring(colonyId or "local") .. "_" .. tostring(jobType or "Job"),
-            label = tostring(jobType or "Job") .. " Area",
+            label = areaLabel,
             sourceKind = "job",
             sourceJobType = tostring(jobType or ""),
             rect = nil
@@ -272,7 +281,7 @@ function RealBase.EnsureSystemZonesForOwner(ownerUsername, colonyId)
     local zones = store.GetZones(resolvedColonyId)
     local createdAny = createdBase == true
 
-    local managedJobZones = { "Gatherer", "Patrol" }
+    local managedJobZones = { "Gatherer", "Patrol", "CorpseRemoval" }
     local jobType = nil
     for _, jobType in ipairs(managedJobZones) do
         if RealBase.ShouldCreateJobZone(jobType) then

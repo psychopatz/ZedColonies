@@ -43,6 +43,16 @@ local function getWorkerSkillLevel(worker, skillID)
     return math.max(0, math.floor(tonumber(entry and entry.level) or 0))
 end
 
+function Config.IsV2ResidentBehaviorSupported()
+    local companion = DC_Colony and DC_Colony.Companion or nil
+    if companion and companion.IsV2Active then
+        return companion.IsV2Active() == true
+    end
+
+    local activated = getActivatedMods and getActivatedMods() or nil
+    return activated and activated.contains and activated:contains("DynamicTradingV2") or false
+end
+
 function Config.GetWorkerJobCapability(worker, jobType)
     local normalizedJobType = Config.NormalizeJobType(jobType)
     local capability = {
@@ -59,7 +69,7 @@ function Config.GetWorkerJobCapability(worker, jobType)
             getWorkerSkillLevel(worker, "Melee"),
             getWorkerSkillLevel(worker, "Shooting")
         )
-        if Config.IsTravelCompanionSupported and not Config.IsTravelCompanionSupported() then
+        if Config.IsV2ResidentBehaviorSupported and not Config.IsV2ResidentBehaviorSupported() then
             capability.capable = false
             capability.reason = "Travel Companion requires V2."
             return capability
@@ -67,6 +77,22 @@ function Config.GetWorkerJobCapability(worker, jobType)
         if companion and companion.CanWorkerBeCompanion then
             capability.capable, capability.reason = companion.CanWorkerBeCompanion(worker)
         end
+        return capability
+    end
+
+    if normalizedJobType == ((Config.JobTypes or {}).CorpseRemoval) then
+        if Config.IsV2ResidentBehaviorSupported and not Config.IsV2ResidentBehaviorSupported() then
+            capability.capable = false
+            capability.reason = "Corpse Removal requires V2."
+            return capability
+        end
+        if not (DC_ZoneRealBase and DC_ZoneRealBase.ResolveCorpseDumpTarget and DC_ZoneRealBase.ResolveCorpseDumpTarget(worker)) then
+            capability.capable = false
+            capability.reason = "Set a corpse dump zone first."
+            return capability
+        end
+        capability.capable = true
+        capability.reason = nil
         return capability
     end
 
@@ -114,13 +140,7 @@ function Config.CanWorkerTakeJob(worker, jobType)
 end
 
 function Config.IsTravelCompanionSupported()
-    local companion = DC_Colony and DC_Colony.Companion or nil
-    if companion and companion.IsV2Active then
-        return companion.IsV2Active() == true
-    end
-
-    local activated = getActivatedMods and getActivatedMods() or nil
-    return activated and activated.contains and activated:contains("DynamicTradingV2") or false
+    return Config.IsV2ResidentBehaviorSupported and Config.IsV2ResidentBehaviorSupported() or false
 end
 
 function Config.GetDefaultJobForArchetype(archetypeID)
@@ -160,7 +180,7 @@ end
 
 function Config.GetNextJobType(jobType)
     -- Build the ordered list from JobProfiles.sortOrder.
-    -- TravelCompanion is included only when IsTravelCompanionSupported() is true.
+    -- Jobs tagged with requiresV2 are included only when the V2 runtime is active.
     local v2Active = Config.IsTravelCompanionSupported and Config.IsTravelCompanionSupported()
     local candidates = {}
     for _, jobProfile in pairs(Config.JobProfiles or {}) do

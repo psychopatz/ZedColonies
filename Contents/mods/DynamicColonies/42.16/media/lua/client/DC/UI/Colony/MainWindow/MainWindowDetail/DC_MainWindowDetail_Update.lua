@@ -283,6 +283,15 @@ function DC_MainWindow:updateWorkerDetail(worker)
             .. " <LINE> "
         text = text .. " <RGB:0.72,0.72,0.72> Notes: <RGB:1,1,1> Wood and stone still work without tools, but much slower. Water uses all assigned fluid containers and needs built water storage with free capacity. <LINE> "
     end
+    if normalizedJobType == (config.JobTypes and config.JobTypes.CorpseRemoval) then
+        local corpseDumpTarget = DC_ZoneRealBase and DC_ZoneRealBase.ResolveCorpseDumpTarget and DC_ZoneRealBase.ResolveCorpseDumpTarget(worker) or nil
+        text = text .. " <RGB:0.72,0.72,0.72> Dump Zone: <RGB:1,1,1> "
+            .. tostring(corpseDumpTarget and formatCoords(corpseDumpTarget.x, corpseDumpTarget.y, corpseDumpTarget.z) or "Not set")
+            .. " <LINE> "
+        text = text .. " <RGB:0.72,0.72,0.72> Bodies Moved: <RGB:1,1,1> "
+            .. tostring(math.max(0, math.floor(tonumber(worker.corpseRemovalCount) or 0)))
+            .. " <LINE> "
+    end
     text = text .. " <RGB:0.72,0.72,0.72> Tool State: <RGB:1,1,1> " .. tostring(worker.toolState or "Missing") .. " <LINE> "
     text = text .. " <RGB:0.72,0.72,0.72> Housed: <RGB:1,1,1> " .. formatHousingSummary(worker) .. " <LINE> "
     if jobSkillEffects and jobSkillEffects.skillID then

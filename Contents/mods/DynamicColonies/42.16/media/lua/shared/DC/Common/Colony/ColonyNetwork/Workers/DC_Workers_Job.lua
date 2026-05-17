@@ -69,6 +69,20 @@ Network.Handlers.SetWorkerJobEnabled = function(player, args)
         return
     end
 
+    if args.enabled == true and normalizedJob == ((Config.JobTypes or {}).CorpseRemoval) then
+        local canWorkCorpseDuty, corpseDutyReason = canAssignJobType(worker, normalizedJob)
+        if not canWorkCorpseDuty then
+            debugWorkerJob(
+                "Blocked Corpse Removal start workerID=" .. tostring(args.workerID)
+                    .. " reason=" .. tostring(corpseDutyReason)
+            )
+            Registry.SetWorkerJobEnabled(worker, false)
+            Internal.syncNotice(player, corpseDutyReason or "Corpse Removal is not ready.", "error")
+            Shared.saveAndRefreshBasic(player, worker)
+            return
+        end
+    end
+
     if normalizedJob == ((Config.JobTypes or {}).TravelCompanion) and not isTravelCompanionSupported() then
         debugWorkerJob("Blocked Travel Companion because V2 is inactive workerID=" .. tostring(args.workerID))
         Registry.SetWorkerJobEnabled(worker, false)

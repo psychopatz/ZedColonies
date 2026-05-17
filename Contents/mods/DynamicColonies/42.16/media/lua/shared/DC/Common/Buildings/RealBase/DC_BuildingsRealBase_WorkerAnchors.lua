@@ -63,6 +63,8 @@ function RealBase.ApplyWorkerAnchors(worker)
         workTarget = DC_ZoneRealBase.ResolveGreenhouseTarget and DC_ZoneRealBase.ResolveGreenhouseTarget(worker) or nil
     elseif normalizedJob == tostring(jobTypes.Gatherer or "Gatherer") then
         workTarget = DC_ZoneRealBase.ResolveGathererTarget and DC_ZoneRealBase.ResolveGathererTarget(worker) or nil
+    elseif normalizedJob == tostring(jobTypes.CorpseRemoval or "CorpseRemoval") then
+        workTarget = DC_ZoneRealBase.ResolveCorpseDumpTarget and DC_ZoneRealBase.ResolveCorpseDumpTarget(worker) or nil
     elseif normalizedJob == tostring(jobTypes.Builder or "Builder")
         and assignedProjectBuildingType and assignedProjectBuildingID then
         workTarget = DC_ZoneRealBase.ResolveNearestBuildingTarget and DC_ZoneRealBase.ResolveNearestBuildingTarget(
