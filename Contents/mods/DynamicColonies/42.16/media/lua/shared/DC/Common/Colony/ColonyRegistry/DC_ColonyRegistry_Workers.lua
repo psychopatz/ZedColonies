@@ -6,6 +6,19 @@ local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Internal = Registry.Internal
 
+local function normalizeWorkerReputation(value)
+    local reputation = tonumber(value)
+    if reputation == nil then
+        reputation = 100
+    end
+    if reputation > 100 then
+        reputation = 100
+    elseif reputation < -100 then
+        reputation = -100
+    end
+    return reputation
+end
+
 function Registry.CreateWorker(ownerUsername, template)
     template = template or {}
     local owner = Config.GetOwnerUsername(ownerUsername)
@@ -75,6 +88,7 @@ function Registry.CreateWorker(ownerUsername, template)
         dumpCooldownHours = tonumber(template.dumpCooldownHours) or 0,
         dumpTrips = tonumber(template.dumpTrips) or 0,
         moneyStored = math.max(0, math.floor(tonumber(template.moneyStored) or 0)),
+        reputation = normalizeWorkerReputation(template.reputation),
         deathCause = template.deathCause,
         energy = Internal.CopyShallow(template.energy or template.tiredness),
         tiredness = Internal.CopyShallow(template.energy or template.tiredness), -- Compatibility
@@ -145,7 +159,11 @@ function Registry.GetWorkerRaw(workerID)
         return nil
     end
 
-    return Registry.GetWorkerData(colonyID, workerID)
+    local worker = Registry.GetWorkerData(colonyID, workerID)
+    if worker and worker.reputation == nil then
+        worker.reputation = 100
+    end
+    return worker
 end
 
 function Registry.GetWorker(workerID)

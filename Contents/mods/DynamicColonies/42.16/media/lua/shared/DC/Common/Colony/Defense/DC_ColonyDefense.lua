@@ -23,6 +23,12 @@ local function getRegistry()
     return DC_Colony and DC_Colony.Registry or nil
 end
 
+local function getDefenseSetting(key, fallback)
+    local config = getConfig()
+    local settings = config and config.ColonyDefenseSettings or nil
+    return tonumber(settings and settings[key]) or tonumber(fallback) or 0
+end
+
 local function normalizeOwner(ownerUsername)
     local config = getConfig()
     if config and config.GetOwnerUsername then
@@ -108,6 +114,7 @@ function Defense.GetRuntime(ownerUsername)
             colonyID = getColonyID(owner),
             zoneRevision = "0",
             perimeterPosts = nil,
+            patrolRoutePoints = nil,
             alert = nil,
             lastThreat = nil,
         }
@@ -128,6 +135,7 @@ function Defense.InvalidateOwner(ownerUsername)
     end
 
     runtime.perimeterPosts = nil
+    runtime.patrolRoutePoints = nil
     local store = getStore()
     runtime.zoneRevision = tostring(store and store.GetColonyVersion and store.GetColonyVersion(runtime.colonyID) or 0)
     return true
@@ -293,9 +301,13 @@ function Defense.BuildWorkerRuntime(worker, homeCoords, workCoords)
     local dutyMode = Defense.GetWorkerDutyMode(worker)
     local canFight = Defense.CanWorkerFight(worker, dutyMode)
     local behaviorState = "ColonyIdle"
+    local responseRadius = 0
+    local leashRadius = 0
 
     if dutyMode == "guard" then
         behaviorState = "Patrol"
+        responseRadius = math.max(4, math.floor(getDefenseSetting("PatrolResponseRadius", 18)))
+        leashRadius = math.max(responseRadius, math.floor(getDefenseSetting("PatrolLeashRadius", 22)))
     elseif dutyMode == "work" or dutyMode == "patient" then
         behaviorState = "ColonyWork"
     end
@@ -306,6 +318,12 @@ function Defense.BuildWorkerRuntime(worker, homeCoords, workCoords)
         dcGuardPostIndex = math.max(1, math.floor(tonumber(worker and worker.dcGuardPostIndex) or 1)),
         dcAnchorRevision = Defense.BuildAnchorRevision(worker, homeCoords, workCoords, dutyMode),
         dcBehaviorState = behaviorState,
+        guardEngageRadius = responseRadius,
+        guardLeashRadius = leashRadius,
+        dcPatrolPauseMinMs = math.max(0, math.floor(getDefenseSetting("PatrolPauseMinMs", 2200))),
+        dcPatrolPauseMaxMs = math.max(0, math.floor(getDefenseSetting("PatrolPauseMaxMs", 5200))),
+        dcPatrolMoveGapMinMs = math.max(0, math.floor(getDefenseSetting("PatrolMoveGapMinMs", 700))),
+        dcPatrolMoveGapMaxMs = math.max(0, math.floor(getDefenseSetting("PatrolMoveGapMaxMs", 2200))),
     }
 end
 

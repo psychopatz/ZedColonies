@@ -99,18 +99,48 @@ local function applyWorkerRuntime(worker, npcData, homeCoords, workCoords)
     if tostring(worker.dcBehaviorState or "") ~= tostring(runtime.dcBehaviorState or "") then
         changed = true
     end
+    if math.floor(tonumber(worker.guardEngageRadius) or 0) ~= math.floor(tonumber(runtime.guardEngageRadius) or 0) then
+        changed = true
+    end
+    if math.floor(tonumber(worker.guardLeashRadius) or 0) ~= math.floor(tonumber(runtime.guardLeashRadius) or 0) then
+        changed = true
+    end
+    if math.floor(tonumber(worker.dcPatrolPauseMinMs) or 0) ~= math.floor(tonumber(runtime.dcPatrolPauseMinMs) or 0) then
+        changed = true
+    end
+    if math.floor(tonumber(worker.dcPatrolPauseMaxMs) or 0) ~= math.floor(tonumber(runtime.dcPatrolPauseMaxMs) or 0) then
+        changed = true
+    end
+    if math.floor(tonumber(worker.dcPatrolMoveGapMinMs) or 0) ~= math.floor(tonumber(runtime.dcPatrolMoveGapMinMs) or 0) then
+        changed = true
+    end
+    if math.floor(tonumber(worker.dcPatrolMoveGapMaxMs) or 0) ~= math.floor(tonumber(runtime.dcPatrolMoveGapMaxMs) or 0) then
+        changed = true
+    end
 
     worker.dcDutyMode = tostring(runtime.dcDutyMode or worker.dcDutyMode or "idle")
     worker.dcCanFight = runtime.dcCanFight == true
     worker.dcGuardPostIndex = math.max(1, math.floor(tonumber(runtime.dcGuardPostIndex) or tonumber(worker.dcGuardPostIndex) or 1))
     worker.dcAnchorRevision = tostring(runtime.dcAnchorRevision or worker.dcAnchorRevision or "")
     worker.dcBehaviorState = tostring(runtime.dcBehaviorState or worker.dcBehaviorState or "ColonyIdle")
+    worker.guardEngageRadius = math.max(0, math.floor(tonumber(runtime.guardEngageRadius) or tonumber(worker.guardEngageRadius) or 0))
+    worker.guardLeashRadius = math.max(0, math.floor(tonumber(runtime.guardLeashRadius) or tonumber(worker.guardLeashRadius) or 0))
+    worker.dcPatrolPauseMinMs = math.max(0, math.floor(tonumber(runtime.dcPatrolPauseMinMs) or tonumber(worker.dcPatrolPauseMinMs) or 0))
+    worker.dcPatrolPauseMaxMs = math.max(0, math.floor(tonumber(runtime.dcPatrolPauseMaxMs) or tonumber(worker.dcPatrolPauseMaxMs) or 0))
+    worker.dcPatrolMoveGapMinMs = math.max(0, math.floor(tonumber(runtime.dcPatrolMoveGapMinMs) or tonumber(worker.dcPatrolMoveGapMinMs) or 0))
+    worker.dcPatrolMoveGapMaxMs = math.max(0, math.floor(tonumber(runtime.dcPatrolMoveGapMaxMs) or tonumber(worker.dcPatrolMoveGapMaxMs) or 0))
 
     npcData.dcDutyMode = worker.dcDutyMode
     npcData.dcCanFight = worker.dcCanFight == true
     npcData.dcGuardPostIndex = worker.dcGuardPostIndex
     npcData.dcAnchorRevision = worker.dcAnchorRevision
     npcData.dcBehaviorState = worker.dcBehaviorState
+    npcData.guardEngageRadius = worker.guardEngageRadius
+    npcData.guardLeashRadius = worker.guardLeashRadius
+    npcData.dcPatrolPauseMinMs = worker.dcPatrolPauseMinMs
+    npcData.dcPatrolPauseMaxMs = worker.dcPatrolPauseMaxMs
+    npcData.dcPatrolMoveGapMinMs = worker.dcPatrolMoveGapMinMs
+    npcData.dcPatrolMoveGapMaxMs = worker.dcPatrolMoveGapMaxMs
     return changed
 end
 
@@ -278,6 +308,12 @@ function Bridge.SyncWorker(worker)
             dcGuardPostIndex = npcData.dcGuardPostIndex,
             dcAnchorRevision = npcData.dcAnchorRevision,
             dcBehaviorState = npcData.dcBehaviorState,
+            guardEngageRadius = npcData.guardEngageRadius,
+            guardLeashRadius = npcData.guardLeashRadius,
+            dcPatrolPauseMinMs = npcData.dcPatrolPauseMinMs,
+            dcPatrolPauseMaxMs = npcData.dcPatrolPauseMaxMs,
+            dcPatrolMoveGapMinMs = npcData.dcPatrolMoveGapMinMs,
+            dcPatrolMoveGapMaxMs = npcData.dcPatrolMoveGapMaxMs,
         }, true)
     end
 

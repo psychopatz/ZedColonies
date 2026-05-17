@@ -192,6 +192,7 @@ function Registry.GetWorkerSummary(worker)
         tirednessRecoveryMultiplier = worker.energyRecoveryMultiplier or worker.tirednessRecoveryMultiplier or 1,
         outputCount = worker.outputCount or 0,
         moneyStored = worker.moneyStored or 0,
+        reputation = tonumber(worker.reputation) or 100,
         scavengeTier = worker.scavengeTier,
         scavengeTierLabel = worker.scavengeTierLabel,
         scavengePoolRolls = worker.scavengePoolRolls,
@@ -327,6 +328,7 @@ function Registry.GetWorkerDetailsForOwner(ownerUsername, workerID, includeWareh
     end
     detail.activityLog = copyLedgerEntries(worker.activityLog)
     detail.statusFlags = Internal.CopyDeep and Internal.CopyDeep(worker.statusFlags) or worker.statusFlags
+    detail.reputation = tonumber(worker.reputation) or 100
     detail.energy = Internal.CopyDeep and Internal.CopyDeep(worker.energy) or worker.energy
     detail.tiredness = Internal.CopyDeep and Internal.CopyDeep(worker.tiredness) or worker.tiredness
     detail.companion = Internal.CopyDeep and Internal.CopyDeep(worker.companion) or worker.companion

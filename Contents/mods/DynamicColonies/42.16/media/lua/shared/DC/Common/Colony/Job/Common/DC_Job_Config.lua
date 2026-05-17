@@ -191,4 +191,13 @@ Config.ArchetypeCarryWeight = {
     Scavenger = 10
 }
 
+Config.ColonyDefenseSettings = Config.ColonyDefenseSettings or {
+    PatrolResponseRadius = 18,
+    PatrolLeashRadius = 22,
+    PatrolPauseMinMs = 2200,
+    PatrolPauseMaxMs = 5200,
+    PatrolMoveGapMinMs = 700,
+    PatrolMoveGapMaxMs = 2200,
+}
+
 return Config

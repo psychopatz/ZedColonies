@@ -184,7 +184,7 @@ end
 
 function RealBase.ShouldCreateJobZone(jobType)
     local normalized = tostring(jobType or "")
-    return normalized == "Gatherer"
+    return normalized == "Gatherer" or normalized == "Patrol"
 end
 
 function RealBase.BuildBaseZone(colonyId)
@@ -272,11 +272,15 @@ function RealBase.EnsureSystemZonesForOwner(ownerUsername, colonyId)
     local zones = store.GetZones(resolvedColonyId)
     local createdAny = createdBase == true
 
-    if RealBase.ShouldCreateJobZone("Gatherer") then
-        local zone = RealBase.FindJobTypeZone(zones, "Gatherer")
-        if not zone then
-            RealBase.EnsureJobTypeZone(zones, resolvedColonyId, "Gatherer")
-            createdAny = true
+    local managedJobZones = { "Gatherer", "Patrol" }
+    local jobType = nil
+    for _, jobType in ipairs(managedJobZones) do
+        if RealBase.ShouldCreateJobZone(jobType) then
+            local zone = RealBase.FindJobTypeZone(zones, jobType)
+            if not zone then
+                RealBase.EnsureJobTypeZone(zones, resolvedColonyId, jobType)
+                createdAny = true
+            end
         end
     end
 
