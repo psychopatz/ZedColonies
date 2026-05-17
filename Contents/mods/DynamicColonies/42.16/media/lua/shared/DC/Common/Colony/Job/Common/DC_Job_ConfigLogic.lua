@@ -66,9 +66,6 @@ function Config.GetWorkerJobCapability(worker, jobType)
         end
         if companion and companion.CanWorkerBeCompanion then
             capability.capable, capability.reason = companion.CanWorkerBeCompanion(worker)
-        else
-            capability.capable = false
-            capability.reason = "Companion unavailable."
         end
         return capability
     end
@@ -79,10 +76,8 @@ function Config.GetWorkerJobCapability(worker, jobType)
             getWorkerSkillLevel(worker, "Melee"),
             getWorkerSkillLevel(worker, "Shooting")
         )
-        capability.capable = capability.skillLevel > 0
-        if not capability.capable then
-            capability.reason = "Requires Melee or Shooting skill."
-        end
+        capability.capable = true
+        capability.reason = nil
         return capability
     end
 

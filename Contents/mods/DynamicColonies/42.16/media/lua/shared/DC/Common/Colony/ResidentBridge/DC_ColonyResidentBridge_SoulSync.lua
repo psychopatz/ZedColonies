@@ -104,7 +104,7 @@ local function applyWorkerRuntime(worker, npcData, homeCoords, workCoords)
     worker.dcCanFight = runtime.dcCanFight == true
     worker.dcGuardPostIndex = math.max(1, math.floor(tonumber(runtime.dcGuardPostIndex) or tonumber(worker.dcGuardPostIndex) or 1))
     worker.dcAnchorRevision = tostring(runtime.dcAnchorRevision or worker.dcAnchorRevision or "")
-    worker.dcBehaviorState = tostring(runtime.dcBehaviorState or worker.dcBehaviorState or "ColonyCower")
+    worker.dcBehaviorState = tostring(runtime.dcBehaviorState or worker.dcBehaviorState or "ColonyIdle")
 
     npcData.dcDutyMode = worker.dcDutyMode
     npcData.dcCanFight = worker.dcCanFight == true
@@ -174,7 +174,7 @@ local function applyResidentPosition(worker, npcData, homeCoords, workCoords)
     npcData.lastX = math.floor(tonumber(anchor.x) or 0)
     npcData.lastY = math.floor(tonumber(anchor.y) or 0)
     npcData.lastZ = math.floor(tonumber(anchor.z) or 0)
-    npcData.state = tostring(worker.dcBehaviorState or npcData.dcBehaviorState or (useWork and "ColonyWork" or "ColonyCower"))
+    npcData.state = tostring(worker.dcBehaviorState or npcData.dcBehaviorState or (useWork and "ColonyWork" or "ColonyIdle"))
 end
 
 local function ensureResidentSoul(worker, homeCoords)

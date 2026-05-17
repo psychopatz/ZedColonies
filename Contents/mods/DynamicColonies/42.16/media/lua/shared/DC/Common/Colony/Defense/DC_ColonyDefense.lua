@@ -292,7 +292,7 @@ end
 function Defense.BuildWorkerRuntime(worker, homeCoords, workCoords)
     local dutyMode = Defense.GetWorkerDutyMode(worker)
     local canFight = Defense.CanWorkerFight(worker, dutyMode)
-    local behaviorState = "ColonyCower"
+    local behaviorState = "ColonyIdle"
 
     if dutyMode == "guard" then
         behaviorState = "Patrol"

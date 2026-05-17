@@ -38,8 +38,8 @@ local DEFAULT_ORDER_META = {
     Follow = { label = "Follow Me", visualEmote = "followme", emptyText = "No commanded companions are close enough to follow you." },
     Stay = { label = "Wait Here", visualEmote = "freeze", emptyText = "No commanded companions are close enough to hold here." },
     ProtectAuto = { label = "Defend (Auto)", visualEmote = "signalok", emptyText = "No commanded companions are close enough to cover you." },
-    ProtectMelee = { label = "Defend (Melee)", visualEmote = "comefront", emptyText = "No melee-capable companions are close enough to guard you." },
-    ProtectRanged = { label = "Defend (Ranged)", visualEmote = "signalfire", emptyText = "No ranged-capable companions are close enough to cover you." },
+    ProtectMelee = { label = "Defend (Melee)", visualEmote = "comefront", emptyText = "No commanded companions are close enough to guard you." },
+    ProtectRanged = { label = "Defend (Ranged)", visualEmote = "signalfire", emptyText = "No commanded companions are close enough to cover you." },
     Dismiss = { label = "Go Home", visualEmote = "moveout", emptyText = "No commanded companions are close enough to send home." },
 }
 
@@ -283,17 +283,12 @@ local function addCommandSlice(subMenu, order)
 end
 
 function CompanionCommands.BuildMenuDefinition(playerObj)
-    local snapshot = buildNearbySnapshot(playerObj)
     local subMenu = {}
     addCommandSlice(subMenu, "Follow")
     addCommandSlice(subMenu, "Stay")
     addCommandSlice(subMenu, "ProtectAuto")
-    if snapshot.canMelee then
-        addCommandSlice(subMenu, "ProtectMelee")
-    end
-    if snapshot.canRanged then
-        addCommandSlice(subMenu, "ProtectRanged")
-    end
+    addCommandSlice(subMenu, "ProtectMelee")
+    addCommandSlice(subMenu, "ProtectRanged")
     addCommandSlice(subMenu, "Dismiss")
     return subMenu
 end

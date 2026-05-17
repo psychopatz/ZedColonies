@@ -18,12 +18,6 @@ function Internal.CanWorkerBeCompanion(worker)
         return false, "Travel Companion needs V2."
     end
 
-    local melee = Internal.GetWorkerSkillLevel(worker, "Melee")
-    local shooting = Internal.GetWorkerSkillLevel(worker, "Shooting")
-    if melee <= 0 and shooting <= 0 then
-        return false, "Travel Companion requires Melee or Shooting skill."
-    end
-
     return true, nil
 end
 

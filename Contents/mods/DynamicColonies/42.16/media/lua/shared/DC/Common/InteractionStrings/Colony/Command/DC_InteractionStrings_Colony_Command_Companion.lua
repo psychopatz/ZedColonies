@@ -37,7 +37,7 @@ DynamicTrading.RegisterInteractionStrings("DynamicColonies", "Command", {
                 activityText = "Took up melee guard duty on your command.",
                 summarySingle = "{name} is screening with melee weapons.",
                 summaryPlural = "{count} companions are screening with melee weapons.",
-                emptyText = "No melee-capable companions are close enough to guard you.",
+                emptyText = "No commanded companions are close enough to guard you.",
             },
             ProtectRanged = {
                 label = "Defend (Ranged)",
@@ -46,7 +46,7 @@ DynamicTrading.RegisterInteractionStrings("DynamicColonies", "Command", {
                 activityText = "Took up ranged overwatch on your command.",
                 summarySingle = "{name} is taking ranged overwatch.",
                 summaryPlural = "{count} companions are taking ranged overwatch.",
-                emptyText = "No ranged-capable companions are close enough to cover you.",
+                emptyText = "No commanded companions are close enough to cover you.",
             },
             Dismiss = {
                 label = "Go Home",
