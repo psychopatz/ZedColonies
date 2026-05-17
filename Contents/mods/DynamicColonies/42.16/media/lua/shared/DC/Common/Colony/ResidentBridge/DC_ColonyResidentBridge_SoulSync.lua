@@ -59,6 +59,7 @@ local function setResidentFields(worker, npcData, anchorSnapshot)
     npcData.dcResidentWorkerID = tostring(worker.workerID or npcData.dcResidentWorkerID or "")
     npcData.dcResidentRole = Internal.GetResidentRole(worker)
     npcData.dcResidentHomeMode = tostring(anchorSnapshot and anchorSnapshot.homeMode or "base")
+    npcData.dcResidentWorkMode = tostring(anchorSnapshot and anchorSnapshot.workMode or "base")
     npcData.abstractResident = false
 end
 
@@ -73,6 +74,44 @@ local function applyWorkerIdentity(worker, npcData)
     npcData.linkedWorkerID = worker.workerID
     npcData.isPlayerFactionTrader = false
     npcData.factionID = factionID or "Independent"
+end
+
+local function applyWorkerRuntime(worker, npcData, homeCoords, workCoords)
+    local defense = Internal.GetDefense and Internal.GetDefense() or nil
+    local runtime = defense and defense.BuildWorkerRuntime and defense.BuildWorkerRuntime(worker, homeCoords, workCoords) or nil
+    if type(runtime) ~= "table" then
+        return false
+    end
+
+    local changed = false
+    if tostring(worker.dcDutyMode or "") ~= tostring(runtime.dcDutyMode or "idle") then
+        changed = true
+    end
+    if (worker.dcCanFight == true) ~= (runtime.dcCanFight == true) then
+        changed = true
+    end
+    if math.max(1, math.floor(tonumber(worker.dcGuardPostIndex) or 1)) ~= math.max(1, math.floor(tonumber(runtime.dcGuardPostIndex) or 1)) then
+        changed = true
+    end
+    if tostring(worker.dcAnchorRevision or "") ~= tostring(runtime.dcAnchorRevision or "") then
+        changed = true
+    end
+    if tostring(worker.dcBehaviorState or "") ~= tostring(runtime.dcBehaviorState or "") then
+        changed = true
+    end
+
+    worker.dcDutyMode = tostring(runtime.dcDutyMode or worker.dcDutyMode or "idle")
+    worker.dcCanFight = runtime.dcCanFight == true
+    worker.dcGuardPostIndex = math.max(1, math.floor(tonumber(runtime.dcGuardPostIndex) or tonumber(worker.dcGuardPostIndex) or 1))
+    worker.dcAnchorRevision = tostring(runtime.dcAnchorRevision or worker.dcAnchorRevision or "")
+    worker.dcBehaviorState = tostring(runtime.dcBehaviorState or worker.dcBehaviorState or "ColonyCower")
+
+    npcData.dcDutyMode = worker.dcDutyMode
+    npcData.dcCanFight = worker.dcCanFight == true
+    npcData.dcGuardPostIndex = worker.dcGuardPostIndex
+    npcData.dcAnchorRevision = worker.dcAnchorRevision
+    npcData.dcBehaviorState = worker.dcBehaviorState
+    return changed
 end
 
 local function applyCompanionDerivedData(worker, npcData)
@@ -110,22 +149,32 @@ local function applyResidentPosition(worker, npcData, homeCoords, workCoords)
         return
     end
 
-    local useWork = state ~= tostring(states.Resting or "Resting")
-        and state ~= tostring(states.Idle or "Idle")
-        and state ~= tostring(states.Incapacitated or "Incapacitated")
+    local dutyMode = tostring(worker.dcDutyMode or npcData.dcDutyMode or "")
+    local useWork = (dutyMode == "work" or dutyMode == "patient" or dutyMode == "guard")
         and Internal.HasPoint(workCoords)
+    if dutyMode == "" then
+        useWork = state ~= tostring(states.Resting or "Resting")
+            and state ~= tostring(states.Idle or "Idle")
+            and state ~= tostring(states.Incapacitated or "Incapacitated")
+            and Internal.HasPoint(workCoords)
+    end
     local anchor = useWork and workCoords or homeCoords
 
     if not Internal.HasPoint(anchor) then
         return
     end
 
-    npcData.status = useWork and "Working" or "Resting"
+    if dutyMode == "guard" or dutyMode == "work" or dutyMode == "patient" then
+        npcData.status = "Working"
+    else
+        npcData.status = "Resting"
+    end
     npcData.returnTime = 0
     npcData.returnStatus = nil
     npcData.lastX = math.floor(tonumber(anchor.x) or 0)
     npcData.lastY = math.floor(tonumber(anchor.y) or 0)
     npcData.lastZ = math.floor(tonumber(anchor.z) or 0)
+    npcData.state = tostring(worker.dcBehaviorState or npcData.dcBehaviorState or (useWork and "ColonyWork" or "ColonyCower"))
 end
 
 local function ensureResidentSoul(worker, homeCoords)
@@ -196,6 +245,7 @@ function Bridge.SyncWorker(worker)
     setResidentFields(worker, npcData, anchorSnapshot)
     npcData.homeCoords = homeCoords
     npcData.workCoords = workCoords or npcData.workCoords or homeCoords
+    workerChanged = applyWorkerRuntime(worker, npcData, homeCoords, workCoords) == true or workerChanged
     applyResidentPosition(worker, npcData, homeCoords, workCoords)
     applyCompanionDerivedData(worker, npcData)
 
@@ -214,7 +264,20 @@ function Bridge.SyncWorker(worker)
             dcResidentWorkerID = npcData.dcResidentWorkerID,
             dcResidentRole = npcData.dcResidentRole,
             dcResidentHomeMode = npcData.dcResidentHomeMode,
+            dcResidentWorkMode = npcData.dcResidentWorkMode,
             abstractResident = npcData.abstractResident,
+            status = npcData.status,
+            state = npcData.state,
+            homeCoords = npcData.homeCoords,
+            workCoords = npcData.workCoords,
+            lastX = npcData.lastX,
+            lastY = npcData.lastY,
+            lastZ = npcData.lastZ,
+            dcDutyMode = npcData.dcDutyMode,
+            dcCanFight = npcData.dcCanFight == true,
+            dcGuardPostIndex = npcData.dcGuardPostIndex,
+            dcAnchorRevision = npcData.dcAnchorRevision,
+            dcBehaviorState = npcData.dcBehaviorState,
         }, true)
     end
 

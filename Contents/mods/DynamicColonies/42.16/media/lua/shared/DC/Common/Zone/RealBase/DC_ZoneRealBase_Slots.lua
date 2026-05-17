@@ -1,7 +1,12 @@
+require "DC/Common/Zone/DC_ZoneDataStore"
+
 DC_ZoneRealBase = DC_ZoneRealBase or {}
 
 local RealBase = DC_ZoneRealBase
-local Store = DC_ZoneDataStore
+
+local function getStore()
+    return DC_ZoneDataStore
+end
 
 local function copyDeep(value)
     if type(value) ~= "table" then
@@ -123,7 +128,11 @@ local function findIncomingSlot(incomingZone, expectedSlot)
 end
 
 function RealBase.GetZonesForOwner(ownerUsername)
-    return Store.GetZones(getOwnerColonyID(ownerUsername))
+    local store = getStore()
+    if not (store and store.GetZones) then
+        return {}
+    end
+    return store.GetZones(getOwnerColonyID(ownerUsername))
 end
 
 function RealBase.FindBaseZone(zones)
@@ -200,7 +209,12 @@ function RealBase.EnsureBaseZoneForOwner(ownerUsername, colonyId)
         return nil, false
     end
 
-    local zones = Store.GetZones(resolvedColonyId)
+    local store = getStore()
+    if not (store and store.GetZones and store.Commit) then
+        return nil, false
+    end
+
+    local zones = store.GetZones(resolvedColonyId)
     local baseZone = RealBase.FindBaseZone(zones)
     if baseZone then
         RealBase.NormalizeZoneShape(baseZone)
@@ -209,7 +223,7 @@ function RealBase.EnsureBaseZoneForOwner(ownerUsername, colonyId)
 
     baseZone = RealBase.BuildBaseZone(resolvedColonyId)
     zones[#zones + 1] = baseZone
-    Store.Commit(resolvedColonyId)
+    store.Commit(resolvedColonyId)
     return baseZone, true
 end
 
@@ -250,7 +264,12 @@ function RealBase.EnsureSystemZonesForOwner(ownerUsername, colonyId)
 
     local owner = normalizeOwner(ownerUsername)
     local resolvedColonyId = tostring(colonyId or getOwnerColonyID(owner))
-    local zones = Store.GetZones(resolvedColonyId)
+    local store = getStore()
+    if not (store and store.GetZones and store.Commit) then
+        return baseZone, createdBase
+    end
+
+    local zones = store.GetZones(resolvedColonyId)
     local createdAny = createdBase == true
 
     if RealBase.ShouldCreateJobZone("Gatherer") then
@@ -262,7 +281,7 @@ function RealBase.EnsureSystemZonesForOwner(ownerUsername, colonyId)
     end
 
     if createdAny then
-        Store.Commit(resolvedColonyId)
+        store.Commit(resolvedColonyId)
     end
 
     return baseZone, createdAny
@@ -291,7 +310,12 @@ function RealBase.CreateBuildingSlotForInstance(ownerUsername, instance)
 
     local owner = normalizeOwner(ownerUsername)
     local colonyId = getOwnerColonyID(owner)
-    local zones = Store.GetZones(colonyId)
+    local store = getStore()
+    if not (store and store.GetZones and store.Commit) then
+        return nil, false
+    end
+
+    local zones = store.GetZones(colonyId)
     local existingZone, existingSlot = RealBase.FindBuildingSlot(zones, instance.buildingID)
     if existingZone and existingSlot then
         return existingSlot, false
@@ -309,14 +333,19 @@ function RealBase.CreateBuildingSlotForInstance(ownerUsername, instance)
     })
     zone.areaSlots[#zone.areaSlots + 1] = slot
     RealBase.NormalizeZoneShape(zone)
-    Store.Commit(colonyId)
+    store.Commit(colonyId)
     return slot, true
 end
 
 function RealBase.RemoveBuildingSlot(ownerUsername, buildingID)
     local owner = normalizeOwner(ownerUsername)
     local colonyId = getOwnerColonyID(owner)
-    local zones = Store.GetZones(colonyId)
+    local store = getStore()
+    if not (store and store.GetZones and store.Commit) then
+        return false
+    end
+
+    local zones = store.GetZones(colonyId)
     local zone, _, slotIndex = RealBase.FindBuildingSlot(zones, buildingID)
     if not zone or not slotIndex then
         return false
@@ -334,28 +363,37 @@ function RealBase.RemoveBuildingSlot(ownerUsername, buildingID)
         end
     end
 
-    Store.Commit(colonyId)
+    store.Commit(colonyId)
     return true
 end
 
 function RealBase.RefreshBuildingSlotLabel(ownerUsername, buildingID, label)
     local owner = normalizeOwner(ownerUsername)
     local colonyId = getOwnerColonyID(owner)
-    local zones = Store.GetZones(colonyId)
+    local store = getStore()
+    if not (store and store.GetZones and store.Commit) then
+        return false
+    end
+
+    local zones = store.GetZones(colonyId)
     local _, slot = RealBase.FindBuildingSlot(zones, buildingID)
     if not slot then
         return false
     end
 
     slot.label = tostring(label or slot.label or "Area")
-    Store.Commit(colonyId)
+    store.Commit(colonyId)
     return true
 end
 
 function RealBase.BuildMergedZonesForSave(ownerUsername, colonyId, incomingZones)
     local owner = normalizeOwner(ownerUsername)
     local resolvedColonyId = tostring(colonyId or getOwnerColonyID(owner))
-    local currentZones = DC_ZoneData.normalizeZones(copyDeep(Store.GetZones(resolvedColonyId)), resolvedColonyId)
+    local store = getStore()
+    local currentZones = {}
+    if store and store.GetZones then
+        currentZones = DC_ZoneData.normalizeZones(copyDeep(store.GetZones(resolvedColonyId)), resolvedColonyId)
+    end
     local normalizedIncomingZones = DC_ZoneData.normalizeZones(copyDeep(incomingZones or {}), resolvedColonyId)
     local mergedZones = {}
     local usedZoneIDs = {}

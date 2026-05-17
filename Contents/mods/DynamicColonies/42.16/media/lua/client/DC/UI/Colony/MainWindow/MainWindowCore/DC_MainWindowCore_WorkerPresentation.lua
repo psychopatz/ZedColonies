@@ -65,6 +65,9 @@ function Internal.getJobColor(jobType)
     if normalizedJob == tostring(jobTypes.Doctor or "Doctor") then
         return { r = 0.95, g = 0.52, b = 0.52, a = 1 }
     end
+    if normalizedJob == tostring(jobTypes.Guard or "Guard") then
+        return { r = 0.96, g = 0.68, b = 0.32, a = 1 }
+    end
     if normalizedJob == tostring(jobTypes.Unemployed or "Unemployed") then
         return { r = 0.7, g = 0.7, b = 0.7, a = 1 }
     end

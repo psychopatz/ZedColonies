@@ -57,6 +57,8 @@ function RealBase.ApplyWorkerAnchors(worker)
     local workTarget = nil
     if normalizedJob == tostring(jobTypes.Doctor or "Doctor") then
         workTarget = DC_ZoneRealBase.ResolveInfirmaryTarget and DC_ZoneRealBase.ResolveInfirmaryTarget(worker) or nil
+    elseif normalizedJob == tostring(jobTypes.Guard or "Guard") then
+        workTarget = DC_ZoneRealBase.ResolveSafeFallbackTarget and DC_ZoneRealBase.ResolveSafeFallbackTarget(worker.ownerUsername) or nil
     elseif normalizedJob == tostring(jobTypes.Farm or "Farm") then
         workTarget = DC_ZoneRealBase.ResolveGreenhouseTarget and DC_ZoneRealBase.ResolveGreenhouseTarget(worker) or nil
     elseif normalizedJob == tostring(jobTypes.Gatherer or "Gatherer") then
@@ -70,6 +72,12 @@ function RealBase.ApplyWorkerAnchors(worker)
             worker.homeY,
             assignedProjectBuildingID
         ) or nil
+    end
+
+    if not workTarget
+        and worker.infirmaryBedAssigned == true
+        and (tonumber(worker.hp) or 0) < (tonumber(worker.maxHp) or 0) then
+        workTarget = DC_ZoneRealBase.ResolveInfirmaryTarget and DC_ZoneRealBase.ResolveInfirmaryTarget(worker) or nil
     end
 
     if workTarget then

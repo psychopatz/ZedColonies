@@ -72,6 +72,20 @@ function Config.GetWorkerJobSkillID(worker, profile)
         end
         return "Construction"
     end
+    if normalizedJob == Config.JobTypes.Guard then
+        local meleeLevel = 0
+        local shootingLevel = 0
+        if DC_Colony and DC_Colony.Skills then
+            local meleeEntry = DC_Colony.Skills.GetSkillEntry and DC_Colony.Skills.GetSkillEntry(worker, "Melee") or nil
+            meleeLevel = math.max(0, math.floor(tonumber(meleeEntry and meleeEntry.level) or 0))
+            local shootingEntry = DC_Colony.Skills.GetSkillEntry and DC_Colony.Skills.GetSkillEntry(worker, "Shooting") or nil
+            shootingLevel = math.max(0, math.floor(tonumber(shootingEntry and shootingEntry.level) or 0))
+        end
+        if shootingLevel > meleeLevel then
+            return "Shooting"
+        end
+        return "Melee"
+    end
     -- Static cases: read skillID from the job profile definition.
     local jobProfile = Config.JobProfiles and Config.JobProfiles[normalizedJob] or nil
     return jobProfile and jobProfile.skillID or nil

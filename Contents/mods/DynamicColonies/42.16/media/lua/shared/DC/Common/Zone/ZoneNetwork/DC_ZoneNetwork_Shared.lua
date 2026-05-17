@@ -6,7 +6,10 @@ DC_Colony.Network.Internal = DC_Colony.Network.Internal or {}
 
 local Network = DC_Colony.Network
 local Internal = Network.Internal
-local Store = DC_ZoneDataStore
+
+local function getStore()
+    return DC_ZoneDataStore
+end
 
 local function getConfig()
     return DC_Colony and DC_Colony.Config or nil
@@ -79,7 +82,12 @@ function Internal.syncZonesSnapshot(player, requestedColonyId, knownVersion)
         DC_ZoneRealBase.EnsureBaseZoneForOwner(owner, colonyId)
     end
 
-    local snapshot = Store.BuildSnapshot(colonyId)
+    local store = getStore()
+    if not (store and store.BuildSnapshot) then
+        return
+    end
+
+    local snapshot = store.BuildSnapshot(colonyId)
     if knownVersion ~= nil and tostring(knownVersion) == tostring(snapshot.version) then
         sendSnapshot(player, colonyId, snapshot, { unchanged = true })
         return
@@ -105,15 +113,20 @@ function Internal.saveZonesSnapshot(player, requestedColonyId, zones, knownVersi
             if Internal.syncNotice then
                 Internal.syncNotice(player, validationReason or "Unable to save that Base Zone layout.", "error", true)
             end
-            sendSnapshot(player, colonyId, Store.BuildSnapshot(colonyId), {})
+            sendSnapshot(player, colonyId, store.BuildSnapshot(colonyId), {})
             return
         end
         zonesToSave = sanitizedZones
     end
 
-    local ok, saveReason, snapshot = Store.SaveSnapshot(colonyId, zonesToSave, knownVersion)
+    local store = getStore()
+    if not (store and store.SaveSnapshot and store.BuildSnapshot) then
+        return
+    end
+
+    local ok, saveReason, snapshot = store.SaveSnapshot(colonyId, zonesToSave, knownVersion)
     if not ok then
-        local currentSnapshot = snapshot or Store.BuildSnapshot(colonyId)
+        local currentSnapshot = snapshot or store.BuildSnapshot(colonyId)
         sendSnapshot(player, colonyId, currentSnapshot, { conflict = saveReason == "conflict" })
         if saveReason == "conflict" and Internal.syncNotice then
             Internal.syncNotice(player, "Zone data changed on the server. Refreshed your view.", "warning", false)
@@ -128,11 +141,15 @@ function Internal.saveZonesSnapshot(player, requestedColonyId, zones, knownVersi
         end
     end
 
+    if DC_Colony and DC_Colony.Defense and DC_Colony.Defense.InvalidateOwner then
+        DC_Colony.Defense.InvalidateOwner(owner)
+    end
+
     if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RefreshOwnerWorkers then
         DC_Colony.ResidentBridge.RefreshOwnerWorkers(owner)
     end
 
-    sendSnapshot(player, colonyId, snapshot or Store.BuildSnapshot(colonyId), {})
+    sendSnapshot(player, colonyId, snapshot or store.BuildSnapshot(colonyId), {})
     if Internal.syncFactionStatusSummary then
         Internal.syncFactionStatusSummary(player, owner)
     end

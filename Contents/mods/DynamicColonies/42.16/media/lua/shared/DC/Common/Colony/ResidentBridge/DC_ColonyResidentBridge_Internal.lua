@@ -26,6 +26,10 @@ function Internal.GetCompanion()
     return DC_Colony and DC_Colony.Companion or nil
 end
 
+function Internal.GetDefense()
+    return DC_Colony and DC_Colony.Defense or nil
+end
+
 function Internal.GetCompanionInternal()
     local companion = Internal.GetCompanion()
     return companion and companion.Internal or nil

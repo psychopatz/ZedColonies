@@ -84,6 +84,10 @@ function Bridge.ResolveWorkAnchor(worker, homeTarget)
     if normalizedJob == tostring(jobTypes.Doctor or "Doctor") and DC_ZoneRealBase and DC_ZoneRealBase.ResolveInfirmaryTarget then
         target = DC_ZoneRealBase.ResolveInfirmaryTarget(worker)
         workMode = "building"
+    elseif normalizedJob == tostring(jobTypes.Guard or "Guard")
+        and DC_ZoneRealBase and DC_ZoneRealBase.ResolveSafeFallbackTarget then
+        target = DC_ZoneRealBase.ResolveSafeFallbackTarget(worker.ownerUsername)
+        workMode = "base"
     elseif normalizedJob == tostring(jobTypes.Farm or "Farm") and DC_ZoneRealBase and DC_ZoneRealBase.ResolveGreenhouseTarget then
         target = DC_ZoneRealBase.ResolveGreenhouseTarget(worker)
         workMode = "building"
@@ -102,6 +106,14 @@ function Bridge.ResolveWorkAnchor(worker, homeTarget)
             worker.homeY or worker.workY,
             worker.assignedProjectBuildingID
         )
+        workMode = "building"
+    end
+
+    if not Internal.HasPoint(target)
+        and worker.infirmaryBedAssigned == true
+        and (tonumber(worker.hp) or 0) < (tonumber(worker.maxHp) or 0)
+        and DC_ZoneRealBase and DC_ZoneRealBase.ResolveInfirmaryTarget then
+        target = DC_ZoneRealBase.ResolveInfirmaryTarget(worker)
         workMode = "building"
     end
 

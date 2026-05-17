@@ -22,6 +22,7 @@ require "DC/Common/Colony/ColonyEquipment/Backpacks/DC_ColonyEquipment_Backpacks
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig_Carry"
 require "DC/Common/Colony/ColonyConfig/DC_ColonyConfig_Player"
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion"
+require "DC/Common/Colony/Defense/DC_ColonyDefense"
 require "DC/Common/Colony/ResidentBridge/DC_ColonyResidentBridge"
 
 return Config

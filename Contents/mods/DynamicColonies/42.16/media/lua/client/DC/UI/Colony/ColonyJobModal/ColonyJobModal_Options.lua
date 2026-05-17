@@ -25,6 +25,9 @@ local function getJobDisplayColor(config, jobType)
     if normalized == tostring(jobTypes.Doctor or "Doctor") then
         return { r = 0.95, g = 0.52, b = 0.52, a = 1 }
     end
+    if normalized == tostring(jobTypes.Guard or "Guard") then
+        return { r = 0.96, g = 0.68, b = 0.32, a = 1 }
+    end
     if normalized == tostring(jobTypes.Unemployed or "Unemployed") then
         return { r = 0.7, g = 0.7, b = 0.7, a = 1 }
     end
@@ -63,7 +66,8 @@ local function describeJobOption(config, worker, normalized, label)
     } or { jobType = normalized }
     local skillID = config.GetWorkerJobSkillID and config.GetWorkerJobSkillID(tempWorker, { jobType = normalized }) or nil
 
-    if normalized == tostring((jobTypes.TravelCompanion or "TravelCompanion")) then
+    if normalized == tostring((jobTypes.TravelCompanion or "TravelCompanion"))
+        or normalized == tostring((jobTypes.Guard or "Guard")) then
         local meleeLevel = 0
         local shootingLevel = 0
         if DC_Colony and DC_Colony.Skills then

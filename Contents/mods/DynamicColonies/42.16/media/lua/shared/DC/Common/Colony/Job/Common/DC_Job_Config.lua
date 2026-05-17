@@ -7,6 +7,7 @@ Config.JobTypes = {
     Unemployed = "Unemployed",
     Builder = "Builder",
     Doctor = "Doctor",
+    Guard = "Guard",
     Farm = "Farm",
     Fish = "Fish",
     Gatherer = "Gatherer",
@@ -58,6 +59,25 @@ Config.JobProfiles = {
         skillID = "Medical",
         sortOrder = 30,
         defaultForArchetype = "Doctor",
+        hooks = {}
+    },
+    Guard = {
+        jobType = Config.JobTypes.Guard,
+        displayName = "Guard",
+        siteType = nil,
+        requiredToolTags = {
+            "Colony.Combat.Melee",
+            "Colony.Combat.Ranged",
+            "Colony.Combat.Ammo",
+            "Colony.Carry.Backpack",
+        },
+        cycleHours = 24,
+        dailyCaloriesNeed = 2250,
+        dailyHydrationNeed = 1850,
+        outputRules = {},
+        skillID = nil,          -- dynamic: guard capability resolves from combat skills
+        sortOrder = 35,
+        defaultForArchetype = nil,
         hooks = {}
     },
     Farm = {

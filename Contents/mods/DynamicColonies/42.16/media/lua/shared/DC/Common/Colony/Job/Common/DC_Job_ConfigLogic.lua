@@ -73,6 +73,19 @@ function Config.GetWorkerJobCapability(worker, jobType)
         return capability
     end
 
+    if normalizedJobType == ((Config.JobTypes or {}).Guard) then
+        capability.skillID = "Combat"
+        capability.skillLevel = math.max(
+            getWorkerSkillLevel(worker, "Melee"),
+            getWorkerSkillLevel(worker, "Shooting")
+        )
+        capability.capable = capability.skillLevel > 0
+        if not capability.capable then
+            capability.reason = "Requires Melee or Shooting skill."
+        end
+        return capability
+    end
+
     local tempWorker = worker and {scavengeSiteProfileID = worker.scavengeSiteProfileID, jobType = normalizedJobType} or {jobType = normalizedJobType}
     local skillID = Config.GetWorkerJobSkillID and Config.GetWorkerJobSkillID(tempWorker, {jobType = normalizedJobType}) or nil
     if skillID then

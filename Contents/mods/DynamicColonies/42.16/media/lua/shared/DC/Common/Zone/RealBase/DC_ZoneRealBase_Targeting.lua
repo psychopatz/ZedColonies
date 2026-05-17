@@ -46,6 +46,68 @@ local function canStandOnSquare(square)
     return true
 end
 
+local function findPassablePointNear(x, y, z, radius)
+    local point = copyPoint(x, y, z)
+    local searchRadius = math.max(0, math.floor(tonumber(radius) or 1))
+    if not getCell then
+        return point
+    end
+
+    local cell = getCell()
+    if not cell then
+        return point
+    end
+
+    local baseZ = math.floor(tonumber(z) or 0)
+    local square = cell:getGridSquare(point.x, point.y, baseZ)
+    if canStandOnSquare(square) then
+        return point
+    end
+
+    for delta = 1, searchRadius do
+        local minX = point.x - delta
+        local maxX = point.x + delta
+        local minY = point.y - delta
+        local maxY = point.y + delta
+        local currentX = nil
+        local currentY = nil
+
+        currentY = minY
+        for currentX = minX, maxX do
+            square = cell:getGridSquare(currentX, currentY, baseZ)
+            if canStandOnSquare(square) then
+                return { x = currentX, y = currentY, z = baseZ }
+            end
+        end
+
+        currentY = maxY
+        for currentX = minX, maxX do
+            square = cell:getGridSquare(currentX, currentY, baseZ)
+            if canStandOnSquare(square) then
+                return { x = currentX, y = currentY, z = baseZ }
+            end
+        end
+
+        currentX = minX
+        for currentY = minY + 1, maxY - 1 do
+            square = cell:getGridSquare(currentX, currentY, baseZ)
+            if canStandOnSquare(square) then
+                return { x = currentX, y = currentY, z = baseZ }
+            end
+        end
+
+        currentX = maxX
+        for currentY = minY + 1, maxY - 1 do
+            square = cell:getGridSquare(currentX, currentY, baseZ)
+            if canStandOnSquare(square) then
+                return { x = currentX, y = currentY, z = baseZ }
+            end
+        end
+    end
+
+    return point
+end
+
 local function findPassablePointInRect(rect)
     local center = getRectCenter(rect)
     if not center then
@@ -128,6 +190,78 @@ function RealBase.ResolveBaseTarget(ownerUsername)
     end
 
     return copyPoint(nil, nil, nil, point)
+end
+
+function RealBase.ResolveSafeFallbackTarget(ownerUsername)
+    return RealBase.ResolveBaseTarget(ownerUsername)
+end
+
+function RealBase.ResolvePerimeterPosts(ownerUsername, options)
+    local zones = RealBase.GetZonesForOwner(ownerUsername)
+    local baseZone = RealBase.FindBaseZone(zones)
+    local slot = baseZone and RealBase.GetAreaSlots(baseZone)[1] or nil
+    local rect = slot and slot.rect or nil
+    if type(rect) ~= "table" then
+        local fallback = RealBase.ResolveSafeFallbackTarget(ownerUsername)
+        return fallback and { fallback } or {}
+    end
+
+    options = type(options) == "table" and options or {}
+    local spacing = math.max(3, math.floor(tonumber(options.spacing) or 6))
+    local edgeInset = math.max(0, math.floor(tonumber(options.edgeInset) or 0))
+    local searchRadius = math.max(0, math.floor(tonumber(options.passableRadius) or 1))
+    local x1 = math.floor(tonumber(rect[1]) or 0) + edgeInset
+    local y1 = math.floor(tonumber(rect[2]) or 0) + edgeInset
+    local x2 = math.floor(tonumber(rect[3]) or 0) - edgeInset
+    local y2 = math.floor(tonumber(rect[4]) or 0) - edgeInset
+    local z = math.floor(tonumber(rect[5]) or 0)
+    if x2 < x1 or y2 < y1 then
+        local fallback = RealBase.ResolveSafeFallbackTarget(ownerUsername)
+        return fallback and { fallback } or {}
+    end
+
+    local points = {}
+    local seen = {}
+
+    local function addPoint(x, y)
+        local key = tostring(x) .. ":" .. tostring(y) .. ":" .. tostring(z)
+        if seen[key] then
+            return
+        end
+        seen[key] = true
+        local point = findPassablePointNear(x, y, z, searchRadius)
+        if point then
+            points[#points + 1] = point
+        end
+    end
+
+    local currentX = nil
+    local currentY = nil
+    for currentX = x1, x2, spacing do
+        addPoint(currentX, y1)
+    end
+    addPoint(x2, y1)
+
+    for currentY = y1 + spacing, y2, spacing do
+        addPoint(x2, currentY)
+    end
+    addPoint(x2, y2)
+
+    for currentX = x2 - spacing, x1, -spacing do
+        addPoint(currentX, y2)
+    end
+    addPoint(x1, y2)
+
+    for currentY = y2 - spacing, y1 + spacing, -spacing do
+        addPoint(x1, currentY)
+    end
+
+    if #points <= 0 then
+        local fallback = RealBase.ResolveSafeFallbackTarget(ownerUsername)
+        return fallback and { fallback } or {}
+    end
+
+    return points
 end
 
 function RealBase.ResolveNearestBuildingTarget(ownerUsername, buildingType, anchorX, anchorY, preferredBuildingID)
