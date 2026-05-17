@@ -114,6 +114,9 @@ function EventSync.onServerCommand(module, command, args)
         DC_MainWindow.cachedOwnedFactionStatus = args and args.status or nil
         if DC_System then
             DC_System.ownedFactionStatusCache = DC_MainWindow.cachedOwnedFactionStatus
+            if DC_System.MaybePromptOwnedFactionRename then
+                DC_System.MaybePromptOwnedFactionRename(DC_MainWindow.cachedOwnedFactionStatus)
+            end
         end
         if DC_MainWindow.instance and DC_MainWindow.instance.updateFactionButton then
             DC_MainWindow.instance:updateFactionButton()
@@ -133,6 +136,9 @@ function EventSync.onServerCommand(module, command, args)
             DC_MainWindow.cachedOwnedFactionStatus = args.factionStatus
             if DC_System then
                 DC_System.ownedFactionStatusCache = args.factionStatus
+                if DC_System.MaybePromptOwnedFactionRename then
+                    DC_System.MaybePromptOwnedFactionRename(args.factionStatus)
+                end
             end
         end
         DC_MainWindow.cachedWorkersVersion = versions.workerList or DC_MainWindow.cachedWorkersVersion
@@ -198,6 +204,9 @@ function EventSync.onServerCommand(module, command, args)
         DC_MainWindow.cachedFactionStatusVersion = args and args.version or nil
         if DC_System then
             DC_System.ownedFactionStatusCache = DC_MainWindow.cachedOwnedFactionStatus
+            if DC_System.MaybePromptOwnedFactionRename then
+                DC_System.MaybePromptOwnedFactionRename(DC_MainWindow.cachedOwnedFactionStatus)
+            end
         end
         if DC_MainWindow.instance and DC_MainWindow.instance.updateFactionButton then
             DC_MainWindow.instance:updateFactionButton()

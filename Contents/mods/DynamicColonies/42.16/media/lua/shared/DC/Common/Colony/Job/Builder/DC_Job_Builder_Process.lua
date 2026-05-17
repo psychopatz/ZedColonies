@@ -132,6 +132,14 @@ function Sim.ProcessBuilderJob(worker, ctx)
                             buildingType = buildResult.instance and buildResult.instance.buildingType or buildResult.project.buildingType,
                             defaultValue = buildResult.transition.realBase.defaultName,
                         } or nil,
+                    promptOwnedFactionRename = buildResult.transition
+                        and buildResult.transition.realBase
+                        and buildResult.transition.realBase.promptOwnedFactionRename
+                        or nil,
+                    sendFactionStatus = buildResult.transition
+                        and buildResult.transition.realBase
+                        and buildResult.transition.realBase.sendFactionStatus == true
+                        or false,
                     notice = {
                         message = tostring(buildResult.project.buildingType or "Building")
                             .. " reached level "

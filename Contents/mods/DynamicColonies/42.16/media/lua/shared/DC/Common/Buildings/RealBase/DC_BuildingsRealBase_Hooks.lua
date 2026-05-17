@@ -12,6 +12,22 @@ local function normalizeOwner(ownerUsername)
     return tostring(ownerUsername or "local")
 end
 
+local function buildFactionRenamePrompt(ownerUsername)
+    if not DynamicTrading_Factions or not DynamicTrading_Factions.GetOwnedFactionStatus then
+        return nil
+    end
+
+    local status = DynamicTrading_Factions.GetOwnedFactionStatus(ownerUsername)
+    if not (status and status.faction and status.needsNamingPrompt == true) then
+        return nil
+    end
+
+    return {
+        defaultValue = tostring(status.faction.name or ""),
+        status = status,
+    }
+end
+
 function RealBase.OnProjectCompleted(project, instance)
     if not project or not instance or tostring(project.mode or "") == "install" then
         return nil
@@ -29,8 +45,21 @@ function RealBase.OnProjectCompleted(project, instance)
         elseif DC_ZoneRealBase and DC_ZoneRealBase.EnsureBaseZoneForOwner then
             DC_ZoneRealBase.EnsureBaseZoneForOwner(owner)
         end
+
+        local ensureDetails = nil
+        if DynamicTrading_Factions and DynamicTrading_Factions.EnsurePlayerFaction then
+            local _, _, _, details = DynamicTrading_Factions.EnsurePlayerFaction(owner, {
+                source = "headquarters_completed"
+            })
+            ensureDetails = details
+        end
+
         if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RefreshOwnerWorkers then
             DC_Colony.ResidentBridge.RefreshOwnerWorkers(owner)
+        end
+        result.sendFactionStatus = true
+        if ensureDetails and ensureDetails.created == true and ensureDetails.needsNamingPrompt == true then
+            result.promptOwnedFactionRename = buildFactionRenamePrompt(owner)
         end
         return result
     end

@@ -76,7 +76,7 @@ function DC_PlayerFactionNameModal:createChildren()
     self.statusLabel:instantiate()
     self:addChild(self.statusLabel)
 
-    self.btnConfirm = ISButton:new(pad, self.height - 38, 100, 24, "Create", self, self.onConfirm)
+    self.btnConfirm = ISButton:new(pad, self.height - 38, 100, 24, tostring(self.confirmLabel or "Create"), self, self.onConfirm)
     self.btnConfirm:initialise()
     self.btnConfirm:instantiate()
     self:addChild(self.btnConfirm)
@@ -133,9 +133,10 @@ function DC_PlayerFactionNameModal.Open(args)
     local x = (getCore():getScreenWidth() - width) / 2
     local y = (getCore():getScreenHeight() - height) / 2
     local modal = DC_PlayerFactionNameModal:new(x, y, width, height)
-    modal.title = tostring(args.title or "Create Faction")
-    modal.promptText = tostring(args.promptText or "Choose a faction name.")
+    modal.title = tostring(args.title or "Faction Name")
+    modal.promptText = tostring(args.promptText or "Enter a faction name.")
     modal.defaultValue = tostring(args.defaultValue or "")
+    modal.confirmLabel = tostring(args.confirmLabel or "Create")
     modal.onConfirmCallback = args.onConfirm
     modal:initialise()
     modal:instantiate()
@@ -153,10 +154,11 @@ function DC_PlayerFactionNameModal:new(x, y, width, height)
     local o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Create Faction"
+    o.title = "Faction Name"
     o.resizable = false
-    o.promptText = "Choose a faction name."
+    o.promptText = "Enter a faction name."
     o.defaultValue = ""
+    o.confirmLabel = "Create"
     o.onConfirmCallback = nil
     return o
 end

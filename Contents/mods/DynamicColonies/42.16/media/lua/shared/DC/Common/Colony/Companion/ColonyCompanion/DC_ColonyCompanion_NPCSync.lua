@@ -14,6 +14,12 @@ function Internal.SyncNPCFromWorker(worker, uuid)
         return false
     end
 
+    local factionID = nil
+    if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.Internal
+        and DC_Colony.ResidentBridge.Internal.ResolvePlayerFactionID then
+        factionID = DC_Colony.ResidentBridge.Internal.ResolvePlayerFactionID(worker.ownerUsername)
+    end
+
     npcData.name = worker.name or npcData.name
     npcData.isFemale = worker.isFemale
     npcData.identitySeed = worker.identitySeed or npcData.identitySeed
@@ -21,7 +27,7 @@ function Internal.SyncNPCFromWorker(worker, uuid)
     npcData.ownerUsername = worker.ownerUsername
     npcData.linkedWorkerID = worker.workerID
     npcData.isPlayerFactionTrader = false
-    npcData.factionID = npcData.factionID or "Independent"
+    npcData.factionID = factionID or "Independent"
     npcData.homeCoords = {
         x = worker.homeX or 0,
         y = worker.homeY or 0,
@@ -59,6 +65,7 @@ function Internal.SyncActiveNPCFromWorker(worker, shouldBroadcast)
     local liveSynced = false
     if DTNPCServerCore and DTNPCServerCore.UpdateNPCByUUID then
         local changed = DTNPCServerCore.UpdateNPCByUUID(uuid, {
+            factionID = npcData.factionID,
             loadout = npcData.loadout,
             combatHealth = npcData.combatHealth,
             restingRegenMultiplier = npcData.restingRegenMultiplier,

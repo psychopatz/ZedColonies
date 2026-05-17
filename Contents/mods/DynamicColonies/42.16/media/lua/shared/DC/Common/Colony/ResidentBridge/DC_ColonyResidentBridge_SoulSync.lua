@@ -63,6 +63,7 @@ local function setResidentFields(worker, npcData, anchorSnapshot)
 end
 
 local function applyWorkerIdentity(worker, npcData)
+    local factionID = Internal.ResolvePlayerFactionID and Internal.ResolvePlayerFactionID(worker.ownerUsername) or nil
     npcData.name = worker.name or npcData.name
     npcData.isFemale = worker.isFemale
     npcData.identitySeed = worker.identitySeed or npcData.identitySeed
@@ -71,7 +72,7 @@ local function applyWorkerIdentity(worker, npcData)
     npcData.ownerUsername = worker.ownerUsername
     npcData.linkedWorkerID = worker.workerID
     npcData.isPlayerFactionTrader = false
-    npcData.factionID = npcData.factionID or "Independent"
+    npcData.factionID = factionID or "Independent"
 end
 
 local function applyCompanionDerivedData(worker, npcData)
@@ -200,6 +201,21 @@ function Bridge.SyncWorker(worker)
 
     if DynamicTrading_Roster and DynamicTrading_Roster.SaveSoul then
         DynamicTrading_Roster.SaveSoul(uuid, npcData)
+    end
+
+    if DTNPCServerCore and DTNPCServerCore.UpdateNPCByUUID then
+        DTNPCServerCore.UpdateNPCByUUID(uuid, {
+            factionID = npcData.factionID,
+            ownerUsername = npcData.ownerUsername,
+            linkedWorkerID = npcData.linkedWorkerID,
+            dcResident = npcData.dcResident,
+            dcResidentOwnerUsername = npcData.dcResidentOwnerUsername,
+            dcResidentColonyId = npcData.dcResidentColonyId,
+            dcResidentWorkerID = npcData.dcResidentWorkerID,
+            dcResidentRole = npcData.dcResidentRole,
+            dcResidentHomeMode = npcData.dcResidentHomeMode,
+            abstractResident = npcData.abstractResident,
+        }, true)
     end
 
     if worker.residentSoulUUID ~= uuid then

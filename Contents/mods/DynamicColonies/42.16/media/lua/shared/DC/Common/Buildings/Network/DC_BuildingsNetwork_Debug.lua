@@ -153,6 +153,9 @@ Network.Handlers.DebugCompleteBuildingProject = function(player, args)
             defaultValue = transition.realBase.defaultName,
         })
     end
+    if transition and transition.realBase and transition.realBase.promptOwnedFactionRename and Internal.sendResponse then
+        Internal.sendResponse(player, "DynamicTrading_V2", "PromptOwnedFactionRename", transition.realBase.promptOwnedFactionRename)
+    end
     local mapChange = Internal.BuildingMap and Internal.BuildingMap.Touch and Internal.BuildingMap.Touch(owner, {
         plotX = project.plotX,
         plotY = project.plotY,
@@ -165,6 +168,9 @@ Network.Handlers.DebugCompleteBuildingProject = function(player, args)
             sourcePlayer = player,
             mapChange = mapChange,
         })
+    end
+    if transition and transition.realBase and transition.realBase.sendFactionStatus == true and Internal.syncFactionStatusSummary then
+        Internal.syncFactionStatusSummary(player, owner)
     end
     if transition and transition.safetyChanged == true and Internal.syncPlotSafety then
         transition.mapChange = mapChange

@@ -8,14 +8,24 @@ function DC_MainWindow:updateFactionButton()
 
     local status = (DC_System and DC_System.GetOwnedFactionStatus and DC_System.GetOwnedFactionStatus()) or DC_MainWindow.cachedOwnedFactionStatus
     if status and status.faction then
-        self.btnFaction:setTitle("Open Faction")
+        if status.needsNamingPrompt == true then
+            self.btnFaction:setTitle("Finalize Faction")
+        else
+            self.btnFaction:setTitle("Open Faction")
+        end
         self.btnFaction:setEnable(true)
         return
     end
 
-    if status and status.canCreate == true then
-        self.btnFaction:setTitle("Create Faction")
+    if status and (status.canCreate == true or status.createBlockedReason == "syncing") then
+        self.btnFaction:setTitle("Claim Syncing")
         self.btnFaction:setEnable(true)
+        return
+    end
+
+    if status and status.createBlockedReason == "headquarters_required" then
+        self.btnFaction:setTitle("HQ Required")
+        self.btnFaction:setEnable(false)
         return
     end
 

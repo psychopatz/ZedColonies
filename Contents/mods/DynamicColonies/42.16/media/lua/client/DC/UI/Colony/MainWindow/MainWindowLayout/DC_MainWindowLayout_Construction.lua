@@ -186,7 +186,7 @@ function DC_MainWindow:createChildren()
         self:addChild(self.btnDebugArchive)
     end
 
-    self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Open Faction", self, self.onOpenFaction)
+    self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Faction", self, self.onOpenFaction)
     self.btnFaction:initialise()
     self:addChild(self.btnFaction)
 

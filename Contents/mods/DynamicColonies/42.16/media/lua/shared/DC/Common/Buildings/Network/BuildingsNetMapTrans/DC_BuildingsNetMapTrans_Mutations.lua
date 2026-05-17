@@ -47,6 +47,9 @@ function MapTransport.PushOwnerMutation(ownerUsername, context)
             if context and context.promptBuildingName and NetworkInternal.sendResponse then
                 NetworkInternal.sendResponse(player, ColonyConfig.COMMAND_MODULE or "DColony", "PromptBuildingName", context.promptBuildingName)
             end
+            if context and context.promptOwnedFactionRename and NetworkInternal.sendResponse then
+                NetworkInternal.sendResponse(player, "DynamicTrading_V2", "PromptOwnedFactionRename", context.promptOwnedFactionRename)
+            end
             if context and context.notice and NetworkInternal.syncNotice then
                 NetworkInternal.syncNotice(player, context.notice.message, context.notice.severity, context.notice.popup)
             end

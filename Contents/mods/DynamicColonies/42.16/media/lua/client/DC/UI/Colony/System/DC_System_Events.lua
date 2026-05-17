@@ -16,7 +16,9 @@ local function isIndependentFactionID(factionID)
 end
 
 local function onServerCommand(module, command, args)
-    local isFactionCommand = command == "SyncOwnedFactionStatus" or command == "OwnedFactionActionResult"
+    local isFactionCommand = command == "SyncOwnedFactionStatus"
+        or command == "OwnedFactionActionResult"
+        or command == "PromptOwnedFactionRename"
     if module ~= Internal.GetCommandModule()
         and not (isFactionCommand and module == Internal.GetFactionCommandModule()) then
         return
@@ -32,6 +34,9 @@ local function onServerCommand(module, command, args)
     if command ~= "SyncRecruitAttemptResult" then
         if command == "SyncOwnedFactionStatus" then
             System.ownedFactionStatusCache = args and args.status or nil
+            if System.MaybePromptOwnedFactionRename then
+                System.MaybePromptOwnedFactionRename(System.ownedFactionStatusCache)
+            end
 
             local ui = getConversationUI()
             if ui then
@@ -42,10 +47,27 @@ local function onServerCommand(module, command, args)
 
         if command == "FactionStatusSummary" then
             System.ownedFactionStatusCache = args and args.status or nil
+            if System.MaybePromptOwnedFactionRename then
+                System.MaybePromptOwnedFactionRename(System.ownedFactionStatusCache)
+            end
 
             local ui = getConversationUI()
             if ui then
                 ui:updateOptions(ui.baseOptions or {})
+            end
+            return
+        end
+
+        if command == "PromptOwnedFactionRename" then
+            if args and args.status then
+                System.ownedFactionStatusCache = args.status
+            end
+            if System.PromptRenameOwnedFaction then
+                System.PromptRenameOwnedFaction({
+                    status = args and args.status or nil,
+                    defaultValue = args and args.defaultValue or nil,
+                    force = true,
+                })
             end
             return
         end

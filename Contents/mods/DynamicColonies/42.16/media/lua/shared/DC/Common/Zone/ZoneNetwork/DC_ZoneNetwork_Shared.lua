@@ -121,11 +121,21 @@ function Internal.saveZonesSnapshot(player, requestedColonyId, zones, knownVersi
         return
     end
 
+    if DynamicTrading_Factions and DynamicTrading_Factions.GetPlayerFaction and DynamicTrading_Factions.RefreshPlayerFaction then
+        local faction = DynamicTrading_Factions.GetPlayerFaction(owner)
+        if faction and faction.id then
+            DynamicTrading_Factions.RefreshPlayerFaction(faction.id)
+        end
+    end
+
     if DC_Colony and DC_Colony.ResidentBridge and DC_Colony.ResidentBridge.RefreshOwnerWorkers then
         DC_Colony.ResidentBridge.RefreshOwnerWorkers(owner)
     end
 
     sendSnapshot(player, colonyId, snapshot or Store.BuildSnapshot(colonyId), {})
+    if Internal.syncFactionStatusSummary then
+        Internal.syncFactionStatusSummary(player, owner)
+    end
 end
 
 return Network

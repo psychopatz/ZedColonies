@@ -137,6 +137,19 @@ function Internal.GetRosterData()
     return ModData.get(DynamicTrading_Roster.MOD_DATA_KEY)
 end
 
+function Internal.ResolvePlayerFactionID(ownerUsername)
+    if not DynamicTrading_Factions or not DynamicTrading_Factions.GetPlayerFaction then
+        return nil, nil
+    end
+
+    local faction = DynamicTrading_Factions.GetPlayerFaction(ownerUsername)
+    if type(faction) == "table" and faction.playerOwned == true then
+        return faction.id, faction
+    end
+
+    return nil, nil
+end
+
 function Internal.FindResidentSoul(worker)
     if type(worker) ~= "table" then
         return nil
