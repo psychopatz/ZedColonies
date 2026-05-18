@@ -83,8 +83,9 @@ function Internal.GetHealthSeed(worker)
         return nil
     end
 
+    local maxHp = math.max(1, tonumber(worker.maxHp) or tonumber(worker.healthMax) or tonumber(Config.DEFAULT_WORKER_MAX_HP) or 100)
     return {
-        hp = math.max(0, tonumber(worker.hp) or tonumber(worker.health) or 0),
-        maxHp = math.max(1, tonumber(worker.maxHp) or tonumber(worker.healthMax) or tonumber(Config.DEFAULT_WORKER_MAX_HP) or 100),
+        hp = math.max(0, tonumber(worker.hp) or tonumber(worker.health) or maxHp),
+        maxHp = maxHp,
     }
 end
