@@ -66,6 +66,14 @@ function DC_ZoneSelector:new(x, y, width, height, player, highlightColor, callba
     o.currentTiles    = math.max(0, math.floor(tonumber(selectionOptions.currentTiles) or 0))
     o.currentTilesLabel = tostring(selectionOptions.currentTilesLabel or "Current tiles")
     o.validationMessage = ""
+    o.validateRect    = type(selectionOptions.validateRect) == "function" and selectionOptions.validateRect or nil
+    o.guideRects      = type(selectionOptions.guideRects) == "table" and selectionOptions.guideRects or {}
+    o.guideColor      = type(selectionOptions.guideColor) == "table" and selectionOptions.guideColor or {
+        r = 0.2,
+        g = 0.85,
+        b = 0.25,
+        a = 0.18,
+    }
 
     -- State machine
     o.selectorState   = DC_ZoneSelectorState.STATE_IDLE

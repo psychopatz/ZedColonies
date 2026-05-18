@@ -10,6 +10,30 @@ local FONT_HGT = getTextManager():getFontHeight(FONT)
 local FONT_HGT_MEDIUM = getTextManager():getFontHeight(UIFont.Medium)
 local UI_BORDER_SPACING = 10
 
+local function renderGuideRects(selector)
+    local guideColor = type(selector and selector.guideColor) == "table" and selector.guideColor or nil
+    if not selector or not guideColor then
+        return
+    end
+
+    for _, rect in ipairs(selector.guideRects or {}) do
+        if type(rect) == "table" then
+            addAreaHighlightForPlayer(
+                selector.playerNum,
+                rect[1],
+                rect[2],
+                (rect[3] or rect[1]) + 1,
+                (rect[4] or rect[2]) + 1,
+                rect[5] or selector.player:getZ(),
+                guideColor.r or 0.2,
+                guideColor.g or 0.85,
+                guideColor.b or 0.25,
+                guideColor.a or 0.18
+            )
+        end
+    end
+end
+
 function Render.SetPreviewButtonsVisible(selector, visible)
     if selector.btnConfirm then selector.btnConfirm:setVisible(visible) end
     if selector.btnReset then selector.btnReset:setVisible(visible) end
@@ -42,6 +66,7 @@ function Render.Prerender(selector)
         selector.borderColor.g, selector.borderColor.b)
 
     -- The highlight logic for the 3D world stays here
+    renderGuideRects(selector)
     local metrics = State.GetSelectionMetrics(selector)
     if metrics then
         local color = State.GetHighlightColor(selector)

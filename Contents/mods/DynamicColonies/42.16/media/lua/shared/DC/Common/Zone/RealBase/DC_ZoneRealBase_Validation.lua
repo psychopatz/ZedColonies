@@ -85,6 +85,16 @@ local function isManagedZone(zone)
     return zoneKind == "base" or zoneKind == "buildingType" or zoneKind == "jobType"
 end
 
+local function requiresBaseContainment(zone)
+    local zoneKind = tostring(zone and zone.zoneKind or "")
+    if zoneKind ~= "jobType" then
+        return zoneKind == "buildingType"
+    end
+
+    local jobType = tostring(zone and zone.sourceJobType or "")
+    return jobType ~= "CorpseRemoval"
+end
+
 local function getZoneTileCap(zone, ownerUsername, options)
     if tostring(zone and zone.zoneKind or "") == "base" then
         return math.max(0, math.floor(tonumber(options and options.allowedBaseTiles) or RealBase.GetAllowedBaseTiles(ownerUsername, options)))
@@ -137,7 +147,7 @@ function RealBase.ValidateZonesForOwner(ownerUsername, zones, options)
                     if not baseRect then
                         return false, "Assign the Base Zone first before setting building areas."
                     end
-                    if not isInsideBase2D(slot.rect, baseRect) then
+                    if requiresBaseContainment(zone) and not isInsideBase2D(slot.rect, baseRect) then
                         return false, tostring(slot.label or "Building area") .. " must stay inside the Base Zone."
                     end
                 end

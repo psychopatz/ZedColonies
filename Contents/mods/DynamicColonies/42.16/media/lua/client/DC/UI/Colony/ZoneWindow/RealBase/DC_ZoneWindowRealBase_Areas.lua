@@ -58,6 +58,16 @@ local function getRectTileCount(rect)
     return DC_ZoneRealBase and DC_ZoneRealBase.GetRectTileCount and DC_ZoneRealBase.GetRectTileCount(rect) or 0
 end
 
+local function getBaseGuideRects(window, zone)
+    if not window or tostring(zone and zone.zoneKind or "") == "base" then
+        return {}
+    end
+
+    local currentZones = DC_ZoneWindowState.GetZones(window)
+    local baseZone = DC_ZoneRealBase and DC_ZoneRealBase.FindBaseZone and DC_ZoneRealBase.FindBaseZone(currentZones) or nil
+    return type(baseZone and baseZone.rects) == "table" and baseZone.rects or {}
+end
+
 function RealBaseUI.PopulateAreaList(window)
     if not window or not window.rectList then
         return
@@ -146,7 +156,12 @@ local function openSelector(window, slotIndex, existingRect)
             maxTiles = getSlotTileLimit(window, zone),
             tileLimitLabel = tostring(zone and zone.zoneKind or "") == "base" and "Base tile budget" or "Area tile cap",
             currentTiles = getRectTileCount(existingRect),
-            currentTilesLabel = tostring(zone and zone.zoneKind or "") == "base" and "Current base tiles" or "Current assigned tiles"
+            currentTilesLabel = tostring(zone and zone.zoneKind or "") == "base" and "Current base tiles" or "Current assigned tiles",
+            validateRect = function(x1, y1, x2, y2, z)
+                return validateCandidate(window, zone.id, slotIndex, { x1, y1, x2, y2, z or 0 })
+            end,
+            guideRects = getBaseGuideRects(window, zone),
+            guideColor = { r = 0.22, g = 0.88, b = 0.28, a = 0.14 }
         }
     )
     selector:initialise()

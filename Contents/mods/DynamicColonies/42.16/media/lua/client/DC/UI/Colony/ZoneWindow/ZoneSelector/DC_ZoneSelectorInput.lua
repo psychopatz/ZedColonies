@@ -5,11 +5,42 @@ DC_ZoneSelectorInput = DC_ZoneSelectorInput or {}
 local Input = DC_ZoneSelectorInput
 local State = DC_ZoneSelectorState
 
+local function updateValidationMessage(selector)
+    if not selector then
+        return false
+    end
+
+    local metrics = State.GetSelectionMetrics(selector)
+    if not metrics then
+        selector.validationMessage = ""
+        return true
+    end
+
+    local maxTiles = selector.maxTiles
+    if maxTiles ~= nil and metrics.total > maxTiles then
+        selector.validationMessage = tostring(selector.tileLimitLabel or "Tile cap")
+            .. " exceeded (" .. tostring(metrics.total) .. "/" .. tostring(maxTiles) .. ")."
+        return false
+    end
+
+    if selector.validateRect then
+        local ok, reason = selector.validateRect(metrics.x1, metrics.y1, metrics.x2, metrics.y2, selector.player:getZ())
+        if ok ~= true then
+            selector.validationMessage = tostring(reason or "That area is not valid.")
+            return false
+        end
+    end
+
+    selector.validationMessage = ""
+    return true
+end
+
 function Input.Nudge(selector, dx, dy)
     selector.startingX = (selector.startingX or 0) + dx
     selector.endX = (selector.endX or 0) + dx
     selector.startingY = (selector.startingY or 0) + dy
     selector.endY = (selector.endY or 0) + dy
+    updateValidationMessage(selector)
 end
 
 function Input.Scale(selector, edge, amount)
@@ -35,6 +66,7 @@ function Input.Scale(selector, edge, amount)
     selector.endX = x2
     selector.startingY = y1
     selector.endY = y2
+    updateValidationMessage(selector)
 end
 
 function Input.OnCancel(selector)
@@ -48,10 +80,7 @@ function Input.OnConfirm(selector)
         return
     end
 
-    local metrics = State.GetSelectionMetrics(selector)
-    local maxTiles = selector and selector.maxTiles
-    if metrics and maxTiles ~= nil and metrics.total > maxTiles then
-        selector.validationMessage = tostring(selector.tileLimitLabel or "Tile cap") .. " exceeded (" .. tostring(metrics.total) .. "/" .. tostring(maxTiles) .. ")."
+    if updateValidationMessage(selector) ~= true then
         return
     end
 
@@ -78,6 +107,7 @@ function Input.OnReset(selector)
     selector.endY = nil
     selector.startRenderTile = false
     selector.selectorState = State.STATE_IDLE
+    selector.validationMessage = ""
     selector:setPreviewButtonsVisible(false)
 end
 
@@ -100,11 +130,13 @@ function Input.OnMouseDownOutside(selector, x, y)
         selector.endX = sq:getX()
         selector.endY = sq:getY()
         selector.selectorState = State.STATE_DRAGGING
+        selector.validationMessage = ""
         ISWorldObjectContextMenu.disableWorldMenu = true
     elseif selector.selectorState == State.STATE_EXPANDING then
         selector.endX = sq:getX()
         selector.endY = sq:getY()
         selector.selectorState = State.STATE_DRAGGING
+        updateValidationMessage(selector)
     end
 end
 
@@ -116,6 +148,7 @@ function Input.OnMouseMoveOutside(selector, dx, dy)
     if sq then
         selector.endX = sq:getX()
         selector.endY = sq:getY()
+        updateValidationMessage(selector)
     end
 end
 
@@ -124,6 +157,7 @@ function Input.OnMouseUpOutside(selector, x, y)
     if selector.selectorState ~= State.STATE_DRAGGING then return end
 
     selector.selectorState = State.STATE_PREVIEW
+    updateValidationMessage(selector)
     selector:setPreviewButtonsVisible(true)
 end
 
