@@ -7,3 +7,4 @@ require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_DebugArc
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Character"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Faction"
 require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_Help"
+require "DC/UI/Colony/MainWindow/MainWindowActions/DC_MainWindowActions_ResetNPCs"

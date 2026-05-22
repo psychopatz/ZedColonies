@@ -180,17 +180,22 @@ function DC_MainWindow:createChildren()
     self.btnBuildings:initialise()
     self:addChild(self.btnBuildings)
 
+    self.btnResetNPCs = ISButton:new(600, buttonY, 100, 28, "Reset NPCs", self, self.onResetNPCs)
+    self.btnResetNPCs:initialise()
+    MainWindowLayout.applyToggleButtonStyle(self.btnResetNPCs, true)
+    self:addChild(self.btnResetNPCs)
+
     if canUseDebug() then
-        self.btnDebugArchive = ISButton:new(600, buttonY, 80, 28, "Debug", self, self.onOpenDebugArchive)
+        self.btnDebugArchive = ISButton:new(710, buttonY, 70, 28, "Debug", self, self.onOpenDebugArchive)
         self.btnDebugArchive:initialise()
         self:addChild(self.btnDebugArchive)
     end
 
-    self.btnFaction = ISButton:new(690, buttonY, 160, 28, "Faction", self, self.onOpenFaction)
+    self.btnFaction = ISButton:new(790, buttonY, 150, 28, "Faction", self, self.onOpenFaction)
     self.btnFaction:initialise()
     self:addChild(self.btnFaction)
 
-    self.btnCompanionCommand = ISButton:new(860, buttonY, 110, 28, "Command", self, self.onCompanionCommand)
+    self.btnCompanionCommand = ISButton:new(950, buttonY, 110, 28, "Command", self, self.onCompanionCommand)
     self.btnCompanionCommand:initialise()
     self.btnCompanionCommand:setEnable(false)
     self:addChild(self.btnCompanionCommand)

@@ -28,6 +28,95 @@ local function getPresentation()
     return DC_Colony and DC_Colony.Presentation or nil
 end
 
+local function copyPoint(point)
+    if type(point) ~= "table" then
+        return nil
+    end
+
+    return {
+        x = math.floor(tonumber(point.x) or 0),
+        y = math.floor(tonumber(point.y) or 0),
+        z = math.floor(tonumber(point.z) or 0)
+    }
+end
+
+local function hasPoint(point)
+    return type(point) == "table"
+        and tonumber(point.x) ~= nil
+        and tonumber(point.y) ~= nil
+end
+
+local function findWorkerUUID(worker)
+    local uuid = tostring(worker and worker.residentSoulUUID or "")
+    if uuid ~= "" then
+        return uuid
+    end
+
+    local companionData = type(worker and worker.companion) == "table" and worker.companion or nil
+    uuid = companionData and tostring(companionData.uuid or "") or ""
+    if uuid ~= "" then
+        return uuid
+    end
+
+    return nil
+end
+
+local function resetWorkerCompanionState(worker)
+    local companionData = type(worker and worker.companion) == "table" and worker.companion or nil
+    if not companionData then
+        return
+    end
+
+    companionData.stage = nil
+    companionData.awaitingDespawn = false
+    companionData.currentOrder = nil
+    companionData.returnReason = nil
+    companionData.returnTravelHours = nil
+    companionData.commandInvalidSinceMs = nil
+end
+
+local function teleportLiveNPCToPoint(uuid, point)
+    if not uuid or not hasPoint(point) or not DTNPCServerCore or not DTNPCServerCore.GetNPCDataByUUID then
+        return false
+    end
+
+    local zombie, npcData = DTNPCServerCore.GetNPCDataByUUID(uuid)
+    if not zombie or zombie:isDead() then
+        return false
+    end
+
+    local x = math.floor(tonumber(point.x) or 0)
+    local y = math.floor(tonumber(point.y) or 0)
+    local z = math.floor(tonumber(point.z) or 0)
+
+    zombie:setX(x)
+    zombie:setY(y)
+    zombie:setZ(z)
+    zombie:setLastX(x)
+    zombie:setLastY(y)
+
+    if zombie.setUseless and not zombie:isUseless() then
+        zombie:setUseless(true)
+    end
+
+    if type(npcData) == "table" then
+        npcData.lastX = x
+        npcData.lastY = y
+        npcData.lastZ = z
+        if DTNPC and DTNPC.AttachData then
+            DTNPC.AttachData(zombie, npcData)
+        end
+        if DTNPCServerCore.SyncToAllClients then
+            DTNPCServerCore.SyncToAllClients(zombie, npcData)
+        end
+        if DTNPCServerCore.BroadcastPosition then
+            DTNPCServerCore.BroadcastPosition(zombie, npcData)
+        end
+    end
+
+    return true
+end
+
 local function syncCompanionWorker(player, worker)
     local companion = DC_Colony and DC_Colony.Companion or nil
     if companion and companion.SyncActiveNPCFromWorker then
@@ -225,6 +314,129 @@ function Shared.saveAndRefreshBasic(player, worker, syncProjection)
     Internal.syncWorkerList(player)
     if syncProjection then
         Internal.syncWarehouse(player, nil, true)
+    end
+end
+
+function Shared.ResetOwnerNPCsToBase(player)
+    local Config = getConfig()
+    local Registry = getRegistry()
+    local residentBridge = DC_Colony and DC_Colony.ResidentBridge or nil
+    local realBase = DC_ZoneRealBase or nil
+
+    if not player or not Config or not Registry then
+        return false, "Colony systems are unavailable right now."
+    end
+
+    local owner = Config.GetOwnerUsername and Config.GetOwnerUsername(player)
+        or tostring(player and player.getUsername and player:getUsername() or "local")
+    local basePoint = realBase and realBase.ResolveBaseTarget and realBase.ResolveBaseTarget(owner) or nil
+    if not hasPoint(basePoint) then
+        return false, "Place a player base zone first."
+    end
+
+    local presenceStates = Config.PresenceStates or {}
+    local workerStates = Config.States or {}
+    local homeState = tostring(presenceStates.Home or "Home")
+    local idleState = tostring(workerStates.Idle or "Idle")
+    local deadState = tostring(workerStates.Dead or "Dead")
+    local incapacitatedState = tostring(workerStates.Incapacitated or "Incapacitated")
+    local changedWorkerIDs = {}
+    local livingCount = 0
+    local teleportedCount = 0
+
+    for _, worker in ipairs(Registry.GetWorkersForOwnerRaw(owner) or {}) do
+        local state = tostring(worker and worker.state or "")
+        local hp = tonumber(worker and worker.hp)
+        if worker and state ~= deadState and (hp == nil or hp > 0) then
+            livingCount = livingCount + 1
+
+            worker.homeX = math.floor(tonumber(basePoint.x) or 0)
+            worker.homeY = math.floor(tonumber(basePoint.y) or 0)
+            worker.homeZ = math.floor(tonumber(basePoint.z) or 0)
+            worker.presenceState = homeState
+            worker.travelHoursRemaining = 0
+            worker.returnReason = nil
+            if state ~= incapacitatedState then
+                worker.state = idleState
+            end
+
+            resetWorkerCompanionState(worker)
+
+            if residentBridge and residentBridge.SyncWorker then
+                residentBridge.SyncWorker(worker)
+            end
+
+            local targetPoint = copyPoint({
+                x = worker.homeX,
+                y = worker.homeY,
+                z = worker.homeZ or 0
+            }) or copyPoint(basePoint)
+            local uuid = findWorkerUUID(worker)
+            if teleportLiveNPCToPoint(uuid, targetPoint) then
+                teleportedCount = teleportedCount + 1
+            end
+
+            changedWorkerIDs[#changedWorkerIDs + 1] = worker.workerID
+        end
+    end
+
+    if livingCount <= 0 then
+        return false, "No living colony NPCs were found to reset."
+    end
+
+    if Registry.Save then
+        Registry.Save()
+    end
+    if DTNPCManager and DTNPCManager.CheckRosterSpawns then
+        DTNPCManager.CheckRosterSpawns()
+    end
+
+    local message = "Reset " .. tostring(livingCount) .. " colony NPCs to your current base."
+    local sent = 0
+    if Internal.forEachOnlineOwnerPlayer then
+        sent = Internal.forEachOnlineOwnerPlayer(owner, function(ownerPlayer)
+            if Internal.syncNotice then
+                Internal.syncNotice(ownerPlayer, message, "info", false)
+            end
+            if Internal.syncWorkerListFocused then
+                Internal.syncWorkerListFocused(ownerPlayer, owner)
+            elseif Internal.syncWorkerList then
+                Internal.syncWorkerList(ownerPlayer)
+            end
+            if Internal.syncWorkerUpdated then
+                for _, workerID in ipairs(changedWorkerIDs) do
+                    Internal.syncWorkerUpdated(ownerPlayer, owner, workerID)
+                end
+            end
+        end)
+    end
+
+    if sent <= 0 then
+        if Internal.syncNotice then
+            Internal.syncNotice(player, message, "info", false)
+        end
+        if Internal.syncWorkerListFocused then
+            Internal.syncWorkerListFocused(player, owner)
+        elseif Internal.syncWorkerList then
+            Internal.syncWorkerList(player)
+        end
+        if Internal.syncWorkerUpdated then
+            for _, workerID in ipairs(changedWorkerIDs) do
+                Internal.syncWorkerUpdated(player, owner, workerID)
+            end
+        end
+    end
+
+    return true, message, {
+        livingCount = livingCount,
+        teleportedCount = teleportedCount,
+    }
+end
+
+Network.Handlers.ResetAllOwnedNPCsToBase = function(player, _args)
+    local ok, message = Shared.ResetOwnerNPCsToBase(player)
+    if not ok and Internal.syncNotice then
+        Internal.syncNotice(player, message or "Unable to reset colony NPCs to base.", "error", true)
     end
 end
 
