@@ -94,6 +94,10 @@ function Bridge.ResolveWorkAnchor(worker, homeTarget)
     elseif normalizedJob == tostring(jobTypes.Gatherer or "Gatherer") and DC_ZoneRealBase and DC_ZoneRealBase.ResolveGathererTarget then
         target = DC_ZoneRealBase.ResolveGathererTarget(worker)
         workMode = "job"
+    elseif normalizedJob == tostring(jobTypes.ChopTrees or "ChopTrees")
+        and DC_ZoneRealBase and DC_ZoneRealBase.ResolveChopTreesTarget then
+        target = DC_ZoneRealBase.ResolveChopTreesTarget(worker)
+        workMode = "job"
     elseif normalizedJob == tostring(jobTypes.CorpseRemoval or "CorpseRemoval")
         and DC_ZoneRealBase and DC_ZoneRealBase.ResolveCorpseDumpTarget then
         target = DC_ZoneRealBase.ResolveCorpseDumpTarget(worker)

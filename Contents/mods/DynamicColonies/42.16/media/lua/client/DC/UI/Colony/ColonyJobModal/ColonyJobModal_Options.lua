@@ -22,6 +22,9 @@ local function getJobDisplayColor(config, jobType)
     if normalized == tostring(jobTypes.Gatherer or "Gatherer") then
         return { r = 0.74, g = 0.86, b = 0.42, a = 1 }
     end
+    if normalized == tostring(jobTypes.ChopTrees or "ChopTrees") then
+        return { r = 0.78, g = 0.58, b = 0.28, a = 1 }
+    end
     if normalized == tostring(jobTypes.CorpseRemoval or "CorpseRemoval") then
         return { r = 0.85, g = 0.56, b = 0.34, a = 1 }
     end
@@ -138,6 +141,7 @@ local function buildOrderedJobOptions(config, worker)
     addJob(jobTypes.Unemployed)
     addJob(jobTypes.Scavenge)
     addJob(jobTypes.Gatherer)
+    addJob(jobTypes.ChopTrees)
     addJob(jobTypes.CorpseRemoval)
     addJob(jobTypes.Farm)
     addJob(jobTypes.Fish)

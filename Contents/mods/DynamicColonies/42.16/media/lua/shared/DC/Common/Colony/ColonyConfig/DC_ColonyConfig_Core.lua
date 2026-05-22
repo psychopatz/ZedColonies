@@ -114,7 +114,8 @@ Config.ReturnReasons = {
 Config.SiteTypes = {
     FarmPlotSite = "FarmPlotSite",
     FishingSite = "FishingSite",
-    ScavengeSite = "ScavengeSite"
+    ScavengeSite = "ScavengeSite",
+    TreeChopSite = "TreeChopSite"
 }
 
 function Config.GetRecruitChanceForReputation(reputation)

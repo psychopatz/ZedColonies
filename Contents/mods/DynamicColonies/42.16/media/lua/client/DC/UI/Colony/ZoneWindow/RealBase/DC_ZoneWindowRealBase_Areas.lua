@@ -68,6 +68,50 @@ local function getBaseGuideRects(window, zone)
     return type(baseZone and baseZone.rects) == "table" and baseZone.rects or {}
 end
 
+local function getWoodcutSelectionStats(metrics, selector)
+    if not metrics or tostring(selector and selector.zoneType or "") ~= "woodcut" then
+        return nil
+    end
+
+    local cell = getCell and getCell() or nil
+    if not cell then
+        return {
+            {
+                label = "Trees",
+                value = "?",
+            },
+        }
+    end
+
+    local z = math.floor(tonumber(selector and selector.fixedZ or 0) or 0)
+    local count = 0
+    local unresolved = false
+    local y = nil
+    local x = nil
+    for y = math.floor(metrics.y1), math.floor(metrics.y2) do
+        for x = math.floor(metrics.x1), math.floor(metrics.x2) do
+            local square = cell:getGridSquare(x, y, z)
+            if square then
+                if square.getTree and square:getTree() then
+                    count = count + 1
+                end
+            else
+                unresolved = true
+            end
+        end
+    end
+
+    return {
+        {
+            label = "Trees",
+            value = unresolved and (tostring(count) .. " + ?") or tostring(count),
+            r = 0.72,
+            g = 0.88,
+            b = 0.72,
+        },
+    }
+end
+
 function RealBaseUI.PopulateAreaList(window)
     if not window or not window.rectList then
         return
@@ -157,9 +201,12 @@ local function openSelector(window, slotIndex, existingRect)
             tileLimitLabel = tostring(zone and zone.zoneKind or "") == "base" and "Base tile budget" or "Area tile cap",
             currentTiles = getRectTileCount(existingRect),
             currentTilesLabel = tostring(zone and zone.zoneKind or "") == "base" and "Current base tiles" or "Current assigned tiles",
+            zoneType = tostring(zone and zone.zoneType or ""),
+            fixedZ = existingRect and existingRect[5] or (window and window.player and window.player:getZ() or 0),
             validateRect = function(x1, y1, x2, y2, z)
                 return validateCandidate(window, zone.id, slotIndex, { x1, y1, x2, y2, z or 0 })
             end,
+            getSelectionStats = getWoodcutSelectionStats,
             guideRects = getBaseGuideRects(window, zone),
             guideColor = { r = 0.22, g = 0.88, b = 0.28, a = 0.14 }
         }

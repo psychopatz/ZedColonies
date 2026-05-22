@@ -23,6 +23,7 @@ Sim.tickCounter = Sim.tickCounter or 0
 Sim.lastProcessedHour = Sim.lastProcessedHour or -1
 
 require "DC/Common/Colony/ColonySim/DC_ColonySim_Helpers"
+require "DC/Common/Colony/ColonySim/DC_ColonySim_Travel"
 require "DC/Common/Colony/ColonySim/DC_ColonySim_Outcome"
 require "DC/Common/Colony/ColonySim/DC_ColonySim_XP"
 require "DC/Common/Colony/ColonyHealth/DC_ColonyHealth"

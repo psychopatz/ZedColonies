@@ -11,6 +11,7 @@ Config.JobTypes = {
     Farm = "Farm",
     Fish = "Fish",
     Gatherer = "Gatherer",
+    ChopTrees = "ChopTrees",
     CorpseRemoval = "CorpseRemoval",
     Scavenge = "Scavenge",
     TravelCompanion = "TravelCompanion"
@@ -122,6 +123,22 @@ Config.JobProfiles = {
         outputRules = {},
         skillID = nil,          -- dynamic: resolved via Gatherer.GetPrimarySkillID(worker)
         sortOrder = 40,
+        defaultForArchetype = nil,
+        hooks = {}
+    },
+    ChopTrees = {
+        jobType = Config.JobTypes.ChopTrees,
+        displayName = "Chop Trees",
+        siteType = Config.SiteTypes.TreeChopSite,
+        requiredToolTags = {
+            "Weapon.Melee.Axe"
+        },
+        cycleHours = 12,
+        dailyCaloriesNeed = 2350,
+        dailyHydrationNeed = 1950,
+        outputRules = {},
+        skillID = nil,          -- dynamic: resolved in GetWorkerJobSkillID
+        sortOrder = 41,
         defaultForArchetype = nil,
         hooks = {}
     },

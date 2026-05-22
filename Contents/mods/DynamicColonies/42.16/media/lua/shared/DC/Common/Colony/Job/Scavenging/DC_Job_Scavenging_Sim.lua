@@ -46,10 +46,7 @@ Internal.getAvailableProvisionTotals = function(worker)
 end
 
 Internal.getRequiredTravelReserve = function(worker, profile, multiplier)
-    local factor = math.max(0, tonumber(multiplier) or 1)
-    local travelHours = Internal.getScavengeTravelHours()
-    return math.max(0, tonumber(Config.GetEffectiveHourlyCaloriesNeed(worker, profile)) or 0) * travelHours * factor,
-        math.max(0, tonumber(Config.GetEffectiveHourlyHydrationNeed(worker, profile)) or 0) * travelHours * factor
+    return Internal.getRequiredTravelReserveForHours(worker, profile, Internal.getScavengeTravelHours(), multiplier)
 end
 
 Internal.getReturnHomeMessage = function(reason)

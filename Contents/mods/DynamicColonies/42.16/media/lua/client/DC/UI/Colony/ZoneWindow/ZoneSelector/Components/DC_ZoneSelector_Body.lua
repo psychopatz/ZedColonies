@@ -61,6 +61,32 @@ function Body:createChildren()
         p:drawText("From: " .. math.floor(metrics.x1) .. ", " .. math.floor(metrics.y1), px, py + fh, 0.7, 0.7, 0.7, 1, UIFont.NewSmall)
         p:drawText("To:   " .. math.floor(metrics.x2) .. ", " .. math.floor(metrics.y2), px, py + fh * 2 + 2, 0.7, 0.7, 0.7, 1, UIFont.NewSmall)
 
+        if type(sel.getSelectionStats) == "function" then
+            local stats = sel.getSelectionStats(metrics, sel)
+            if type(stats) == "table" and #stats > 0 then
+                py = py + fh * 3 + 10
+                local stat = nil
+                for _, stat in ipairs(stats) do
+                    local label = tostring(stat.label or "")
+                    local value = tostring(stat.value or "")
+                    if label ~= "" then
+                        p:drawText(label .. ":", px, py, 0.8, 0.8, 0.8, 1, UIFont.Small)
+                        p:drawText(
+                            value,
+                            px,
+                            py + fh - 2,
+                            tonumber(stat.r) or 0.82,
+                            tonumber(stat.g) or 0.82,
+                            tonumber(stat.b) or 0.82,
+                            1,
+                            UIFont.Medium
+                        )
+                        py = py + fh * 2 + 2
+                    end
+                end
+            end
+        end
+
         if sel.validationMessage and sel.validationMessage ~= "" then
             p:drawText(sel.validationMessage, px, self.height - (fh * 2) - 8, 0.95, 0.62, 0.62, 1, UIFont.NewSmall)
         end

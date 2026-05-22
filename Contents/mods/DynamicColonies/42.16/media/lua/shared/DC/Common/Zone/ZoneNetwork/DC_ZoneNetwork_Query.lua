@@ -7,7 +7,12 @@ Network.Handlers = Network.Handlers or {}
 
 Network.Handlers.RequestZonesSnapshot = function(player, args)
     if Network.Internal and Network.Internal.syncZonesSnapshot then
-        Network.Internal.syncZonesSnapshot(player, args and args.colonyId, args and args.knownVersion)
+        Network.Internal.syncZonesSnapshot(
+            player,
+            args and args.colonyId,
+            args and args.knownVersion,
+            args and args.refreshWoodcutZoneID
+        )
     end
 end
 

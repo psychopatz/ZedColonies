@@ -82,11 +82,13 @@ local function flushPendingSave(colonyId)
     return false
 end
 
-function Sync.RequestSnapshot(window)
+function Sync.RequestSnapshot(window, options)
     local colonyId = tostring(window and window.colonyId or "")
+    options = type(options) == "table" and options or {}
     if sendCommand("RequestZonesSnapshot", {
         colonyId = colonyId,
-        knownVersion = DC_ZoneDataStore.GetColonyVersion(colonyId)
+        knownVersion = DC_ZoneDataStore.GetColonyVersion(colonyId),
+        refreshWoodcutZoneID = options.refreshWoodcutZoneID and tostring(options.refreshWoodcutZoneID) or nil,
     }) then
         return true
     end

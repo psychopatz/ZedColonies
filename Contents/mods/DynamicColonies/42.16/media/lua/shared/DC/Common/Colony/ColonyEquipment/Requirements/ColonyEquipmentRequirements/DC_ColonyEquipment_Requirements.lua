@@ -24,6 +24,9 @@ require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequiremen
 -- Gatherer
 require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Gatherer/DC_ColonyEquipmentRequirements_Gatherer"
 
+-- Chop Trees
+require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/ChopTrees/DC_ColonyEquipmentRequirements_ChopTrees"
+
 -- Scavenge
 require "DC/Common/Colony/ColonyEquipment/Requirements/ColonyEquipmentRequirements/Scavenge/DC_ColonyEquipmentRequirements_Scavenge"
 

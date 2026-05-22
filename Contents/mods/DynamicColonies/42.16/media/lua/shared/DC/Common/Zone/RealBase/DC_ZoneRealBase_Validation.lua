@@ -92,7 +92,7 @@ local function requiresBaseContainment(zone)
     end
 
     local jobType = tostring(zone and zone.sourceJobType or "")
-    return jobType ~= "CorpseRemoval"
+    return jobType ~= "CorpseRemoval" and jobType ~= "ChopTrees"
 end
 
 local function getZoneTileCap(zone, ownerUsername, options)

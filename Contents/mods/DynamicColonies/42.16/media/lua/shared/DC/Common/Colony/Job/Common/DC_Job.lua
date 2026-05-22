@@ -32,6 +32,12 @@ require "DC/Common/Colony/Job/Fishing/DC_Job_Fishing_Process"
 require "DC/Common/Colony/Job/Gatherer/DC_Job_Gatherer_Config"
 require "DC/Common/Colony/Job/Gatherer/DC_Job_Gatherer_Process"
 
+-- Shared Woodcut Ledger
+require "DC/Common/Colony/Woodcut/DC_Colony_Woodcut"
+
+-- Chop Trees
+require "DC/Common/Colony/Job/ChopTrees/DC_Job_ChopTrees_Process"
+
 -- Travel Companion
 require "DC/Common/Colony/Companion/ColonyCompanion/DC_ColonyCompanion"
 

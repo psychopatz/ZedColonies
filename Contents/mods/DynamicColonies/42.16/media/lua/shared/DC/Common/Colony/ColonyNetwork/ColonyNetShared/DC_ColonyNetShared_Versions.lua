@@ -163,8 +163,13 @@ function Shared.buildWorkerDetailVersion(worker, workerID, includeWorkerLedgers,
         tostring(worker.assignedSiteID or ""),
         tostring(worker.travelHoursRemaining or 0),
         tostring(worker.workProgress or 0),
+        tostring(worker.workTarget or 0),
         tostring(worker.moneyStored or 0),
         tostring(worker.toolState or ""),
+        tostring(worker.chopTreesMode or ""),
+        tostring(worker.chopTreesClaimKey or ""),
+        tostring(worker.chopTreesLiveCycleHours or 0),
+        tostring(worker.chopTreesLiveStartedAtHour or 0),
     }
 
     parts[#parts + 1] = buildLedgerMaskSignature(normalizedWorkerMask, { "nutrition", "tool", "haul", "output" })

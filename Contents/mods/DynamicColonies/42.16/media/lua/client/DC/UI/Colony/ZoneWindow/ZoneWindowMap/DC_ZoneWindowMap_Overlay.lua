@@ -9,6 +9,8 @@
 DC_ZoneWindow = DC_ZoneWindow or {}
 DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
 
+require "DC/UI/Colony/ZoneWindow/RealBase/DC_ZoneWindowRealBase_Formatters"
+
 local FONT = UIFont.Small
 local FONT_HGT = getTextManager():getFontHeight(FONT)
 local LABEL_PAD_X = 6
@@ -132,7 +134,15 @@ function MapOverlay:_renderZone(widget, zone, isSelected)
 
             -- Label: show on first rect of each zone
             if ptIdx == 1 or isActiveRect then
-                self:_drawLabel(widget, zone.name or "Zone", x1, y1, x2, y2, color, isSelected)
+                local label = zone.name or "Zone"
+                if isSelected and DC_ZoneWindow.Internal and DC_ZoneWindow.Internal.RealBase
+                    and DC_ZoneWindow.Internal.RealBase.GetWoodcutCoverageText then
+                    local coverage = DC_ZoneWindow.Internal.RealBase.GetWoodcutCoverageText(zone)
+                    if coverage and coverage ~= "" then
+                        label = tostring(label) .. " | " .. tostring(coverage)
+                    end
+                end
+                self:_drawLabel(widget, label, x1, y1, x2, y2, color, isSelected)
             end
         end
     end

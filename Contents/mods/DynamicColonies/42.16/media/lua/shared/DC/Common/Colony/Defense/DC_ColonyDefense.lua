@@ -311,6 +311,8 @@ function Defense.BuildWorkerRuntime(worker, homeCoords, workCoords)
         behaviorState = "Patrol"
         responseRadius = math.max(4, math.floor(getDefenseSetting("PatrolResponseRadius", 18)))
         leashRadius = math.max(responseRadius, math.floor(getDefenseSetting("PatrolLeashRadius", 22)))
+    elseif dutyMode == "work" and normalizedJob == tostring(jobTypes.ChopTrees or "ChopTrees") then
+        behaviorState = "ColonyChopTrees"
     elseif dutyMode == "work" and normalizedJob == tostring(jobTypes.CorpseRemoval or "CorpseRemoval") then
         behaviorState = "ColonyCorpseRemoval"
     elseif dutyMode == "work" or dutyMode == "patient" then

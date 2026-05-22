@@ -1,4 +1,5 @@
 require "DC/Common/Zone/DC_ZoneDataStore"
+require "DC/Common/Colony/Woodcut/DC_Colony_Woodcut"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Network = DC_Colony.Network or {}
@@ -66,7 +67,7 @@ local function sendSnapshot(player, colonyId, snapshot, options)
     })
 end
 
-function Internal.syncZonesSnapshot(player, requestedColonyId, knownVersion)
+function Internal.syncZonesSnapshot(player, requestedColonyId, knownVersion, refreshWoodcutZoneID)
     local owner = getOwnerUsername(player)
     local colonyId, reason = resolveColonyID(owner, requestedColonyId)
     if not colonyId then
@@ -85,6 +86,15 @@ function Internal.syncZonesSnapshot(player, requestedColonyId, knownVersion)
     local store = getStore()
     if not (store and store.BuildSnapshot) then
         return
+    end
+
+    if refreshWoodcutZoneID and DC_Colony and DC_Colony.Woodcut and DC_Colony.Woodcut.FindZoneByID then
+        local zone = DC_Colony.Woodcut.FindZoneByID(owner, refreshWoodcutZoneID)
+        if zone and DC_Colony.Woodcut.RefreshLoadedScan then
+            DC_Colony.Woodcut.RefreshLoadedScan(owner, zone, {
+                force = true,
+            })
+        end
     end
 
     local snapshot = store.BuildSnapshot(colonyId)

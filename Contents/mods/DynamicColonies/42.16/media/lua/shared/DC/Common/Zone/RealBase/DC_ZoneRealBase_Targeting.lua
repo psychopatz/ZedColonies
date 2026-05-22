@@ -469,6 +469,19 @@ function RealBase.ResolveGathererTarget(worker)
     )
 end
 
+function RealBase.ResolveChopTreesTarget(worker)
+    if not worker then
+        return nil
+    end
+
+    return RealBase.ResolveJobTypeTarget(
+        worker.ownerUsername,
+        "ChopTrees",
+        worker.homeX or worker.workX,
+        worker.homeY or worker.workY
+    )
+end
+
 function RealBase.ResolveCorpseDumpTarget(worker)
     if not worker then
         return nil

@@ -135,6 +135,7 @@ local function applyWorkerRuntime(worker, npcData, homeCoords, workCoords)
     npcData.dcGuardPostIndex = worker.dcGuardPostIndex
     npcData.dcAnchorRevision = worker.dcAnchorRevision
     npcData.dcBehaviorState = worker.dcBehaviorState
+    npcData.dcResidentJobType = tostring(worker.jobType or npcData.dcResidentJobType or "")
     npcData.guardEngageRadius = worker.guardEngageRadius
     npcData.guardLeashRadius = worker.guardLeashRadius
     npcData.dcPatrolPauseMinMs = worker.dcPatrolPauseMinMs

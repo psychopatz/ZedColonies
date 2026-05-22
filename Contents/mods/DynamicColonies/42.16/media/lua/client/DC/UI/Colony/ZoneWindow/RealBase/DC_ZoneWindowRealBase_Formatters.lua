@@ -2,6 +2,8 @@ DC_ZoneWindow = DC_ZoneWindow or {}
 DC_ZoneWindow.Internal = DC_ZoneWindow.Internal or {}
 DC_ZoneWindow.Internal.RealBase = DC_ZoneWindow.Internal.RealBase or {}
 
+require "DC/Common/Colony/Woodcut/DC_Colony_Woodcut"
+
 local RealBaseUI = DC_ZoneWindow.Internal.RealBase
 
 function RealBaseUI.FormatZoneLabel(zone)
@@ -54,7 +56,23 @@ function RealBaseUI.BuildInfoText(window, zone)
             text = text .. " | Slot cap " .. tostring(math.floor(tonumber(areaTileCap) or 0))
         end
     end
+
+    if DC_Colony and DC_Colony.Woodcut and tostring(zone and zone.zoneType or "") == "woodcut" then
+        local state = DC_Colony.Woodcut.GetOrCreateZoneState(zone.ownerUsername, zone)
+        text = text .. " | " .. tostring(DC_Colony.Woodcut.GetCoverageText(state))
+    end
     return text
+end
+
+function RealBaseUI.GetWoodcutCoverageText(zone)
+    if not zone or tostring(zone.zoneType or "") ~= "woodcut" then
+        return nil
+    end
+    if not DC_Colony or not DC_Colony.Woodcut then
+        return "Trees ?"
+    end
+    local state = DC_Colony.Woodcut.GetOrCreateZoneState(zone.ownerUsername, zone)
+    return DC_Colony.Woodcut.GetCoverageText(state)
 end
 
 return RealBaseUI

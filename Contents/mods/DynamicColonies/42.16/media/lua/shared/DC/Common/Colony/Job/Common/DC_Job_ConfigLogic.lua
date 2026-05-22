@@ -96,6 +96,19 @@ function Config.GetWorkerJobCapability(worker, jobType)
         return capability
     end
 
+    if normalizedJobType == ((Config.JobTypes or {}).ChopTrees) then
+        capability.skillID = "Plants"
+        capability.skillLevel = getWorkerSkillLevel(worker, "Plants")
+        if not (DC_ZoneRealBase and DC_ZoneRealBase.ResolveChopTreesTarget and DC_ZoneRealBase.ResolveChopTreesTarget(worker)) then
+            capability.capable = false
+            capability.reason = "Set a Chop Trees zone first."
+            return capability
+        end
+        capability.capable = true
+        capability.reason = nil
+        return capability
+    end
+
     if normalizedJobType == ((Config.JobTypes or {}).Guard) then
         capability.skillID = "Combat"
         capability.skillLevel = math.max(

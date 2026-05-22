@@ -72,6 +72,9 @@ function Config.GetWorkerJobSkillID(worker, profile)
         end
         return "Construction"
     end
+    if normalizedJob == Config.JobTypes.ChopTrees then
+        return "Plants"
+    end
     if normalizedJob == Config.JobTypes.Guard then
         local meleeLevel = 0
         local shootingLevel = 0
