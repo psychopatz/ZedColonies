@@ -8,9 +8,18 @@ local Woodcut = DC_Colony.Woodcut
 
 Woodcut.STATE_VERSION = Woodcut.STATE_VERSION or 1
 Woodcut.DEFAULT_SCAN_STALE_MS = Woodcut.DEFAULT_SCAN_STALE_MS or 8000
+Woodcut.SCAN_BATCH_TILES = Woodcut.SCAN_BATCH_TILES or 120
+Woodcut.SCAN_BATCH_MIN_INTERVAL_MS = Woodcut.SCAN_BATCH_MIN_INTERVAL_MS or 100
 Woodcut.CLAIM_TIMEOUT_MS = Woodcut.CLAIM_TIMEOUT_MS or 25000
 Woodcut.COLLECTED_PRUNE_MS = Woodcut.COLLECTED_PRUNE_MS or 300000
 Woodcut.MAX_BUCKET_SAMPLES = Woodcut.MAX_BUCKET_SAMPLES or 6
+Woodcut.DebugStats = Woodcut.DebugStats or {
+    scanRuns = 0,
+    scanThrottledRuns = 0,
+    scanPartialRuns = 0,
+    scanCompletedRuns = 0,
+    scanTiles = 0,
+}
 
 local function floorNumber(value, fallback)
     if tonumber(value) == nil then
@@ -330,6 +339,9 @@ function Woodcut.IsZoneStateStale(zone, zoneState, maxAgeMs)
         return false
     end
     local state = normalizeZoneState(zone, zoneState or zone.woodcutState)
+    if state._woodcutScanInProgress == true then
+        return true
+    end
     local targetAge = math.max(1000, floorNumber(maxAgeMs, Woodcut.DEFAULT_SCAN_STALE_MS) or Woodcut.DEFAULT_SCAN_STALE_MS)
     if state.lastScanAt <= 0 then
         return true
@@ -338,6 +350,41 @@ function Woodcut.IsZoneStateStale(zone, zoneState, maxAgeMs)
         return true
     end
     return (nowMillis() - state.lastScanAt) >= targetAge
+end
+
+local function resetScanCursor(state)
+    state._woodcutScanInProgress = nil
+    state._woodcutScanSlotIndex = nil
+    state._woodcutScanX = nil
+    state._woodcutScanY = nil
+    state._woodcutScanRevision = nil
+    state._woodcutScanSeenLoaded = nil
+    state._woodcutScanUnresolvedTiles = nil
+    state._woodcutScanTotalTiles = nil
+    state._woodcutScanResolvedTiles = nil
+    state._woodcutScanLastRunAt = nil
+end
+
+local function startScanCursor(state, revision)
+    state._woodcutScanInProgress = true
+    state._woodcutScanSlotIndex = 1
+    state._woodcutScanX = nil
+    state._woodcutScanY = nil
+    state._woodcutScanRevision = tostring(revision or "")
+    state._woodcutScanSeenLoaded = {}
+    state._woodcutScanUnresolvedTiles = {}
+    state._woodcutScanTotalTiles = 0
+    state._woodcutScanResolvedTiles = 0
+end
+
+local function getScanBudget(options)
+    if options and options.full == true then
+        return 2147483647
+    end
+    return math.max(1, floorNumber(
+        options and (options.scanBudgetTiles or options.budgetTiles),
+        Woodcut.SCAN_BATCH_TILES
+    ) or Woodcut.SCAN_BATCH_TILES)
 end
 
 function Woodcut.RefreshLoadedScan(ownerUsername, zone, options)
@@ -352,77 +399,164 @@ function Woodcut.RefreshLoadedScan(ownerUsername, zone, options)
     end
 
     local force = options.force == true
-    if not force and not Woodcut.IsZoneStateStale(zone, state, options.maxAgeMs) then
+    local rectRevision = getRectRevision(zone)
+    local scanRevision = tostring(state._woodcutScanRevision or "")
+    local scanInProgress = state._woodcutScanInProgress == true and scanRevision == rectRevision
+    if not force and not scanInProgress and not Woodcut.IsZoneStateStale(zone, state, options.maxAgeMs) then
         return state
     end
 
     clearExpiredClaims(state)
 
     local cell = getCell and getCell() or nil
-    local unresolvedTiles = {}
-    local seenLoaded = {}
-    local totalTiles = 0
-    local resolvedTiles = 0
     local now = nowMillis()
     local slots = DC_ZoneRealBase and DC_ZoneRealBase.GetAreaSlots and DC_ZoneRealBase.GetAreaSlots(zone) or {}
+    local budget = getScanBudget(options)
+    local processed = 0
+    local stats = Woodcut.DebugStats
+    stats.scanRuns = (tonumber(stats.scanRuns) or 0) + 1
 
-    for _, slot in ipairs(slots or {}) do
-        local rect = slot and slot.rect or nil
-        if type(rect) == "table" then
-            local z = floorNumber(rect[5], 0) or 0
-            local y = nil
-            local x = nil
-            for y = floorNumber(rect[2], 0) or 0, floorNumber(rect[4], -1) or -1 do
-                for x = floorNumber(rect[1], 0) or 0, floorNumber(rect[3], -1) or -1 do
-                    totalTiles = totalTiles + 1
-                    local key = buildTreeKey(x, y, z)
-                    local square = cell and cell:getGridSquare(x, y, z) or nil
-                    if square then
-                        resolvedTiles = resolvedTiles + 1
-                        local tree = square.getTree and square:getTree() or nil
-                        if tree then
-                            seenLoaded[key] = true
-                            local record = state.treesByKey[key]
-                            if type(record) ~= "table" then
-                                record = {
-                                    x = x,
-                                    y = y,
-                                    z = z,
-                                }
-                                state.treesByKey[key] = record
-                            end
-                            record.x = x
-                            record.y = y
-                            record.z = z
-                            record.synthetic = nil
-                            record.discovered = true
-                            record.lastSeenAt = now
-                            record.size = math.max(1, floorNumber(tree.getSize and tree:getSize() or record.size, 2) or 2)
-                            record.logYield = math.max(1, floorNumber(tree.getLogYield and tree:getLogYield() or record.logYield, 1) or 1)
-                            record.bucketKey = buildBucketKey(record.size, record.logYield)
-                            if tostring(record.state or "") ~= "collected" and tostring(record.state or "") ~= "claimed" then
-                                record.state = "standing"
-                            end
-                        else
-                            local record = state.treesByKey[key]
-                            if type(record) == "table" and tostring(record.state or "") ~= "collected" then
-                                record.state = "collected"
-                                record.claimedByWorkerID = nil
-                                record.claimedAt = nil
-                                record.collectedAt = record.collectedAt or now
-                            end
-                        end
-                    else
-                        unresolvedTiles[#unresolvedTiles + 1] = {
-                            x = x,
-                            y = y,
-                            z = z,
-                            key = key,
-                        }
+    if not force and scanInProgress then
+        local lastRunAt = math.max(0, floorNumber(state._woodcutScanLastRunAt, 0) or 0)
+        local minInterval = math.max(0, floorNumber(options.scanMinIntervalMs, Woodcut.SCAN_BATCH_MIN_INTERVAL_MS) or 0)
+        if lastRunAt > 0 and (now - lastRunAt) < minInterval then
+            stats.scanThrottledRuns = (tonumber(stats.scanThrottledRuns) or 0) + 1
+            return state
+        end
+    end
+
+    if force or not scanInProgress then
+        startScanCursor(state, rectRevision)
+    end
+    state._woodcutScanLastRunAt = now
+
+    local seenLoaded = type(state._woodcutScanSeenLoaded) == "table" and state._woodcutScanSeenLoaded or {}
+    local unresolvedTiles = type(state._woodcutScanUnresolvedTiles) == "table" and state._woodcutScanUnresolvedTiles or {}
+    local totalTiles = math.max(0, floorNumber(state._woodcutScanTotalTiles, 0) or 0)
+    local resolvedTiles = math.max(0, floorNumber(state._woodcutScanResolvedTiles, 0) or 0)
+    local slotIndex = math.max(1, floorNumber(state._woodcutScanSlotIndex, 1) or 1)
+    local scanX = state._woodcutScanX
+    local scanY = state._woodcutScanY
+
+    local function nextRect()
+        while slotIndex <= #slots do
+            local slot = slots[slotIndex]
+            local rect = slot and slot.rect or nil
+            if type(rect) ~= "table" then
+                slotIndex = slotIndex + 1
+                scanX = nil
+                scanY = nil
+            else
+                local minX = floorNumber(rect[1], 0) or 0
+                local minY = floorNumber(rect[2], 0) or 0
+                local maxX = floorNumber(rect[3], -1) or -1
+                local maxY = floorNumber(rect[4], -1) or -1
+                local z = floorNumber(rect[5], 0) or 0
+                if maxX < minX or maxY < minY then
+                    slotIndex = slotIndex + 1
+                    scanX = nil
+                    scanY = nil
+                else
+                    scanX = math.max(minX, floorNumber(scanX, minX) or minX)
+                    scanY = math.max(minY, floorNumber(scanY, minY) or minY)
+                    if scanY <= maxY and scanX <= maxX then
+                        return minX, minY, maxX, maxY, z
                     end
+                    slotIndex = slotIndex + 1
+                    scanX = nil
+                    scanY = nil
                 end
             end
         end
+        return nil
+    end
+
+    while processed < budget do
+        local minX, _minY, maxX, maxY, z = nextRect()
+        if not minX then
+            break
+        end
+
+        local x = scanX
+        local y = scanY
+        totalTiles = totalTiles + 1
+        processed = processed + 1
+        stats.scanTiles = (tonumber(stats.scanTiles) or 0) + 1
+
+        local key = buildTreeKey(x, y, z)
+        local square = cell and cell:getGridSquare(x, y, z) or nil
+        if square then
+            resolvedTiles = resolvedTiles + 1
+            local tree = square.getTree and square:getTree() or nil
+            if tree then
+                seenLoaded[key] = true
+                local record = state.treesByKey[key]
+                if type(record) ~= "table" then
+                    record = {
+                        x = x,
+                        y = y,
+                        z = z,
+                    }
+                    state.treesByKey[key] = record
+                end
+                record.x = x
+                record.y = y
+                record.z = z
+                record.synthetic = nil
+                record.discovered = true
+                record.lastSeenAt = now
+                record.size = math.max(1, floorNumber(tree.getSize and tree:getSize() or record.size, 2) or 2)
+                record.logYield = math.max(1, floorNumber(tree.getLogYield and tree:getLogYield() or record.logYield, 1) or 1)
+                record.bucketKey = buildBucketKey(record.size, record.logYield)
+                if tostring(record.state or "") ~= "collected" and tostring(record.state or "") ~= "claimed" then
+                    record.state = "standing"
+                end
+            else
+                local record = state.treesByKey[key]
+                if type(record) == "table" and tostring(record.state or "") ~= "collected" then
+                    record.state = "collected"
+                    record.claimedByWorkerID = nil
+                    record.claimedAt = nil
+                    record.collectedAt = record.collectedAt or now
+                end
+            end
+        else
+            unresolvedTiles[#unresolvedTiles + 1] = {
+                x = x,
+                y = y,
+                z = z,
+                key = key,
+            }
+        end
+
+        scanX = x + 1
+        if scanX > maxX then
+            scanX = minX
+            scanY = y + 1
+        end
+        if scanY > maxY then
+            slotIndex = slotIndex + 1
+            scanX = nil
+            scanY = nil
+        end
+    end
+
+    state._woodcutScanSeenLoaded = seenLoaded
+    state._woodcutScanUnresolvedTiles = unresolvedTiles
+    state._woodcutScanTotalTiles = totalTiles
+    state._woodcutScanResolvedTiles = resolvedTiles
+    state._woodcutScanSlotIndex = slotIndex
+    state._woodcutScanX = scanX
+    state._woodcutScanY = scanY
+
+    if slotIndex <= #slots then
+        stats.scanPartialRuns = (tonumber(stats.scanPartialRuns) or 0) + 1
+        state._woodcutScanInProgress = true
+        state.unresolvedTiles = copyArray(unresolvedTiles)
+        state.unresolvedTileCount = #unresolvedTiles
+        state.isExactCount = totalTiles > 0 and resolvedTiles >= totalTiles
+        recountState(state)
+        return state
     end
 
     local key = nil
@@ -446,11 +580,13 @@ function Woodcut.RefreshLoadedScan(ownerUsername, zone, options)
         end
     end
 
-    state.unresolvedTiles = unresolvedTiles
+    state.unresolvedTiles = copyArray(unresolvedTiles)
     state.unresolvedTileCount = #unresolvedTiles
     state.isExactCount = totalTiles > 0 and resolvedTiles >= totalTiles
     state.lastScanAt = now
-    state.lastScanZoneRevision = getRectRevision(zone)
+    state.lastScanZoneRevision = rectRevision
+    resetScanCursor(state)
+    stats.scanCompletedRuns = (tonumber(stats.scanCompletedRuns) or 0) + 1
     recountState(state)
     return state
 end
@@ -547,6 +683,7 @@ function Woodcut.ClaimNextTree(worker, options)
         Woodcut.RefreshLoadedScan(worker and worker.ownerUsername or zone.ownerUsername, zone, {
             force = options.forceRefresh == true,
             maxAgeMs = options.maxAgeMs,
+            scanBudgetTiles = options.scanBudgetTiles or options.budgetTiles,
         })
     end
 
@@ -666,6 +803,17 @@ function Woodcut.GetCoverageText(zoneState)
     end
 
     return "Trees ?"
+end
+
+function Woodcut.GetDebugStats()
+    local stats = Woodcut.DebugStats or {}
+    return {
+        scanRuns = tonumber(stats.scanRuns) or 0,
+        scanThrottledRuns = tonumber(stats.scanThrottledRuns) or 0,
+        scanPartialRuns = tonumber(stats.scanPartialRuns) or 0,
+        scanCompletedRuns = tonumber(stats.scanCompletedRuns) or 0,
+        scanTiles = tonumber(stats.scanTiles) or 0,
+    }
 end
 
 function Woodcut.FindZoneByID(ownerUsername, zoneID)
