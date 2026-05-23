@@ -5,6 +5,17 @@ DC_Colony.Registry.Internal = DC_Colony.Registry.Internal or {}
 local Config = DC_Colony.Config
 local Registry = DC_Colony.Registry
 local Internal = Registry.Internal
+local Runtime = Internal.Runtime or {}
+
+Runtime.workerListCacheByOwner = Runtime.workerListCacheByOwner or {}
+
+local function copyArray(source)
+    local copy = {}
+    for index = 1, #(source or {}) do
+        copy[index] = source[index]
+    end
+    return copy
+end
 
 local function normalizeWorkerReputation(value)
     local reputation = tonumber(value)
@@ -199,6 +210,12 @@ function Registry.GetWorkersForOwnerRaw(ownerUsername)
         return {}
     end
     local workersData = Registry.GetWorkersData(colonyID, false)
+    local version = tonumber(workersData and workersData.version) or 0
+    local cache = Runtime.workerListCacheByOwner and Runtime.workerListCacheByOwner[owner] or nil
+    if cache and tonumber(cache.version) == version and type(cache.workers) == "table" then
+        return copyArray(cache.workers)
+    end
+
     local workers = {}
 
     for _, workerID in ipairs(workersData and workersData.workerIDs or {}) do
@@ -212,7 +229,11 @@ function Registry.GetWorkersForOwnerRaw(ownerUsername)
         return tostring(a.name or a.workerID) < tostring(b.name or b.workerID)
     end)
 
-    return workers
+    Runtime.workerListCacheByOwner[owner] = {
+        version = version,
+        workers = workers,
+    }
+    return copyArray(workers)
 end
 
 function Registry.GetWorkersForOwner(ownerUsername)

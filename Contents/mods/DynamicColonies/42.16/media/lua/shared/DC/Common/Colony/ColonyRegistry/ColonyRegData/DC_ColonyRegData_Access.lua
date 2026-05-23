@@ -8,6 +8,30 @@ local Internal = Registry.Internal
 local Runtime = Internal.Runtime or {}
 local Data = Internal.ColonyRegData or {}
 
+Runtime.ownerUsernamesCache = Runtime.ownerUsernamesCache or nil
+Runtime.ownerUsernamesCacheDirty = Runtime.ownerUsernamesCacheDirty ~= false
+Runtime.workerListCacheByOwner = Runtime.workerListCacheByOwner or {}
+
+local function copyArray(source)
+    local copy = {}
+    for index = 1, #(source or {}) do
+        copy[index] = source[index]
+    end
+    return copy
+end
+
+function Registry.InvalidateListCaches(ownerUsername)
+    Runtime.ownerUsernamesCacheDirty = true
+    if ownerUsername ~= nil then
+        local owner = Config.GetOwnerUsername(ownerUsername)
+        if owner ~= "" and Runtime.workerListCacheByOwner then
+            Runtime.workerListCacheByOwner[owner] = nil
+        end
+    else
+        Runtime.workerListCacheByOwner = {}
+    end
+end
+
 function Registry.GetData()
     return Data.ensureIndex()
 end
@@ -65,6 +89,10 @@ function Registry.EnsureOwner(ownerUsername)
 end
 
 function Registry.GetOwnerUsernames()
+    if Runtime.ownerUsernamesCacheDirty ~= true and type(Runtime.ownerUsernamesCache) == "table" then
+        return copyArray(Runtime.ownerUsernamesCache)
+    end
+
     local owners = {}
     local index = Data.ensureIndex()
 
@@ -79,7 +107,9 @@ function Registry.GetOwnerUsernames()
         return tostring(a or "") < tostring(b or "")
     end)
 
-    return owners
+    Runtime.ownerUsernamesCache = owners
+    Runtime.ownerUsernamesCacheDirty = false
+    return copyArray(owners)
 end
 
 function Registry.GetWorkerOwner(workerID)

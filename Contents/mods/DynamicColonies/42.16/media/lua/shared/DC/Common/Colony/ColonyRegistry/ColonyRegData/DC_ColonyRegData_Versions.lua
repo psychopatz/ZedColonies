@@ -27,6 +27,15 @@ function Registry.Save()
     end
 end
 
+local function invalidateOwnerForColony(colonyID)
+    if not Registry.InvalidateListCaches then
+        return
+    end
+
+    local colonyData = colonyID and Registry.GetColonyData(colonyID, false) or nil
+    Registry.InvalidateListCaches(colonyData and colonyData.ownerUsername or nil)
+end
+
 function Registry.NextID(kind, ownerOrColonyID)
     local colonyData = Registry.GetColonyData(ownerOrColonyID, true)
     if not colonyData then
@@ -49,6 +58,9 @@ function Registry.TouchColonyVersion(ownerOrColonyID)
 
     colonyData.versions.colony = math.max(1, math.floor(tonumber(colonyData.versions.colony) or 1)) + 1
     Data.syncColonySummary(colonyData.colonyID)
+    if Registry.InvalidateListCaches then
+        Registry.InvalidateListCaches(colonyData.ownerUsername)
+    end
     return colonyData.versions.colony
 end
 
@@ -62,6 +74,9 @@ function Registry.TouchWorkersVersion(ownerOrColonyID)
     workersData.version = math.max(1, math.floor(tonumber(workersData.version) or 1)) + 1
     colonyData.versions.workers = workersData.version
     Data.syncColonySummary(colonyData.colonyID)
+    if Registry.InvalidateListCaches then
+        Registry.InvalidateListCaches(colonyData.ownerUsername)
+    end
     return workersData.version
 end
 
@@ -88,6 +103,8 @@ function Registry.TouchWorkerDetailVersion(worker)
 end
 
 function Registry.RemoveWorkerShard(colonyID, workerID)
+    invalidateOwnerForColony(colonyID)
+
     local key = Data.getWorkerKey(colonyID, workerID)
     if ModData.remove and ModData.exists(key) then
         ModData.remove(key)
