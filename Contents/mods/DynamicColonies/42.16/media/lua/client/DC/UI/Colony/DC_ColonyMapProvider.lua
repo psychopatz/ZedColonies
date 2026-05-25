@@ -15,6 +15,7 @@ end
 Provider.ID = Provider.ID or "ColonyScavengeSite"
 Provider.updateIntervalTicks = Provider.updateIntervalTicks or 90
 Provider.requestIntervalTicks = Provider.requestIntervalTicks or 600
+Provider.requiresLiveMapAPI = true
 Provider.SymbolIDs = Provider.SymbolIDs or {
     ScavengeSite = "Target"
 }

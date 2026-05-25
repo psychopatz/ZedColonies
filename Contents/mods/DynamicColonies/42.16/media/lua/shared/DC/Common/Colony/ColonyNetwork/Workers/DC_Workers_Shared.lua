@@ -123,17 +123,8 @@ local function syncCompanionWorker(player, worker)
         companion.SyncActiveNPCFromWorker(worker, true)
     end
     local residentBridge = DC_Colony and DC_Colony.ResidentBridge or nil
-    if residentBridge and residentBridge.SyncWorker then
-        local changed = residentBridge.SyncWorker(worker) == true
-        if changed then
-            local registry = DC_Colony and DC_Colony.Registry or nil
-            if registry and registry.Save then
-                registry.Save()
-            end
-            if DTNPCManager and DTNPCManager.CheckRosterSpawns then
-                DTNPCManager.CheckRosterSpawns()
-            end
-        end
+    if residentBridge and residentBridge.QueueWorkerSync then
+        residentBridge.QueueWorkerSync(worker)
     end
 end
 

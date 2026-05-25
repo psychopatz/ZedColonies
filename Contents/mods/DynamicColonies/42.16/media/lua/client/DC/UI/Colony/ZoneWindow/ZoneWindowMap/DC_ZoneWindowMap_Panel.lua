@@ -6,6 +6,7 @@
 -- ============================================================================
 
 require "ISUI/ISPanel"
+require "DT/Common/Map/DT_MapDisplaySystem"
 
 DC_ZoneWindowMapPanel = ISPanel:derive("DC_ZoneWindowMapPanel")
 
@@ -31,6 +32,9 @@ function DC_ZoneWindowMapPanel:createChildren()
     self.mapWidget:setAnchorRight(true)
     self.mapWidget:setAnchorBottom(true)
     self:addChild(self.mapWidget)
+    if DynamicTrading and DynamicTrading.MapDisplay and DynamicTrading.MapDisplay.RegisterLiveMap and self.ownerWindow and self.ownerWindow.player then
+        DynamicTrading.MapDisplay.RegisterLiveMap(self.ownerWindow.player:getPlayerNum(), self.mapWidget)
+    end
 
     -- Center the map on the player
     if self.ownerWindow and self.ownerWindow.player then
@@ -70,6 +74,9 @@ function DC_ZoneWindowMapPanel:prerender()
     if self.mapWidget then
         self.mapWidget:setWidth(self.width)
         self.mapWidget:setHeight(self.height)
+        if DynamicTrading and DynamicTrading.MapDisplay and DynamicTrading.MapDisplay.RegisterLiveMap and self.ownerWindow and self.ownerWindow.player then
+            DynamicTrading.MapDisplay.RegisterLiveMap(self.ownerWindow.player:getPlayerNum(), self.mapWidget)
+        end
     end
 end
 

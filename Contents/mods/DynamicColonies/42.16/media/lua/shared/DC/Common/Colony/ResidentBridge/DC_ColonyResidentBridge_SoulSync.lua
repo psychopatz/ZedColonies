@@ -10,6 +10,57 @@ local function logResident(message)
     end
 end
 
+local function nowMillis()
+    if getTimeInMillis then
+        local value = tonumber(getTimeInMillis())
+        if value and value > 0 then
+            return math.floor(value)
+        end
+    end
+
+    local gameTime = getGameTime and getGameTime() or nil
+    if gameTime and gameTime.getWorldAgeHours then
+        return math.floor((tonumber(gameTime:getWorldAgeHours()) or 0) * 3600000)
+    end
+
+    return 0
+end
+
+Bridge.SyncFailureState = Bridge.SyncFailureState or {}
+Bridge.SYNC_FAILURE_RETRY_MS = Bridge.SYNC_FAILURE_RETRY_MS or 5000
+
+local function fallbackEnqueueWorker(worker)
+    if type(worker) ~= "table" then
+        return false
+    end
+
+    local workerID = tostring(worker.workerID or "")
+    if workerID == "" then
+        return false
+    end
+
+    Bridge.SyncQueue = Bridge.SyncQueue or {
+        order = {},
+        byWorkerID = {},
+        saveQueued = false,
+        spawnCheckQueued = false,
+        ticksSinceSave = 0,
+        ticksSinceSpawnCheck = 0,
+    }
+    Bridge.SyncQueue.order = type(Bridge.SyncQueue.order) == "table" and Bridge.SyncQueue.order or {}
+    Bridge.SyncQueue.byWorkerID = type(Bridge.SyncQueue.byWorkerID) == "table" and Bridge.SyncQueue.byWorkerID or {}
+
+    if Bridge.SyncQueue.byWorkerID[workerID] == true then
+        return false
+    end
+
+    Bridge.SyncQueue.byWorkerID[workerID] = true
+    Bridge.SyncQueue.order[#Bridge.SyncQueue.order + 1] = workerID
+    Bridge.SyncDebugStats = Bridge.SyncDebugStats or {}
+    Bridge.SyncDebugStats.queuedWorkers = (tonumber(Bridge.SyncDebugStats.queuedWorkers) or 0) + 1
+    return true
+end
+
 local function copyPointToWorker(worker, fieldPrefix, point)
     if type(worker) ~= "table" or not Internal.HasPoint(point) then
         return false
@@ -50,6 +101,73 @@ local function chooseFallbackWork(anchorSnapshot, existingSoul, fallbackHome)
     end
 
     return Internal.CopyPoint(fallbackHome)
+end
+
+local function buildAnchorSignature(anchorSnapshot, existingUUID)
+    anchorSnapshot = type(anchorSnapshot) == "table" and anchorSnapshot or {}
+    local home = anchorSnapshot.home or {}
+    local work = anchorSnapshot.work or {}
+    return table.concat({
+        tostring(existingUUID or ""),
+        tostring(home.x or ""),
+        tostring(home.y or ""),
+        tostring(home.z or ""),
+        tostring(work.x or ""),
+        tostring(work.y or ""),
+        tostring(work.z or ""),
+        tostring(anchorSnapshot.homeMode or ""),
+        tostring(anchorSnapshot.workMode or ""),
+    }, "|")
+end
+
+local function getSyncSignature(worker, npcData)
+    return table.concat({
+        tostring(worker and worker.workerID or ""),
+        tostring(worker and worker.name or ""),
+        tostring(worker and worker.isFemale == true),
+        tostring(worker and worker.identitySeed or ""),
+        tostring(worker and worker.visualID or ""),
+        tostring(worker and worker.archetypeID or ""),
+        tostring(worker and worker.ownerUsername or ""),
+        tostring(worker and worker.homeX or ""),
+        tostring(worker and worker.homeY or ""),
+        tostring(worker and worker.homeZ or ""),
+        tostring(worker and worker.workX or ""),
+        tostring(worker and worker.workY or ""),
+        tostring(worker and worker.workZ or ""),
+        tostring(worker and worker.dcDutyMode or ""),
+        tostring(worker and worker.dcCanFight == true),
+        tostring(worker and worker.dcGuardPostIndex or ""),
+        tostring(worker and worker.dcAnchorRevision or ""),
+        tostring(worker and worker.dcBehaviorState or ""),
+        tostring(worker and worker.guardEngageRadius or ""),
+        tostring(worker and worker.guardLeashRadius or ""),
+        tostring(worker and worker.dcPatrolPauseMinMs or ""),
+        tostring(worker and worker.dcPatrolPauseMaxMs or ""),
+        tostring(worker and worker.dcPatrolMoveGapMinMs or ""),
+        tostring(worker and worker.dcPatrolMoveGapMaxMs or ""),
+        tostring(npcData and npcData.factionID or ""),
+        tostring(npcData and npcData.dcResidentRole or ""),
+        tostring(npcData and npcData.dcResidentHomeMode or ""),
+        tostring(npcData and npcData.dcResidentWorkMode or ""),
+        tostring(npcData and npcData.state or ""),
+        tostring(npcData and npcData.status or ""),
+        tostring(npcData and npcData.lastX or ""),
+        tostring(npcData and npcData.lastY or ""),
+        tostring(npcData and npcData.lastZ or ""),
+    }, "|")
+end
+
+function Bridge.QueueWorkerSync(worker)
+    if Bridge.EnsureSyncQueueHook then
+        Bridge.EnsureSyncQueueHook()
+    end
+
+    if Internal.EnqueueWorker then
+        return Internal.EnqueueWorker(worker)
+    end
+
+    return fallbackEnqueueWorker(worker)
 end
 
 local function setResidentFields(worker, npcData, anchorSnapshot)
@@ -244,12 +362,33 @@ function Bridge.SyncWorker(worker)
 
     local anchorSnapshot = Bridge.BuildAnchorSnapshot(worker)
     local existingUUID, existingSoul = Internal.FindResidentSoul(worker)
+    local workerID = tostring(worker.workerID or "")
+    local anchorSignature = buildAnchorSignature(anchorSnapshot, existingUUID)
+    local failureState = Bridge.SyncFailureState[workerID]
+    if type(failureState) == "table"
+        and tostring(failureState.anchorSignature or "") == anchorSignature
+        and (tonumber(failureState.retryAt) or 0) > nowMillis() then
+        Bridge.SyncDebugStats.backoffHits = (tonumber(Bridge.SyncDebugStats.backoffHits) or 0) + 1
+        return false, existingUUID
+    end
+
     local homeCoords = chooseFallbackHome(anchorSnapshot, existingSoul)
     local workCoords = chooseFallbackWork(anchorSnapshot, existingSoul, homeCoords)
     if not Internal.HasPoint(homeCoords) then
-        logResident("Skipping resident sync; no valid home coords for workerID=" .. tostring(worker and worker.workerID))
+        local currentTime = nowMillis()
+        failureState = failureState or {}
+        failureState.anchorSignature = anchorSignature
+        failureState.retryAt = currentTime + math.max(500, math.floor(tonumber(Bridge.SYNC_FAILURE_RETRY_MS) or 5000))
+        local shouldLog = (tonumber(failureState.lastLogAt) or 0) <= 0
+            or (currentTime - math.max(0, tonumber(failureState.lastLogAt) or 0)) >= math.max(500, math.floor(tonumber(Bridge.SYNC_FAILURE_RETRY_MS) or 5000))
+        if shouldLog then
+            failureState.lastLogAt = currentTime
+            logResident("Skipping resident sync; no valid home coords for workerID=" .. tostring(worker and worker.workerID))
+        end
+        Bridge.SyncFailureState[workerID] = failureState
         return false, nil
     end
+    Bridge.SyncFailureState[workerID] = nil
 
     local workerChanged = false
     workerChanged = copyPointToWorker(worker, "home", homeCoords) or workerChanged
@@ -279,6 +418,12 @@ function Bridge.SyncWorker(worker)
     workerChanged = applyWorkerRuntime(worker, npcData, homeCoords, workCoords) == true or workerChanged
     applyResidentPosition(worker, npcData, homeCoords, workCoords)
     applyCompanionDerivedData(worker, npcData)
+
+    local syncSignature = getSyncSignature(worker, npcData)
+    if tostring(worker._dtResidentSyncSignature or "") == syncSignature
+        and tostring(worker.residentSoulUUID or "") == tostring(uuid or "") then
+        return workerChanged, uuid
+    end
 
     if DynamicTrading_Roster and DynamicTrading_Roster.SaveSoul then
         DynamicTrading_Roster.SaveSoul(uuid, npcData)
@@ -322,6 +467,7 @@ function Bridge.SyncWorker(worker)
         worker.residentSoulUUID = uuid
         workerChanged = true
     end
+    worker._dtResidentSyncSignature = syncSignature
 
     return workerChanged, uuid
 end

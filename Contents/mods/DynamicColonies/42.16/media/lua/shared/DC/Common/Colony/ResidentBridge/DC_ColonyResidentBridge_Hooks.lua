@@ -19,6 +19,7 @@ Bridge.SyncDebugStats = Bridge.SyncDebugStats or {
     syncRuns = 0,
     saves = 0,
     rosterFlushes = 0,
+    backoffHits = 0,
 }
 
 local function getSyncQueue()
@@ -55,6 +56,8 @@ local function enqueueWorker(worker)
     return true
 end
 
+Internal.EnqueueWorker = Internal.EnqueueWorker or enqueueWorker
+
 function Bridge.GetSyncQueueDepth()
     local queue = getSyncQueue()
     return #queue.order
@@ -70,6 +73,7 @@ function Bridge.GetSyncDebugStats()
         syncRuns = tonumber(stats.syncRuns) or 0,
         saves = tonumber(stats.saves) or 0,
         rosterFlushes = tonumber(stats.rosterFlushes) or 0,
+        backoffHits = tonumber(stats.backoffHits) or 0,
     }
 end
 
@@ -91,14 +95,8 @@ function Bridge.OnWorkerStateApplied(worker)
         return changed
     end
 
-    changed = Bridge.SyncWorker(worker) == true or false
-    if changed then
-        local registry = Internal.GetRegistry()
-        local persistedWorker = registry and registry.GetWorkerRaw and registry.GetWorkerRaw(worker.workerID) or nil
-        if registry and registry.Save and persistedWorker == worker then
-            registry.Save()
-        end
-    end
+    Bridge.EnsureSyncQueueHook()
+    changed = Bridge.QueueWorkerSync and (Bridge.QueueWorkerSync(worker) == true) or false
 
     return changed
 end
@@ -186,7 +184,7 @@ function Bridge.RefreshOwnerWorkers(ownerUsername)
 
     local enqueued = false
     for _, worker in ipairs(registry.GetWorkersForOwnerRaw(ownerUsername) or {}) do
-        enqueued = enqueueWorker(worker) == true or enqueued
+        enqueued = (Bridge.QueueWorkerSync and Bridge.QueueWorkerSync(worker) == true) or enqueued
     end
 
     return enqueued
