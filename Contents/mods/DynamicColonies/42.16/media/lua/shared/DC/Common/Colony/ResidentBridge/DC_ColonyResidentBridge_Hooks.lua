@@ -20,6 +20,7 @@ Bridge.SyncDebugStats = Bridge.SyncDebugStats or {
     saves = 0,
     rosterFlushes = 0,
     backoffHits = 0,
+    blockedQueueSkips = 0,
 }
 
 local function getSyncQueue()
@@ -74,6 +75,7 @@ function Bridge.GetSyncDebugStats()
         saves = tonumber(stats.saves) or 0,
         rosterFlushes = tonumber(stats.rosterFlushes) or 0,
         backoffHits = tonumber(stats.backoffHits) or 0,
+        blockedQueueSkips = tonumber(stats.blockedQueueSkips) or 0,
     }
 end
 
@@ -93,6 +95,14 @@ function Bridge.OnWorkerStateApplied(worker)
     local changed = false
     if not Internal.IsAuthority() or type(worker) ~= "table" then
         return changed
+    end
+
+    local queueSignature = Bridge.GetWorkerQueueSignature and Bridge.GetWorkerQueueSignature(worker) or ""
+    if queueSignature ~= "" then
+        if tostring(worker._dtResidentLastAppliedQueueSignature or "") == queueSignature then
+            return false
+        end
+        worker._dtResidentLastAppliedQueueSignature = queueSignature
     end
 
     Bridge.EnsureSyncQueueHook()
@@ -183,7 +193,18 @@ function Bridge.RefreshOwnerWorkers(ownerUsername)
     end
 
     local enqueued = false
+    if Bridge.UnresolvedWorkersByOwner then
+        Bridge.UnresolvedWorkersByOwner[tostring(ownerUsername or "")] = nil
+    end
     for _, worker in ipairs(registry.GetWorkersForOwnerRaw(ownerUsername) or {}) do
+        if type(worker) == "table" then
+            worker._dtResidentSyncBlockedSignature = nil
+            worker._dtResidentSyncBlockedUntil = nil
+            worker._dtResidentLastAppliedQueueSignature = nil
+            if Bridge.SyncFailureState then
+                Bridge.SyncFailureState[tostring(worker.workerID or "")] = nil
+            end
+        end
         enqueued = (Bridge.QueueWorkerSync and Bridge.QueueWorkerSync(worker) == true) or enqueued
     end
 

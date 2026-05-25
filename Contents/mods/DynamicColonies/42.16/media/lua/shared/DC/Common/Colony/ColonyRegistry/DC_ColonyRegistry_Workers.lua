@@ -131,7 +131,9 @@ function Registry.CreateWorker(ownerUsername, template)
     end
     Internal.EnsureActivityLog(worker)
 
-    Registry.RecalculateWorker(worker)
+    Registry.RecalculateWorker(worker, {
+        allowResidentSync = true,
+    })
     local persistedWorker = Registry.GetWorkerData(colonyID, workerID)
     for key, value in pairs(worker) do
         persistedWorker[key] = value
@@ -180,7 +182,9 @@ end
 function Registry.GetWorker(workerID)
     local worker = Registry.GetWorkerRaw(workerID)
     if worker then
-        Registry.RecalculateWorker(worker)
+        Registry.RecalculateWorker(worker, {
+            allowResidentSync = false,
+        })
     end
     return worker
 end
@@ -240,7 +244,9 @@ function Registry.GetWorkersForOwner(ownerUsername)
     local workers = {}
 
     for _, worker in ipairs(Registry.GetWorkersForOwnerRaw(ownerUsername)) do
-        Registry.RecalculateWorker(worker)
+        Registry.RecalculateWorker(worker, {
+            allowResidentSync = false,
+        })
         if worker then
             workers[#workers + 1] = worker
         end

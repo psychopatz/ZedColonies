@@ -5,7 +5,7 @@ local Bridge = DC_Colony.ResidentBridge
 local Internal = Bridge.Internal or {}
 
 local function logResident(message)
-    if DynamicTrading and DynamicTrading.Log then
+    if DynamicTrading and DynamicTrading.Debug == true and DynamicTrading.Log then
         DynamicTrading.Log("DColony", "Resident", "Bridge", tostring(message or ""))
     end
 end
@@ -28,6 +28,15 @@ end
 
 Bridge.SyncFailureState = Bridge.SyncFailureState or {}
 Bridge.SYNC_FAILURE_RETRY_MS = Bridge.SYNC_FAILURE_RETRY_MS or 5000
+Bridge.SYNC_BLOCK_RETRY_MS = Bridge.SYNC_BLOCK_RETRY_MS or 15000
+Bridge.UNRESOLVED_OWNER_RETRY_MS = Bridge.UNRESOLVED_OWNER_RETRY_MS or 5000
+Bridge.UnresolvedWorkersByOwner = Bridge.UnresolvedWorkersByOwner or {}
+
+local function noteResidentCounter(key, amount)
+    if DynamicTrading and DynamicTrading.IncrementCounter then
+        DynamicTrading.IncrementCounter("resident_bridge." .. tostring(key or "unknown"), amount)
+    end
+end
 
 local function fallbackEnqueueWorker(worker)
     if type(worker) ~= "table" then
@@ -158,9 +167,117 @@ local function getSyncSignature(worker, npcData)
     }, "|")
 end
 
+local function getWorkerQueueSignature(worker)
+    if type(worker) ~= "table" then
+        return ""
+    end
+
+    return table.concat({
+        tostring(worker.ownerUsername or ""),
+        tostring(worker.colonyID or ""),
+        tostring(worker.workerID or ""),
+        tostring(worker.jobType or ""),
+        tostring(worker.profession or ""),
+        tostring(worker.state or ""),
+        tostring(worker.presenceState or ""),
+        tostring(worker.housingBuildingID or ""),
+        tostring(worker.housingBuildingType or ""),
+        tostring(worker.housingBuildingLevel or ""),
+        tostring(worker.housingState or ""),
+        tostring(worker.infirmaryBuildingID or ""),
+        tostring(worker.infirmaryBuildingType or ""),
+        tostring(worker.infirmaryBuildingLevel or ""),
+        tostring(worker.infirmaryBedAssigned == true),
+        tostring(worker.doctorCovered == true),
+        tostring(worker.assignedProjectID or ""),
+        tostring(worker.assignedProjectBuildingID or ""),
+        tostring(worker.assignedProjectBuildingType or ""),
+        tostring(worker.assignedProjectTargetLevel or ""),
+        tostring(worker.assignedProjectMaterialState or ""),
+        tostring(worker.homeX or ""),
+        tostring(worker.homeY or ""),
+        tostring(worker.homeZ or ""),
+        tostring(worker.workX or ""),
+        tostring(worker.workY or ""),
+        tostring(worker.workZ or ""),
+        tostring(worker.dcDutyMode or ""),
+        tostring(worker.dcCanFight == true),
+        tostring(worker.dcGuardPostIndex or ""),
+        tostring(worker.dcAnchorRevision or ""),
+        tostring(math.floor(tonumber(worker.hp) or 0)),
+        tostring(math.floor(tonumber(worker.maxHp) or 0))
+    }, "|")
+end
+
+Bridge.GetWorkerQueueSignature = Bridge.GetWorkerQueueSignature or getWorkerQueueSignature
+
+local function getUnresolvedOwnerState(ownerUsername, create)
+    local owner = tostring(ownerUsername or "")
+    if owner == "" then
+        return nil
+    end
+
+    local state = Bridge.UnresolvedWorkersByOwner[owner]
+    if type(state) ~= "table" and create then
+        state = {
+            workers = {},
+            lastRetryAt = 0,
+        }
+        Bridge.UnresolvedWorkersByOwner[owner] = state
+    end
+    return state
+end
+
+local function clearUnresolvedWorker(worker)
+    if type(worker) ~= "table" then
+        return
+    end
+
+    local ownerState = getUnresolvedOwnerState(worker.ownerUsername, false)
+    local workerID = tostring(worker.workerID or "")
+    if ownerState and workerID ~= "" then
+        ownerState.workers[workerID] = nil
+        if next(ownerState.workers) == nil then
+            Bridge.UnresolvedWorkersByOwner[tostring(worker.ownerUsername or "")] = nil
+        end
+    end
+end
+
+local function hasOwnerBaseContext(worker, anchorSnapshot)
+    if type(anchorSnapshot) ~= "table" then
+        return false
+    end
+    if Internal.HasPoint(anchorSnapshot.home) then
+        return true
+    end
+    if tostring(anchorSnapshot.homeMode or "") ~= "fallback" then
+        return true
+    end
+    if DC_ZoneRealBase and DC_ZoneRealBase.ResolveBaseTarget then
+        return Internal.HasPoint(DC_ZoneRealBase.ResolveBaseTarget(worker and worker.ownerUsername))
+    end
+    return false
+end
+
 function Bridge.QueueWorkerSync(worker)
     if Bridge.EnsureSyncQueueHook then
         Bridge.EnsureSyncQueueHook()
+    end
+
+    if type(worker) == "table" then
+        local currentTime = nowMillis()
+        local queueSignature = getWorkerQueueSignature(worker)
+        local blockedUntil = tonumber(worker._dtResidentSyncBlockedUntil) or 0
+        local blockedSignature = tostring(worker._dtResidentSyncBlockedSignature or "")
+        if queueSignature ~= ""
+            and currentTime > 0
+            and blockedUntil > currentTime
+            and blockedSignature == queueSignature then
+            Bridge.SyncDebugStats = Bridge.SyncDebugStats or {}
+            Bridge.SyncDebugStats.blockedQueueSkips = (tonumber(Bridge.SyncDebugStats.blockedQueueSkips) or 0) + 1
+            return false
+        end
+        worker._dtResidentPendingQueueSignature = queueSignature
     end
 
     if Internal.EnqueueWorker then
@@ -363,12 +480,14 @@ function Bridge.SyncWorker(worker)
     local anchorSnapshot = Bridge.BuildAnchorSnapshot(worker)
     local existingUUID, existingSoul = Internal.FindResidentSoul(worker)
     local workerID = tostring(worker.workerID or "")
+    local ownerState = getUnresolvedOwnerState(worker.ownerUsername, true)
     local anchorSignature = buildAnchorSignature(anchorSnapshot, existingUUID)
     local failureState = Bridge.SyncFailureState[workerID]
     if type(failureState) == "table"
         and tostring(failureState.anchorSignature or "") == anchorSignature
         and (tonumber(failureState.retryAt) or 0) > nowMillis() then
         Bridge.SyncDebugStats.backoffHits = (tonumber(Bridge.SyncDebugStats.backoffHits) or 0) + 1
+        noteResidentCounter("backoff_hits", 1)
         return false, existingUUID
     end
 
@@ -376,19 +495,50 @@ function Bridge.SyncWorker(worker)
     local workCoords = chooseFallbackWork(anchorSnapshot, existingSoul, homeCoords)
     if not Internal.HasPoint(homeCoords) then
         local currentTime = nowMillis()
+        local queueSignature = getWorkerQueueSignature(worker)
+        local hasBaseContext = hasOwnerBaseContext(worker, anchorSnapshot)
+        local ownerRetryMs = math.max(1000, math.floor(tonumber(Bridge.UNRESOLVED_OWNER_RETRY_MS) or 5000))
+        local failureRetryMs = hasBaseContext
+            and math.max(500, math.floor(tonumber(Bridge.SYNC_FAILURE_RETRY_MS) or 5000))
+            or math.max(ownerRetryMs, math.floor(tonumber(Bridge.SYNC_BLOCK_RETRY_MS) or 15000))
         failureState = failureState or {}
         failureState.anchorSignature = anchorSignature
-        failureState.retryAt = currentTime + math.max(500, math.floor(tonumber(Bridge.SYNC_FAILURE_RETRY_MS) or 5000))
+        failureState.retryAt = currentTime + failureRetryMs
+        if ownerState then
+            local unresolvedEntry = ownerState.workers[workerID]
+            if type(unresolvedEntry) ~= "table" then
+                unresolvedEntry = {}
+                ownerState.workers[workerID] = unresolvedEntry
+            end
+            unresolvedEntry.anchorSignature = anchorSignature
+            unresolvedEntry.queueSignature = queueSignature
+            unresolvedEntry.homeMode = tostring(anchorSnapshot and anchorSnapshot.homeMode or "")
+            unresolvedEntry.recordedAt = currentTime
+
+            local lastOwnerRetryAt = tonumber(ownerState.lastRetryAt) or 0
+            if hasBaseContext and lastOwnerRetryAt > 0 and (currentTime - lastOwnerRetryAt) < ownerRetryMs then
+                failureState.retryAt = math.max(failureState.retryAt, lastOwnerRetryAt + ownerRetryMs)
+            else
+                ownerState.lastRetryAt = currentTime
+            end
+        end
         local shouldLog = (tonumber(failureState.lastLogAt) or 0) <= 0
-            or (currentTime - math.max(0, tonumber(failureState.lastLogAt) or 0)) >= math.max(500, math.floor(tonumber(Bridge.SYNC_FAILURE_RETRY_MS) or 5000))
+            or (currentTime - math.max(0, tonumber(failureState.lastLogAt) or 0)) >= failureRetryMs
         if shouldLog then
             failureState.lastLogAt = currentTime
             logResident("Skipping resident sync; no valid home coords for workerID=" .. tostring(worker and worker.workerID))
         end
         Bridge.SyncFailureState[workerID] = failureState
+        worker._dtResidentSyncBlockedSignature = queueSignature ~= "" and queueSignature or anchorSignature
+        worker._dtResidentSyncBlockedUntil = currentTime + math.max(failureRetryMs, math.floor(tonumber(Bridge.SYNC_BLOCK_RETRY_MS) or 15000))
+        worker._dtResidentPendingQueueSignature = nil
+        noteResidentCounter("unresolved_skips", 1)
         return false, nil
     end
     Bridge.SyncFailureState[workerID] = nil
+    worker._dtResidentSyncBlockedSignature = nil
+    worker._dtResidentSyncBlockedUntil = nil
+    clearUnresolvedWorker(worker)
 
     local workerChanged = false
     workerChanged = copyPointToWorker(worker, "home", homeCoords) or workerChanged
@@ -422,6 +572,7 @@ function Bridge.SyncWorker(worker)
     local syncSignature = getSyncSignature(worker, npcData)
     if tostring(worker._dtResidentSyncSignature or "") == syncSignature
         and tostring(worker.residentSoulUUID or "") == tostring(uuid or "") then
+        worker._dtResidentPendingQueueSignature = nil
         return workerChanged, uuid
     end
 
@@ -468,6 +619,7 @@ function Bridge.SyncWorker(worker)
         workerChanged = true
     end
     worker._dtResidentSyncSignature = syncSignature
+    worker._dtResidentPendingQueueSignature = nil
 
     return workerChanged, uuid
 end

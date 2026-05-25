@@ -296,7 +296,10 @@ end
 
 function Registry.GetWorkerSummariesForOwner(ownerUsername)
     local summaries = {}
-    for _, worker in ipairs(Registry.GetWorkersForOwner(ownerUsername)) do
+    for _, worker in ipairs(Registry.GetWorkersForOwnerRaw(ownerUsername)) do
+        Registry.RecalculateWorker(worker, {
+            allowResidentSync = false,
+        })
         summaries[#summaries + 1] = Registry.GetWorkerSummary(worker)
     end
     return summaries
@@ -305,7 +308,9 @@ end
 function Registry.GetWorkerDetailsForOwner(ownerUsername, workerID, includeWarehouseLedgers, includeWorkerLedgers)
     local worker = Registry.GetWorkerForOwner(ownerUsername, workerID)
     if not worker then return nil end
-    Registry.RecalculateWorker(worker)
+    Registry.RecalculateWorker(worker, {
+        allowResidentSync = false,
+    })
     local detail = Internal.CopyShallow(worker)
     local includeWorkerLedgerData = includeWorkerLedgers ~= false
     local workerLedgerMask = includeWorkerLedgerData == true and type(includeWorkerLedgers) == "table" and includeWorkerLedgers or nil

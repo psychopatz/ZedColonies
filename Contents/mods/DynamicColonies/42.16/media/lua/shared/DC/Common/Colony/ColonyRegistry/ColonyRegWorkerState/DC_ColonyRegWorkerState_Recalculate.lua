@@ -9,10 +9,11 @@ local Energy = DC_Colony.Energy
 local Skills = DC_Colony.Skills
 local Data = Internal.ColonyRegWorkerState or {}
 
-function Registry.RecalculateWorker(worker)
+function Registry.RecalculateWorker(worker, options)
     if not worker then
         return
     end
+    options = type(options) == "table" and options or {}
 
     worker.nutritionLedger = Internal.EnsureArray(worker.nutritionLedger)
     worker.toolLedger = Internal.EnsureArray(worker.toolLedger)
@@ -209,7 +210,7 @@ function Registry.RecalculateWorker(worker)
     Data.applyGathererPresentation(worker)
 
     if DC_Buildings and DC_Buildings.ApplyWorkerState then
-        DC_Buildings.ApplyWorkerState(worker)
+        DC_Buildings.ApplyWorkerState(worker, options)
     end
     if Energy and Energy.ApplyPresentationFields then
         Energy.ApplyPresentationFields(worker)
