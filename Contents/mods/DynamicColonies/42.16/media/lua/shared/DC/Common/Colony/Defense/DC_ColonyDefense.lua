@@ -314,7 +314,7 @@ function Defense.BuildWorkerRuntime(worker, homeCoords, workCoords)
     elseif dutyMode == "work" and normalizedJob == tostring(jobTypes.ChopTrees or "ChopTrees") then
         behaviorState = "ColonyChopTrees"
     elseif dutyMode == "work" and normalizedJob == tostring(jobTypes.CorpseRemoval or "CorpseRemoval") then
-        behaviorState = "ColonyCorpseRemoval"
+        behaviorState = "ColonyTask"
     elseif dutyMode == "work" or dutyMode == "patient" then
         behaviorState = "ColonyWork"
     end
@@ -325,6 +325,7 @@ function Defense.BuildWorkerRuntime(worker, homeCoords, workCoords)
         dcGuardPostIndex = math.max(1, math.floor(tonumber(worker and worker.dcGuardPostIndex) or 1)),
         dcAnchorRevision = Defense.BuildAnchorRevision(worker, homeCoords, workCoords, dutyMode),
         dcBehaviorState = behaviorState,
+        dcTaskBehaviorId = normalizedJob == tostring(jobTypes.CorpseRemoval or "CorpseRemoval") and "grave_burial" or nil,
         guardEngageRadius = responseRadius,
         guardLeashRadius = leashRadius,
         dcPatrolPauseMinMs = math.max(0, math.floor(getDefenseSetting("PatrolPauseMinMs", 2200))),

@@ -483,6 +483,10 @@ function RealBase.ResolveChopTreesTarget(worker)
 end
 
 function RealBase.ResolveCorpseDumpTarget(worker)
+    return RealBase.ResolveGraveyardTarget(worker)
+end
+
+function RealBase.ResolveGraveyardTarget(worker)
     if not worker then
         return nil
     end

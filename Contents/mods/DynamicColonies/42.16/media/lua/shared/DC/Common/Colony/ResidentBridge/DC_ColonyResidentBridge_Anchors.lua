@@ -99,8 +99,8 @@ function Bridge.ResolveWorkAnchor(worker, homeTarget)
         target = DC_ZoneRealBase.ResolveChopTreesTarget(worker)
         workMode = "job"
     elseif normalizedJob == tostring(jobTypes.CorpseRemoval or "CorpseRemoval")
-        and DC_ZoneRealBase and DC_ZoneRealBase.ResolveCorpseDumpTarget then
-        target = DC_ZoneRealBase.ResolveCorpseDumpTarget(worker)
+        and DC_ZoneRealBase and DC_ZoneRealBase.ResolveGraveyardTarget then
+        target = DC_ZoneRealBase.ResolveGraveyardTarget(worker)
         workMode = "job"
     elseif normalizedJob == tostring(jobTypes.Builder or "Builder")
         and worker.assignedProjectBuildingType

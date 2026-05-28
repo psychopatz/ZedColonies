@@ -62,7 +62,7 @@ end
 local function getJobZoneLabels(jobType)
     local normalized = tostring(jobType or "")
     if normalized == "CorpseRemoval" then
-        return "Corpse Dump Zone", "Corpse Dump Area"
+        return "Graveyard Zone", "Graveyard Area"
     end
     if normalized == "ChopTrees" then
         return "Chop Trees Zone", "Woodcut Area"

@@ -144,7 +144,7 @@ Config.JobProfiles = {
     },
     CorpseRemoval = {
         jobType = Config.JobTypes.CorpseRemoval,
-        displayName = "Corpse Removal",
+        displayName = "Corpse Burial",
         siteType = nil,
         requiredToolTags = {},
         cycleHours = 18,

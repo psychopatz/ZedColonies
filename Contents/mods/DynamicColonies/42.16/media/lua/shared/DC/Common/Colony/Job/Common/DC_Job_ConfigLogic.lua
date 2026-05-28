@@ -83,12 +83,12 @@ function Config.GetWorkerJobCapability(worker, jobType)
     if normalizedJobType == ((Config.JobTypes or {}).CorpseRemoval) then
         if Config.IsV2ResidentBehaviorSupported and not Config.IsV2ResidentBehaviorSupported() then
             capability.capable = false
-            capability.reason = "Corpse Removal requires V2."
+            capability.reason = "Corpse Burial requires V2."
             return capability
         end
-        if not (DC_ZoneRealBase and DC_ZoneRealBase.ResolveCorpseDumpTarget and DC_ZoneRealBase.ResolveCorpseDumpTarget(worker)) then
+        if not (DC_ZoneRealBase and DC_ZoneRealBase.ResolveGraveyardTarget and DC_ZoneRealBase.ResolveGraveyardTarget(worker)) then
             capability.capable = false
-            capability.reason = "Set a corpse dump zone first."
+            capability.reason = "Set a graveyard zone first."
             return capability
         end
         capability.capable = true

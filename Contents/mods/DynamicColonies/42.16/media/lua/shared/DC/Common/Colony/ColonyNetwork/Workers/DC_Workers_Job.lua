@@ -73,11 +73,11 @@ Network.Handlers.SetWorkerJobEnabled = function(player, args)
         local canWorkCorpseDuty, corpseDutyReason = canAssignJobType(worker, normalizedJob)
         if not canWorkCorpseDuty then
             debugWorkerJob(
-                "Blocked Corpse Removal start workerID=" .. tostring(args.workerID)
+                "Blocked Corpse Burial start workerID=" .. tostring(args.workerID)
                     .. " reason=" .. tostring(corpseDutyReason)
             )
             Registry.SetWorkerJobEnabled(worker, false)
-            Internal.syncNotice(player, corpseDutyReason or "Corpse Removal is not ready.", "error")
+            Internal.syncNotice(player, corpseDutyReason or "Corpse Burial is not ready.", "error")
             Shared.saveAndRefreshBasic(player, worker)
             return
         end
