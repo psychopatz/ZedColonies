@@ -144,6 +144,27 @@ function DC_BuildingsDetailsFormatter.BuildPlotText(plot)
             text = text .. " <RGB:0.72,0.72,0.72> Thermostat: <RGB:1,1,1> " .. tostring(building.greenhouseThermostatC or 20) .. " C <LINE> "
             text = text .. " <RGB:0.72,0.72,0.72> Water Use: <RGB:1,1,1> " .. tostring(building.greenhouseDailyWaterUse or 0) .. " / day <LINE> "
             text = text .. " <RGB:0.82,0.82,0.82> Use the Garden button to manage beds, seeds, and temperature in a dedicated modal. <LINE> "
+        elseif building.corpseFacilityType == "Cemetery" or building.corpseFacilityType == "MassGrave" then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Remains Storage <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Slots: <RGB:1,1,1> "
+                .. tostring(building.corpseUsedSlots or 0)
+                .. " / "
+                .. tostring(building.corpseSlotCapacity or 0)
+                .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Ready to Exhume: <RGB:1,1,1> " .. tostring(building.corpseReadyToExhumeCount or 0) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> General Route: <RGB:1,1,1> " .. tostring(building.corpseGeneralRoutePreference or "MassGrave") .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Teammate Overflow: <RGB:1,1,1> " .. tostring(building.corpseTeammateOverflowPolicy or "Block") .. " <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Use the Corpse button to toggle routing and exhume decomposed entries. <LINE> "
+        elseif building.corpseFacilityType == "Incinerator" then
+            text = text .. " <LINE> <RGB:1,1,1> <SIZE:Medium> Incineration Queue <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Pending Queue: <RGB:1,1,1> " .. tostring(building.corpseQueueSize or 0) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Active Batch: <RGB:1,1,1> " .. tostring(building.corpseIncineratorActiveBatchSize or 0) .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Cooldown Remaining: <RGB:1,1,1> "
+                .. tostring(math.floor((tonumber(building.corpseIncineratorCooldownRemainingHours) or 0) + 0.5))
+                .. " hour(s) <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> General Route: <RGB:1,1,1> " .. tostring(building.corpseGeneralRoutePreference or "MassGrave") .. " <LINE> "
+            text = text .. " <RGB:0.72,0.72,0.72> Teammate Overflow: <RGB:1,1,1> " .. tostring(building.corpseTeammateOverflowPolicy or "Block") .. " <LINE> "
+            text = text .. " <RGB:0.82,0.82,0.82> Use the Corpse button to toggle routing and inspect burn queue status. <LINE> "
         end
 
         if tonumber(building.productionRecipeCount or 0) > 0 then

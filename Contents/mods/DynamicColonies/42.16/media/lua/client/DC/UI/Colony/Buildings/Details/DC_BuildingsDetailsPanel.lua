@@ -206,6 +206,8 @@ function DC_BuildingsDetailsPanel:onSwapClicked()
         self:dispatchAction("manageRecycler")
     elseif manageState.isProductionStation == true then
         self:dispatchAction("manageBlueprintCraft")
+    elseif manageState.isCorpseFacility == true then
+        self:dispatchAction("manageCorpseFacility")
     end
 end
 

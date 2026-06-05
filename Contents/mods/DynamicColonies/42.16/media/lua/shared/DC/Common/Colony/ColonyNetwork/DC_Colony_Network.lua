@@ -7,6 +7,7 @@ require "DC/Common/Colony/DC_Colony_Presentation"
 require "DC/Common/Colony/DebugArchive/DC_ColonyDebugArchive"
 require "DC/Common/Buildings/Core/DC_Buildings"
 require "DC/Common/Colony/Resources/ColonyResources/DC_ColonyResources"
+require "DC/Common/Colony/CorpseFacilities/DC_ColonyCorpseFacilities"
 
 DC_Colony = DC_Colony or {}
 DC_Colony.Network = DC_Colony.Network or {}

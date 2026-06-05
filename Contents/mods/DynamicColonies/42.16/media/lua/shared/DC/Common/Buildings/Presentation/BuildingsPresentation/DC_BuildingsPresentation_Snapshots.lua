@@ -50,6 +50,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
     local medical = Buildings.BuildInfirmaryAssignment and Buildings.BuildInfirmaryAssignment(owner) or nil
     local projectList = Buildings.GetOwnerProjectList(owner)
     local availableCounts = Internal and Internal.GetAvailableMaterialCounts and Internal.GetAvailableMaterialCounts(owner, sourcePlayer) or nil
+    local corpseFacilities = DC_Colony and DC_Colony.CorpseFacilities or nil
     local buildings = {}
     local colonyId = ownerData and ownerData.colonyID or owner
 
@@ -69,6 +70,10 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
                     plotY = math.floor(tonumber(instance.plotY) or 0),
                     installs = Buildings.GetBuildingInstallCounts and Buildings.GetBuildingInstallCounts(instance) or {}
                 }
+                local corpseMetrics = corpseFacilities and corpseFacilities.GetBuildingMetrics and corpseFacilities.GetBuildingMetrics(owner, instance) or {}
+                for key, value in pairs(corpseMetrics or {}) do
+                    instances[#instances][key] = value
+                end
             end
         end
 
@@ -185,6 +190,7 @@ function Buildings.BuildOwnerSnapshot(ownerUsername, sourcePlayer)
             hasMedicalSupplies = medical.hasMedicalSupplies,
             buildings = medical.buildings
         } or nil,
-        map = Buildings.BuildMapSnapshot(owner, sourcePlayer)
+        map = Buildings.BuildMapSnapshot(owner, sourcePlayer),
+        corpseFacilities = corpseFacilities and corpseFacilities.GetOwnerSnapshot and corpseFacilities.GetOwnerSnapshot(owner) or nil
     }
 end

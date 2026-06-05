@@ -154,6 +154,11 @@ function DC_BuildingsClientSelectors.GetManagePlotState(plot)
     local isResearchStation = plot and plot.building and tostring(plot.building.buildingType or "") == "ResearchStation"
     local isRecycler = plot and plot.building and tostring(plot.building.buildingType or "") == "Recycler"
     local isProductionStation = plot and plot.building and DC_BuildingsClientSelectors.IsProductionStationType(plot.building.buildingType) == true
+    local isCorpseFacility = plot and plot.building and (
+        tostring(plot.building.corpseFacilityType or plot.building.buildingType or "") == "Cemetery"
+        or tostring(plot.building.corpseFacilityType or plot.building.buildingType or "") == "MassGrave"
+        or tostring(plot.building.corpseFacilityType or plot.building.buildingType or "") == "Incinerator"
+    )
     local canSwap = plot and plot.project and tostring(plot.project.status or "") == "Active"
 
     return {
@@ -161,12 +166,14 @@ function DC_BuildingsClientSelectors.GetManagePlotState(plot)
             or (isGreenhouse and "Garden"
             or (isResearchStation and "Research"
             or (isRecycler and "Recycle"
-            or (isProductionStation and "Craft" or "Manage")))),
-        enabled = canSwap == true or isGreenhouse == true or isResearchStation == true or isRecycler == true or isProductionStation == true,
+            or (isProductionStation and "Craft"
+            or (isCorpseFacility and "Corpse" or "Manage"))))),
+        enabled = canSwap == true or isGreenhouse == true or isResearchStation == true or isRecycler == true or isProductionStation == true or isCorpseFacility == true,
         isGreenhouse = isGreenhouse == true,
         isResearchStation = isResearchStation == true,
         isRecycler = isRecycler == true,
         isProductionStation = isProductionStation == true,
+        isCorpseFacility = isCorpseFacility == true,
         canSwap = canSwap == true
     }
 end

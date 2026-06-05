@@ -86,9 +86,9 @@ function Config.GetWorkerJobCapability(worker, jobType)
             capability.reason = "Corpse Burial requires V2."
             return capability
         end
-        if not (DC_ZoneRealBase and DC_ZoneRealBase.ResolveGraveyardTarget and DC_ZoneRealBase.ResolveGraveyardTarget(worker)) then
+        if not (DC_Colony and DC_Colony.CorpseFacilities and DC_Colony.CorpseFacilities.CanRouteOrdinaryCorpse and DC_Colony.CorpseFacilities.CanRouteOrdinaryCorpse(worker and worker.ownerUsername)) then
             capability.capable = false
-            capability.reason = "Set a graveyard zone first."
+            capability.reason = "Build a Mass Grave or Incinerator first."
             return capability
         end
         capability.capable = true

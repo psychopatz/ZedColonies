@@ -310,12 +310,18 @@ function DC_MainWindow:updateWorkerDetail(worker)
         text = text .. " <RGB:0.72,0.72,0.72> Notes: <RGB:1,1,1> " .. T("DCCommon_UI_MainWindow_GathererNotes", "Wood and stone still work without tools, but much slower. Water uses all assigned fluid containers and needs built water storage with free capacity.") .. " <LINE> "
     end
     if normalizedJobType == (config.JobTypes and config.JobTypes.CorpseRemoval) then
-        local graveyardTarget = DC_ZoneRealBase and DC_ZoneRealBase.ResolveGraveyardTarget and DC_ZoneRealBase.ResolveGraveyardTarget(worker) or nil
-        text = text .. " <RGB:0.72,0.72,0.72> " .. T("DCCommon_UI_MainWindow_Graveyard", "Graveyard") .. ": <RGB:1,1,1> "
-            .. tostring(graveyardTarget and formatCoords(graveyardTarget.x, graveyardTarget.y, graveyardTarget.z) or T("DCCommon_UI_MainWindow_NotSet", "Not set"))
+        local corpseFacilities = DC_BuildingsWindow and DC_BuildingsWindow.cachedSnapshot and DC_BuildingsWindow.cachedSnapshot.corpseFacilities or nil
+        local settings = corpseFacilities and corpseFacilities.settings or nil
+        local summary = corpseFacilities and corpseFacilities.summary or nil
+        text = text .. " <RGB:0.72,0.72,0.72> Corpse Route: <RGB:1,1,1> "
+            .. tostring(settings and settings.generalRoutePreference or T("DCCommon_UI_MainWindow_NotSet", "Not set"))
+            .. " <RGB:0.72,0.72,0.72> | Overflow: <RGB:1,1,1> "
+            .. tostring(settings and settings.teammateOverflowPolicy or T("DCCommon_UI_MainWindow_NotSet", "Not set"))
             .. " <LINE> "
         text = text .. " <RGB:0.72,0.72,0.72> " .. T("DCCommon_UI_MainWindow_CorpsesBuried", "Corpses Buried") .. ": <RGB:1,1,1> "
             .. tostring(math.max(0, math.floor(tonumber(worker.corpseRemovalCount) or 0)))
+            .. " <RGB:0.72,0.72,0.72> | Blocked: <RGB:1,1,1> "
+            .. tostring(math.max(0, math.floor(tonumber(summary and summary.blockedCleanups) or 0)))
             .. " <LINE> "
     end
     text = text .. " <RGB:0.72,0.72,0.72> " .. T("DCCommon_UI_MainWindow_ToolState", "Tool State") .. ": <RGB:1,1,1> " .. tostring(worker.toolState or T("DCCommon_UI_MainWindow_Missing", "Missing")) .. " <LINE> "

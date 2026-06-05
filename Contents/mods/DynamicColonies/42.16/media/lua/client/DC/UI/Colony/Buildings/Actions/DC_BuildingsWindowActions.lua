@@ -2,6 +2,7 @@ require "DC/UI/Colony/Buildings/Modals/DC_BuildingActionModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingDestroyModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BuildingPickerModal"
 require "DC/UI/Colony/Buildings/Modals/DC_BlueprintCraftModal"
+require "DC/UI/Colony/Buildings/Modals/DC_CorpseFacilityModal"
 require "DC/UI/Colony/Buildings/Modals/DC_RecyclerModal"
 require "DC/UI/Colony/Buildings/Modals/DC_ResearchStationModal"
 require "DC/UI/Colony/Buildings/Modals/BuildingProjectModal/BuildingProjectModal"
@@ -29,6 +30,7 @@ function Actions.Dispatch(actionName, window, plot)
         manageResearch = Actions.OnManageResearchPlot,
         manageBlueprintCraft = Actions.OnManageBlueprintCraftPlot,
         manageRecycler = Actions.OnManageRecyclerPlot,
+        manageCorpseFacility = Actions.OnManageCorpseFacilityPlot,
         destroy = Actions.OnDestroyPlot,
         debugComplete = Actions.OnDebugCompleteProject,
         plotSelected = Actions.OnPlotSelected
@@ -274,6 +276,22 @@ function Actions.OnManageRecyclerPlot(window, plot)
         title = tostring(building.displayName or "Recycler") .. " Recycling",
         buildingID = building.buildingID,
         ownerWindow = window and window:getOwnerWindow() or nil,
+    })
+end
+
+function Actions.OnManageCorpseFacilityPlot(window, plot)
+    local building = plot and plot.building or nil
+    local buildingType = tostring(building and (building.corpseFacilityType or building.buildingType) or "")
+    if buildingType ~= "Cemetery" and buildingType ~= "MassGrave" and buildingType ~= "Incinerator" then
+        return
+    end
+
+    DC_CorpseFacilityModal.Open({
+        title = tostring(building.displayName or buildingType) .. " Management",
+        buildingID = building.buildingID,
+        ownerWindow = window and window:getOwnerWindow() or nil,
+        window = window,
+        plot = plot,
     })
 end
 

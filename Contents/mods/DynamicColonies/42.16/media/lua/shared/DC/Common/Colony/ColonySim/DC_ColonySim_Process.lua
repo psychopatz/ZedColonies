@@ -237,6 +237,9 @@ function Sim.ProcessAllWorkers(currentHour)
     if Research and Research.ProcessAllOwners then
         Research.ProcessAllOwners(currentHour)
     end
+    if DC_Colony and DC_Colony.CorpseFacilities and DC_Colony.CorpseFacilities.ProcessAllOwners then
+        DC_Colony.CorpseFacilities.ProcessAllOwners(currentHour)
+    end
 
     if Medical and Medical.SetPlansCache and Medical.BuildAllOwnerPlans then
         Medical.SetPlansCache(Medical.BuildAllOwnerPlans())
