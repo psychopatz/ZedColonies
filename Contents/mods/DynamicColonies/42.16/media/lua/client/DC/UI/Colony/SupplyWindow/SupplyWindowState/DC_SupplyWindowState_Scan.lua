@@ -3,6 +3,13 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 function DC_SupplyWindow:startInventoryScan()
     local startedAt = Internal.getPerfNowMs and Internal.getPerfNowMs() or nil
     local player = Internal.getLocalPlayer()
@@ -30,7 +37,7 @@ function DC_SupplyWindow:startInventoryScan()
 
     if not rootContainer then
         self:refreshDetailSelection()
-        self:updateStatus("No player inventory found.")
+        self:updateStatus(T("DCCommon_UI_Supply_NoPlayerInventory", "No player inventory found."))
         return
     end
 
@@ -39,7 +46,7 @@ function DC_SupplyWindow:startInventoryScan()
         index = 0
     }
     self.scanning = true
-    self:updateStatus("Scanning inventory for labour supplies...")
+    self:updateStatus(T("DCCommon_UI_Supply_ScanningLabourSupplies", "Scanning inventory for labour supplies..."))
     if Internal.debugLog then
         Internal.debugLog("PlayerScan", "started inventory scan", {
             token = self.debugOpenToken,
@@ -63,11 +70,10 @@ function DC_SupplyWindow:finishInventoryScan()
     end
     self:beginPlayerEntryFinalize(
         self.scanTargetTabKey or self.activeTab or Internal.Tabs.Provisions,
-        "Loaded "
-            .. tostring(builtCount)
-            .. " visible entries from "
-            .. tostring(self.scanProcessed or 0)
-            .. " inventory items."
+        T("DCCommon_UI_Supply_LoadedVisibleEntries", "Loaded {visible} visible entries from {scanned} inventory items.", {
+            visible = builtCount,
+            scanned = self.scanProcessed or 0,
+        })
     )
 end
 
@@ -134,11 +140,10 @@ function DC_SupplyWindow:processInventoryScan(batchSize)
         self:finishInventoryScan()
     elseif self.scanProcessed % 120 == 0 then
         self:updateStatus(
-            "Scanning inventory... "
-            .. tostring(self.scanProcessed)
-            .. " items checked, "
-            .. tostring(#(self.playerEntries or {}))
-            .. " visible entries."
+            T("DCCommon_UI_Supply_ScanningInventoryProgress", "Scanning inventory... {scanned} items checked, {visible} visible entries.", {
+                scanned = self.scanProcessed,
+                visible = #(self.playerEntries or {}),
+            })
         )
     end
 end

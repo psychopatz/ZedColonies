@@ -5,6 +5,13 @@ local Internal = DC_MainWindow.Internal
 Internal.ReservePanel = Internal.ReservePanel or {}
 local ReservePanel = Internal.ReservePanel
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 ReservePanel.ColonyProfileCard = ReservePanel.ColonyProfileCard or ISPanel:derive("ColonyProfileCard")
 local ColonyProfileCard = ReservePanel.ColonyProfileCard
 
@@ -26,12 +33,12 @@ end
 function ColonyProfileCard:initialise()
     ISPanel.initialise(self)
 
-    self.btnInventory = ISButton:new(0, 0, 96, 24, "Inventory", self, self.onOpenInventory)
+    self.btnInventory = ISButton:new(0, 0, 96, 24, T("DCCommon_UI_MainWindow_Inventory", "Inventory"), self, self.onOpenInventory)
     self.btnInventory:initialise()
     self.btnInventory:setEnable(false)
     self:addChild(self.btnInventory)
 
-    self.btnCharacter = ISButton:new(0, 0, 96, 24, "Character", self, self.onOpenCharacter)
+    self.btnCharacter = ISButton:new(0, 0, 96, 24, T("DCCommon_UI_MainWindow_Character", "Character"), self, self.onOpenCharacter)
     self.btnCharacter:initialise()
     self.btnCharacter:setEnable(false)
     self:addChild(self.btnCharacter)

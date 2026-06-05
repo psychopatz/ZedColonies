@@ -1,0 +1,7 @@
+Dynamic Colonies Translation Rules
+
+1. Put reusable visible text in common Translate files, not inside version-specific UI logic.
+2. Use semantic keys such as `DCCommon_UI_MainWindow_Title`, not file-path-based names.
+3. Prefer `DC.Text.Get(key, params, fallback)` instead of inline English.
+4. Use placeholders like `{name}` and `{count}` instead of string concatenation for full phrases.
+5. Keep gameplay logic separate from wording so future versions can reuse the same translation tables.

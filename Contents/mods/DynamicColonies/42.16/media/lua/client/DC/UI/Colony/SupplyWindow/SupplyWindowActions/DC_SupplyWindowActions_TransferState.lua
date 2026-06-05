@@ -3,6 +3,13 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 local function canDropHaulEntries(window)
     if not window then
         return false
@@ -32,7 +39,7 @@ end
 function DC_SupplyWindow:canTransferWithWorker(showStatus)
     if self:hasPendingSupplyTransfers() then
         if showStatus ~= false then
-            self:updateStatus("A storage transfer is still being confirmed.")
+            self:updateStatus(T("DCCommon_UI_Supply_TransferPending", "A storage transfer is still being confirmed."))
         end
         return false
     end
@@ -44,7 +51,7 @@ function DC_SupplyWindow:canTransferWithWorker(showStatus)
 
         if not self:isPlayerInventoryReady() then
             if showStatus ~= false then
-                self:updateStatus("Player inventory is still scanning. Please wait a moment.")
+                self:updateStatus(T("DCCommon_UI_Supply_PlayerInventoryScanningWait", "Player inventory is still scanning. Please wait a moment."))
             end
             return false
         end
@@ -97,13 +104,15 @@ function DC_SupplyWindow:updateTransferControls()
     if self.btnAutoEquipNow then
         self.btnAutoEquipNow:setVisible(autoEquipControlsVisible)
         self.btnAutoEquipNow:setEnable(autoEquipControlsVisible and transferAllowed)
-        self.btnAutoEquipNow:setTitle("Auto Equip")
+        self.btnAutoEquipNow:setTitle(T("DCCommon_UI_Supply_AutoEquip", "Auto Equip"))
     end
     if self.btnAutoEquipToggle then
         local autoEquipEnabled = self.getWarehouseAutoEquipEnabled and self:getWarehouseAutoEquipEnabled()
         self.btnAutoEquipToggle:setVisible(autoEquipControlsVisible)
         self.btnAutoEquipToggle:setEnable(autoEquipControlsVisible)
-        self.btnAutoEquipToggle:setTitle(autoEquipEnabled and "Auto On" or "Auto Off")
+        self.btnAutoEquipToggle:setTitle(autoEquipEnabled
+            and T("DCCommon_UI_Supply_AutoOn", "Auto On")
+            or T("DCCommon_UI_Supply_AutoOff", "Auto Off"))
     end
 
     if activeTab == Internal.Tabs.Equipment then

@@ -4,6 +4,13 @@ DC_MainWindow.Internal = DC_MainWindow.Internal or {}
 local Internal = DC_MainWindow.Internal
 local MainWindowLayout = Internal.MainWindowLayout or {}
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 local function canUseDebug()
     if DC_System and DC_System.CanUseDebug then
         return DC_System.CanUseDebug()
@@ -110,7 +117,7 @@ end
 function DC_MainWindowHeaderPanel:prerender()
     ISPanel.prerender(self)
     local th = 0 -- Relative to panel
-    self:drawTextCentre("LABOUR MANAGEMENT", self.width / 2, 6, 1, 1, 1, 1, UIFont.Large)
+    self:drawTextCentre(T("DCCommon_UI_MainWindow_Header", "LABOUR MANAGEMENT"), self.width / 2, 6, 1, 1, 1, 1, UIFont.Large)
 
     if self.btnOptions then
         self.btnOptions:setX(self.width - self.btnOptions:getWidth() - 10)
@@ -158,44 +165,44 @@ function DC_MainWindow:createChildren()
     local activityY = detailY + detailHeight + 8
     local activityHeight = math.max(MainWindowLayout.ACTIVITY_PANEL_MIN_HEIGHT, self.height - activityY - footerH - pad)
 
-    self.btnRefresh = ISButton:new(10, buttonY, 90, 28, "Refresh", self, self.onRefresh)
+    self.btnRefresh = ISButton:new(10, buttonY, 90, 28, T("DCCommon_UI_MainWindow_Refresh", "Refresh"), self, self.onRefresh)
     self.btnRefresh:initialise()
     self:addChild(self.btnRefresh)
 
-    self.btnToggleJob = ISButton:new(110, buttonY, 120, 28, "Start Duty", self, self.onToggleJob)
+    self.btnToggleJob = ISButton:new(110, buttonY, 120, 28, T("DCCommon_UI_MainWindow_StartDuty", "Start Duty"), self, self.onToggleJob)
     self.btnToggleJob:initialise()
     MainWindowLayout.applyToggleButtonStyle(self.btnToggleJob, false)
     self:addChild(self.btnToggleJob)
 
-    self.btnWarehouse = ISButton:new(240, buttonY, 110, 28, "Warehouse", self, self.onOpenWarehouse)
+    self.btnWarehouse = ISButton:new(240, buttonY, 110, 28, T("DCCommon_UI_MainWindow_Warehouse", "Warehouse"), self, self.onOpenWarehouse)
     self.btnWarehouse:initialise()
     self.btnWarehouse:setEnable(false)
     self:addChild(self.btnWarehouse)
 
-    self.btnResources = ISButton:new(360, buttonY, 110, 28, "Resources", self, self.onOpenResources)
+    self.btnResources = ISButton:new(360, buttonY, 110, 28, T("DCCommon_UI_MainWindow_Resources", "Resources"), self, self.onOpenResources)
     self.btnResources:initialise()
     self:addChild(self.btnResources)
 
-    self.btnBuildings = ISButton:new(480, buttonY, 110, 28, "Colony Map", self, self.onOpenBuildings)
+    self.btnBuildings = ISButton:new(480, buttonY, 110, 28, T("DCCommon_UI_MainWindow_ColonyMap", "Colony Map"), self, self.onOpenBuildings)
     self.btnBuildings:initialise()
     self:addChild(self.btnBuildings)
 
-    self.btnResetNPCs = ISButton:new(600, buttonY, 100, 28, "Reset NPCs", self, self.onResetNPCs)
+    self.btnResetNPCs = ISButton:new(600, buttonY, 100, 28, T("DCCommon_UI_MainWindow_ResetNPCs", "Reset NPCs"), self, self.onResetNPCs)
     self.btnResetNPCs:initialise()
     MainWindowLayout.applyToggleButtonStyle(self.btnResetNPCs, true)
     self:addChild(self.btnResetNPCs)
 
     if canUseDebug() then
-        self.btnDebugArchive = ISButton:new(710, buttonY, 70, 28, "Debug", self, self.onOpenDebugArchive)
+        self.btnDebugArchive = ISButton:new(710, buttonY, 70, 28, T("DCCommon_UI_MainWindow_Debug", "Debug"), self, self.onOpenDebugArchive)
         self.btnDebugArchive:initialise()
         self:addChild(self.btnDebugArchive)
     end
 
-    self.btnFaction = ISButton:new(790, buttonY, 150, 28, "Faction", self, self.onOpenFaction)
+    self.btnFaction = ISButton:new(790, buttonY, 150, 28, T("DCCommon_UI_MainWindow_Faction", "Faction"), self, self.onOpenFaction)
     self.btnFaction:initialise()
     self:addChild(self.btnFaction)
 
-    self.btnCompanionCommand = ISButton:new(950, buttonY, 110, 28, "Command", self, self.onCompanionCommand)
+    self.btnCompanionCommand = ISButton:new(950, buttonY, 110, 28, T("DCCommon_UI_MainWindow_Command", "Command"), self, self.onCompanionCommand)
     self.btnCompanionCommand:initialise()
     self.btnCompanionCommand:setEnable(false)
     self:addChild(self.btnCompanionCommand)
@@ -218,12 +225,12 @@ function DC_MainWindow:createChildren()
     self.reservePanel:setAnchorRight(true)
     self:addChild(self.reservePanel)
 
-    self.btnCycleJob = ISButton:new(0, 0, 96, 24, "Change Job", self, self.onCycleJob)
+    self.btnCycleJob = ISButton:new(0, 0, 96, 24, T("DCCommon_UI_MainWindow_ChangeJob", "Change Job"), self, self.onCycleJob)
     self.btnCycleJob:initialise()
     self.btnCycleJob:setEnable(false)
     self.reservePanel:addChild(self.btnCycleJob)
 
-    self.btnCompanionLootConfig = ISButton:new(0, 0, 96, 24, "Loot Setup", self, self.onOpenCompanionLootConfig)
+    self.btnCompanionLootConfig = ISButton:new(0, 0, 96, 24, T("DCCommon_UI_MainWindow_LootSetup", "Loot Setup"), self, self.onOpenCompanionLootConfig)
     self.btnCompanionLootConfig:initialise()
     self.btnCompanionLootConfig:setEnable(false)
     self.reservePanel:addChild(self.btnCompanionLootConfig)
@@ -235,7 +242,7 @@ function DC_MainWindow:createChildren()
     self.detailPanel:setAnchorRight(true)
     self.detailPanel.prerender = function(panel)
         ISPanel.prerender(panel)
-        panel:drawText("Details", 8, 6, 1, 1, 1, 1, UIFont.Medium)
+        panel:drawText(T("DCCommon_UI_MainWindow_Details", "Details"), 8, 6, 1, 1, 1, 1, UIFont.Medium)
     end
     self:addChild(self.detailPanel)
 
@@ -265,7 +272,7 @@ function DC_MainWindow:createChildren()
     self.activityLogPanel:setAnchorBottom(true)
     self.activityLogPanel.prerender = function(panel)
         ISPanel.prerender(panel)
-        panel:drawText("Activity Log", 8, 6, 1, 1, 1, 1, UIFont.Medium)
+        panel:drawText(T("DCCommon_UI_MainWindow_ActivityLog", "Activity Log"), 8, 6, 1, 1, 1, 1, UIFont.Medium)
     end
     self:addChild(self.activityLogPanel)
 
@@ -296,7 +303,7 @@ function DC_MainWindow:createChildren()
     self:addChild(self.statusText)
 
     MainWindowLayout.applyWindowLayout(self)
-    self:updateStatus("Colony Management ready. Jobs are tool-gated, workplaces are deferred, and Help explains the scavenging system.")
+    self:updateStatus(T("DCCommon_UI_MainWindow_Ready", "Colony Management ready. Jobs are tool-gated, workplaces are deferred, and Help explains the scavenging system."))
     self:populateWorkerList(DC_MainWindow.cachedWorkers or {})
     if self.updateFactionButton then
         self:updateFactionButton()

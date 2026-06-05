@@ -2,6 +2,13 @@ DC_FactionInfoWindow = DC_FactionInfoWindow or {}
 
 local Window = DC_FactionInfoWindow
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 local function syncInstance()
     Window.instance = DT_FactionInfoWindow and DT_FactionInfoWindow.instance or nil
     return Window.instance
@@ -22,7 +29,7 @@ end
 
 function Window.Open()
     if not loadDynamicTradingFactionWindow() then
-        return false, "Faction Intelligence is unavailable because DynamicTrading is not active."
+        return false, T("DCCommon_UI_FactionInfo_UnavailableNoTrading", "Faction Intelligence is unavailable because DynamicTrading is not active.")
     end
 
     DT_FactionInfoWindow.Open()
@@ -32,7 +39,7 @@ end
 
 function Window.ToggleWindow()
     if not loadDynamicTradingFactionWindow() then
-        return false, "Faction Intelligence is unavailable because DynamicTrading is not active."
+        return false, T("DCCommon_UI_FactionInfo_UnavailableNoTrading", "Faction Intelligence is unavailable because DynamicTrading is not active.")
     end
 
     if DT_FactionInfoWindow.ToggleWindow then

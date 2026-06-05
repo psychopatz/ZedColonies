@@ -18,6 +18,25 @@ local function clampQuantity(value, maxValue)
     return quantity
 end
 
+local function formatFallback(template, params)
+    local text = tostring(template or "")
+    if type(params) ~= "table" then
+        return text
+    end
+
+    return (text:gsub("{([%w_]+)}", function(name)
+        local value = params[name]
+        return value == nil and ("{" .. name .. "}") or tostring(value)
+    end))
+end
+
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return formatFallback(fallback or key, params)
+end
+
 function DC_ColonyQuantityModal:initialise()
     ISCollapsableWindow.initialise(self)
     self:setResizable(false)
@@ -35,7 +54,9 @@ function DC_ColonyQuantityModal:syncQuantityUI(quantity, syncSlider)
     end
 
     if self.selectedLabel then
-        self.selectedLabel:setName("Selected: " .. tostring(clamped))
+        self.selectedLabel:setName(T("DCCommon_UI_Quantity_Selected", "Selected: {value}", {
+            value = clamped
+        }))
     end
 
     if syncSlider and self.quantitySlider then
@@ -55,7 +76,7 @@ function DC_ColonyQuantityModal:createChildren()
     local contentY = th + pad
     local contentWidth = self.width - (pad * 2)
 
-    self.promptLabel = ISLabel:new(pad, contentY, 20, tostring(self.promptText or "Enter a quantity."), 1, 1, 1, 1, UIFont.Small, true)
+    self.promptLabel = ISLabel:new(pad, contentY, 20, tostring(self.promptText or T("DCCommon_UI_Quantity_PromptSentence", "Enter a quantity.")), 1, 1, 1, 1, UIFont.Small, true)
     self.promptLabel:initialise()
     self.promptLabel:instantiate()
     self:addChild(self.promptLabel)
@@ -78,7 +99,7 @@ function DC_ColonyQuantityModal:createChildren()
         pad,
         contentY + 84,
         20,
-        "Selected: " .. tostring(self.defaultValue or 1),
+        T("DCCommon_UI_Quantity_Selected", "Selected: {value}", { value = self.defaultValue or 1 }),
         1,
         1,
         1,
@@ -94,7 +115,7 @@ function DC_ColonyQuantityModal:createChildren()
         pad,
         contentY + 104,
         20,
-        "Available: " .. tostring(self.maxValue or 1),
+        T("DCCommon_UI_Quantity_Available", "Available: {value}", { value = self.maxValue or 1 }),
         0.75,
         0.75,
         0.75,
@@ -106,12 +127,12 @@ function DC_ColonyQuantityModal:createChildren()
     self.maxLabel:instantiate()
     self:addChild(self.maxLabel)
 
-    self.btnConfirm = ISButton:new(pad, self.height - 38, 100, 24, "Confirm", self, self.onConfirm)
+    self.btnConfirm = ISButton:new(pad, self.height - 38, 100, 24, T("DCCommon_UI_Quantity_Confirm", "Confirm"), self, self.onConfirm)
     self.btnConfirm:initialise()
     self.btnConfirm:instantiate()
     self:addChild(self.btnConfirm)
 
-    self.btnCancel = ISButton:new(self.width - 110, self.height - 38, 100, 24, "Cancel", self, self.onCancel)
+    self.btnCancel = ISButton:new(self.width - 110, self.height - 38, 100, 24, T("DCCommon_UI_Quantity_Cancel", "Cancel"), self, self.onCancel)
     self.btnCancel:initialise()
     self.btnCancel:instantiate()
     self:addChild(self.btnCancel)
@@ -158,8 +179,8 @@ function DC_ColonyQuantityModal.Open(args)
         DC_ColonyQuantityModal.instance = modal
     end
 
-    modal.title = tostring(args.title or "Choose Quantity")
-    modal.promptText = tostring(args.promptText or "Enter quantity.")
+    modal.title = tostring(args.title or T("DCCommon_UI_Quantity_Title", "Choose Quantity"))
+    modal.promptText = tostring(args.promptText or T("DCCommon_UI_Quantity_Prompt", "Enter quantity."))
     modal.maxValue = math.max(1, math.floor(tonumber(args.maxValue) or 1))
     modal.defaultValue = clampQuantity(args.defaultValue or modal.maxValue, modal.maxValue)
     modal.onConfirmCallback = args.onConfirm
@@ -172,7 +193,9 @@ function DC_ColonyQuantityModal.Open(args)
         modal.quantitySlider.disabled = modal.maxValue <= 1
     end
     if modal.maxLabel then
-        modal.maxLabel:setName("Available: " .. tostring(modal.maxValue))
+        modal.maxLabel:setName(T("DCCommon_UI_Quantity_Available", "Available: {value}", {
+            value = modal.maxValue
+        }))
     end
     modal:syncQuantityUI(modal.defaultValue, true)
 
@@ -190,9 +213,9 @@ function DC_ColonyQuantityModal:new(x, y, width, height)
     local o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Choose Quantity"
+    o.title = T("DCCommon_UI_Quantity_Title", "Choose Quantity")
     o.resizable = false
-    o.promptText = "Enter quantity."
+    o.promptText = T("DCCommon_UI_Quantity_Prompt", "Enter quantity.")
     o.defaultValue = 1
     o.maxValue = 1
     o.onConfirmCallback = nil

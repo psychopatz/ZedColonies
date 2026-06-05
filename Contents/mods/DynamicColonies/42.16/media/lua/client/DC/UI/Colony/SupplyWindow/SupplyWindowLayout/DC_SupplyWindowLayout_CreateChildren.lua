@@ -5,6 +5,25 @@ require "ISUI/ISContextMenu"
 
 local Internal = DC_SupplyWindow.Internal
 
+local function formatFallback(template, params)
+    local text = tostring(template or "")
+    if type(params) ~= "table" then
+        return text
+    end
+
+    return (text:gsub("{([%w_]+)}", function(name)
+        local value = params[name]
+        return value == nil and ("{" .. name .. "}") or tostring(value)
+    end))
+end
+
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return formatFallback(fallback or key, params)
+end
+
 local DetailSupportIconPanel = ISPanel:derive("DC_SupplyWindowDetailSupportIconPanel")
 
 local function canUseDebug()
@@ -86,7 +105,9 @@ function DetailSupportIconPanel:onMouseDown(x, y)
                     requirementKey = placeholder and placeholder.requirementKey or nil
                 })
                 if window.updateStatus then
-                    window:updateStatus("Debug requesting " .. getEntryDisplayName(entry) .. "...")
+                    window:updateStatus(T("DCCommon_UI_Supply_DebugRequesting", "Debug requesting {name}...", {
+                        name = getEntryDisplayName(entry)
+                    }))
                 end
             end
         end)
@@ -167,20 +188,19 @@ function DC_SupplyWindow:createChildren()
     self.workerSearch:initialise()
     self:addChild(self.workerSearch)
 
-    self.btnTabProvisions = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, "Provisions", self, self.onSelectProvisionsTab)
+    self.btnTabProvisions = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, T("DCCommon_UI_Supply_Provisions", "Provisions"), self, self.onSelectProvisionsTab)
     self.btnTabProvisions:initialise()
     self:addChild(self.btnTabProvisions)
 
-    self.btnTabOutput = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, "Merchandise", self, self.onSelectOutputTab)
-    self.btnTabOutput = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, "Inventory", self, self.onSelectOutputTab)
+    self.btnTabOutput = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, T("DCCommon_UI_Supply_Inventory", "Inventory"), self, self.onSelectOutputTab)
     self.btnTabOutput:initialise()
     self:addChild(self.btnTabOutput)
 
-    self.btnTabEquipment = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, "Equipment", self, self.onSelectEquipmentTab)
+    self.btnTabEquipment = ISButton:new(layout.rightX, layout.tabsY, 80, layout.tabH, T("DCCommon_UI_Supply_Equipment", "Equipment"), self, self.onSelectEquipmentTab)
     self.btnTabEquipment:initialise()
     self:addChild(self.btnTabEquipment)
 
-    self.btnRefresh = ISButton:new(layout.controlX, layout.searchY, layout.controlWidth, layout.searchH, "Sync", self, self.onRefresh)
+    self.btnRefresh = ISButton:new(layout.controlX, layout.searchY, layout.controlWidth, layout.searchH, T("DCCommon_UI_Supply_Sync", "Sync"), self, self.onRefresh)
     self.btnRefresh:initialise()
     self:addChild(self.btnRefresh)
 
@@ -192,15 +212,15 @@ function DC_SupplyWindow:createChildren()
     self.btnDepositSelected:initialise()
     self:addChild(self.btnDepositSelected)
 
-    self.btnDropSelected = ISButton:new(layout.controlX, layout.centerButtonsY + 80, layout.controlWidth, 32, "Drop", self, self.onDropSelected)
+    self.btnDropSelected = ISButton:new(layout.controlX, layout.centerButtonsY + 80, layout.controlWidth, 32, T("DCCommon_UI_Supply_Drop", "Drop"), self, self.onDropSelected)
     self.btnDropSelected:initialise()
     self:addChild(self.btnDropSelected)
 
-    self.btnAutoEquipNow = ISButton:new(layout.controlX, layout.centerButtonsY + 120, layout.controlWidth, 32, "Auto Equip", self, self.onAutoEquipNow)
+    self.btnAutoEquipNow = ISButton:new(layout.controlX, layout.centerButtonsY + 120, layout.controlWidth, 32, T("DCCommon_UI_Supply_AutoEquip", "Auto Equip"), self, self.onAutoEquipNow)
     self.btnAutoEquipNow:initialise()
     self:addChild(self.btnAutoEquipNow)
 
-    self.btnAutoEquipToggle = ISButton:new(layout.controlX, layout.centerButtonsY + 160, layout.controlWidth, 32, "Auto Off", self, self.onToggleAutoEquip)
+    self.btnAutoEquipToggle = ISButton:new(layout.controlX, layout.centerButtonsY + 160, layout.controlWidth, 32, T("DCCommon_UI_Supply_AutoOff", "Auto Off"), self, self.onToggleAutoEquip)
     self.btnAutoEquipToggle:initialise()
     self:addChild(self.btnAutoEquipToggle)
 

@@ -10,6 +10,25 @@ local function trimName(value)
     return tostring(value or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+local function formatFallback(template, params)
+    local text = tostring(template or "")
+    if type(params) ~= "table" then
+        return text
+    end
+
+    return (text:gsub("{([%w_]+)}", function(name)
+        local value = params[name]
+        return value == nil and ("{" .. name .. "}") or tostring(value)
+    end))
+end
+
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return formatFallback(fallback or key, params)
+end
+
 function DC_PlayerFactionNameModal:initialise()
     ISCollapsableWindow.initialise(self)
     self:setResizable(false)
@@ -27,7 +46,7 @@ function DC_PlayerFactionNameModal:createChildren()
         pad,
         contentY,
         20,
-        tostring(self.promptText or "Choose a faction name."),
+        tostring(self.promptText or T("DCCommon_UI_Faction_NamePromptChoose", "Choose a faction name.")),
         1,
         1,
         1,
@@ -48,7 +67,7 @@ function DC_PlayerFactionNameModal:createChildren()
         pad,
         contentY + 58,
         20,
-        "Use 1-32 characters.",
+        T("DCCommon_UI_Faction_NameHint", "Use 1-32 characters."),
         0.75,
         0.75,
         0.75,
@@ -76,12 +95,12 @@ function DC_PlayerFactionNameModal:createChildren()
     self.statusLabel:instantiate()
     self:addChild(self.statusLabel)
 
-    self.btnConfirm = ISButton:new(pad, self.height - 38, 100, 24, tostring(self.confirmLabel or "Create"), self, self.onConfirm)
+    self.btnConfirm = ISButton:new(pad, self.height - 38, 100, 24, tostring(self.confirmLabel or T("DCCommon_UI_Faction_Create", "Create")), self, self.onConfirm)
     self.btnConfirm:initialise()
     self.btnConfirm:instantiate()
     self:addChild(self.btnConfirm)
 
-    self.btnCancel = ISButton:new(self.width - 110, self.height - 38, 100, 24, "Cancel", self, self.onCancel)
+    self.btnCancel = ISButton:new(self.width - 110, self.height - 38, 100, 24, T("DCCommon_UI_Faction_Cancel", "Cancel"), self, self.onCancel)
     self.btnCancel:initialise()
     self.btnCancel:instantiate()
     self:addChild(self.btnCancel)
@@ -96,11 +115,11 @@ end
 function DC_PlayerFactionNameModal:onConfirm()
     local name = trimName(self.nameEntry and self.nameEntry:getText() or "")
     if name == "" then
-        self:setStatus("Faction name cannot be empty.")
+        self:setStatus(T("DCCommon_UI_Faction_NameEmpty", "Faction name cannot be empty."))
         return
     end
     if #name > 32 then
-        self:setStatus("Faction name must be 32 characters or less.")
+        self:setStatus(T("DCCommon_UI_Faction_NameTooLong", "Faction name must be 32 characters or less."))
         return
     end
 
@@ -133,10 +152,10 @@ function DC_PlayerFactionNameModal.Open(args)
     local x = (getCore():getScreenWidth() - width) / 2
     local y = (getCore():getScreenHeight() - height) / 2
     local modal = DC_PlayerFactionNameModal:new(x, y, width, height)
-    modal.title = tostring(args.title or "Faction Name")
-    modal.promptText = tostring(args.promptText or "Enter a faction name.")
+    modal.title = tostring(args.title or T("DCCommon_UI_Faction_NameTitle", "Faction Name"))
+    modal.promptText = tostring(args.promptText or T("DCCommon_UI_Faction_NamePromptEnter", "Enter a faction name."))
     modal.defaultValue = tostring(args.defaultValue or "")
-    modal.confirmLabel = tostring(args.confirmLabel or "Create")
+    modal.confirmLabel = tostring(args.confirmLabel or T("DCCommon_UI_Faction_Create", "Create"))
     modal.onConfirmCallback = args.onConfirm
     modal:initialise()
     modal:instantiate()
@@ -154,11 +173,11 @@ function DC_PlayerFactionNameModal:new(x, y, width, height)
     local o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Faction Name"
+    o.title = T("DCCommon_UI_Faction_NameTitle", "Faction Name")
     o.resizable = false
-    o.promptText = "Enter a faction name."
+    o.promptText = T("DCCommon_UI_Faction_NamePromptEnter", "Enter a faction name.")
     o.defaultValue = ""
-    o.confirmLabel = "Create"
+    o.confirmLabel = T("DCCommon_UI_Faction_Create", "Create")
     o.onConfirmCallback = nil
     return o
 end

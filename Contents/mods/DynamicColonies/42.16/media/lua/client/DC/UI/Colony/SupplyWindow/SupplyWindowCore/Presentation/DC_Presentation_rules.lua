@@ -3,6 +3,13 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 local function isRelevantEquipmentEntry(entry, window)
     if entry and entry.kind == "player" and Internal.ensurePlayerEntryEquipmentData then
         Internal.ensurePlayerEntryEquipmentData(entry)
@@ -78,16 +85,18 @@ end
 
 function Internal.getTransferBlockedReason(worker)
     if not worker then
-        return "No worker selected."
+        return T("DCCommon_UI_Supply_NoWorkerSelected", "No worker selected.")
     end
 
     local config = Internal.Config or {}
     local normalizedJob = config.NormalizeJobType and config.NormalizeJobType(worker.jobType) or tostring(worker.jobType or "")
     if normalizedJob == ((config.JobTypes or {}).Scavenge) and not Internal.canTransferWithWorker(worker) then
-        return tostring(worker.name or "This worker") .. " is away from home. Transfers are disabled until they return."
+        return T("DCCommon_UI_Supply_TransferBlockedAway", "{name} is away from home. Transfers are disabled until they return.", {
+            name = tostring(worker.name or "This worker")
+        })
     end
 
-    return "Transfers are currently unavailable."
+    return T("DCCommon_UI_Supply_TransferBlockedGeneric", "Transfers are currently unavailable.")
 end
 
 function Internal.canStoreInWarehouseOutput(entry)

@@ -3,6 +3,25 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function formatFallback(template, params)
+    local text = tostring(template or "")
+    if type(params) ~= "table" then
+        return text
+    end
+
+    return (text:gsub("{([%w_]+)}", function(name)
+        local value = params[name]
+        return value == nil and ("{" .. name .. "}") or tostring(value)
+    end))
+end
+
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return formatFallback(fallback or key, params)
+end
+
 local function closeVisibleWindow(window)
     if window and window.getIsVisible and window:getIsVisible() and window.close then
         window:close()
@@ -202,8 +221,9 @@ function DC_SupplyWindow.Open(worker, viewMode, options)
         and DC_SupplyWindow.Internal.getWarehouseDisplayName then
         subjectName = DC_SupplyWindow.Internal.getWarehouseDisplayName(window)
     end
-    window.title = (window.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) and "Warehouse - " or "NPC Inventory - ")
-        .. subjectName
+    window.title = window.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse)
+        and T("DCCommon_UI_Supply_WindowTitleWarehouse", "Warehouse - {name}", { name = subjectName })
+        or T("DCCommon_UI_Supply_WindowTitleInventory", "NPC Inventory - {name}", { name = subjectName })
     window.workerData = nil
     window.detailRefreshTicks = 0
     window.autoRefreshPending = nil
@@ -238,9 +258,16 @@ function DC_SupplyWindow.Open(worker, viewMode, options)
     window:startInventoryScan()
     window:updateStatus(
         window.isCompanionOpen == true
-            and ("Loading companion inventory for " .. subjectName .. "...")
-            or ((window.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse) and "Opening warehouse for " or "Opening inventory for ")
-                .. subjectName .. "...")
+            and T("DCCommon_UI_Supply_LoadingCompanionInventory", "Loading companion inventory for {name}...", {
+                name = subjectName
+            })
+            or (window.viewMode == ((DC_SupplyWindow.Internal.ViewModes or {}).Warehouse)
+                and T("DCCommon_UI_Supply_OpeningWarehouseFor", "Opening warehouse for {name}...", {
+                    name = subjectName
+                })
+                or T("DCCommon_UI_Supply_OpeningInventoryFor", "Opening inventory for {name}...", {
+                    name = subjectName
+                }))
     )
 end
 
@@ -253,7 +280,7 @@ function DC_SupplyWindow:new(x, y, width, height)
     local o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Colony Supplies"
+    o.title = T("DCCommon_UI_Supply_Title", "Colony Supplies")
     o.resizable = true
     o.playerEntries = {}
     o.playerEntriesByID = {}

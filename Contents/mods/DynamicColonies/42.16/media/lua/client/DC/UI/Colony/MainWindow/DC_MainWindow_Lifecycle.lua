@@ -1,6 +1,13 @@
 DC_MainWindow = DC_MainWindow or {}
 DC_MainWindow.Internal = DC_MainWindow.Internal or {}
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 function DC_MainWindow.ToggleWindow(device)
     if DC_MainWindow.instance then
         if DC_MainWindow.instance:getIsVisible() then
@@ -14,7 +21,7 @@ function DC_MainWindow.ToggleWindow(device)
             if DC_MainWindow.instance.onRefresh then
                 DC_MainWindow.instance:onRefresh()
             end
-            DC_MainWindow.instance:updateStatus("Colony Management opened.")
+            DC_MainWindow.instance:updateStatus(T("DCCommon_UI_MainWindow_Open", "Colony Management opened."))
         end
         return
     end
@@ -32,7 +39,7 @@ function DC_MainWindow.Open(device)
         if DC_MainWindow.instance.onRefresh then
             DC_MainWindow.instance:onRefresh()
         end
-        DC_MainWindow.instance:updateStatus("Colony Management opened.")
+        DC_MainWindow.instance:updateStatus(T("DCCommon_UI_MainWindow_Open", "Colony Management opened."))
         return
     end
 
@@ -63,7 +70,7 @@ function DC_MainWindow:new(x, y, width, height)
     local o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Colony Management"
+    o.title = T("DCCommon_UI_MainWindow_Title", "Colony Management")
     o.resizable = true
     return o
 end

@@ -3,23 +3,30 @@ DC_SupplyWindow.Internal = DC_SupplyWindow.Internal or {}
 
 local Internal = DC_SupplyWindow.Internal
 
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return fallback or key
+end
+
 function Internal.getOutputTabLabel(worker, window)
     if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-        return "Inventory"
+        return T("DCCommon_UI_Supply_Inventory", "Inventory")
     end
 
-    return "Inventory"
+    return T("DCCommon_UI_Supply_Inventory", "Inventory")
 end
 
 function Internal.getActiveWorkerTabLabel(window)
     local activeTab = window and window.activeTab or Internal.Tabs.Provisions
     if activeTab == Internal.Tabs.Equipment then
-        return "Equipment"
+        return T("DCCommon_UI_Supply_Equipment", "Equipment")
     end
     if activeTab == Internal.Tabs.Output then
         return Internal.getOutputTabLabel(window and window.workerData, window)
     end
-    return "Provisions"
+    return T("DCCommon_UI_Supply_Provisions", "Provisions")
 end
 
 function Internal.formatWeightValue(value)
@@ -28,8 +35,10 @@ end
 
 function Internal.getWorkerHeaderTitle(window)
     if Internal.isWarehouseView and Internal.isWarehouseView(window) then
-        local warehouseName = Internal.getWarehouseDisplayName and Internal.getWarehouseDisplayName(window) or tostring(window and window.workerName or "Warehouse")
-        return warehouseName .. " Warehouse"
+        local warehouseName = Internal.getWarehouseDisplayName and Internal.getWarehouseDisplayName(window) or tostring(window and window.workerName or T("DCCommon_UI_MainWindow_Warehouse", "Warehouse"))
+        return T("DCCommon_UI_Supply_WarehouseSuffix", "{name} Warehouse", {
+            name = warehouseName
+        })
     end
 
     local workerName = tostring(window and window.workerName or "Worker")
@@ -47,41 +56,40 @@ function Internal.getWorkerHeaderTitle(window)
 
         if normalizedJob ~= ((config.JobTypes or {}).Scavenge) then
             local storedWeight = Internal.formatWeightValue(worker and worker.outputWeight)
-            return workerName
-                .. " (Stored "
-                .. storedWeight
-                .. " | Carry "
-                .. carryWeight
-                .. " / "
-                .. carryCapacity
-                .. ") Inventory"
+            return T("DCCommon_UI_Supply_WorkerInventoryStored", "{name} (Stored {stored} | Carry {carry} / {capacity}) Inventory", {
+                name = workerName,
+                stored = storedWeight,
+                carry = carryWeight,
+                capacity = carryCapacity,
+            })
         end
 
-        return workerName
-            .. " (Carry "
-            .. carryWeight
-            .. " / "
-            .. carryCapacity
-            .. " | Haul "
-            .. haulWeight
-            .. " / "
-            .. haulCapacity
-            .. ") Inventory"
+        return T("DCCommon_UI_Supply_WorkerInventoryHaul", "{name} (Carry {carry} / {capacity} | Haul {haul} / {haulCapacity}) Inventory", {
+            name = workerName,
+            carry = carryWeight,
+            capacity = carryCapacity,
+            haul = haulWeight,
+            haulCapacity = haulCapacity,
+        })
     end
 
-    return workerName .. " Inventory (Carry " .. carryWeight .. " / " .. carryCapacity .. ")"
+    return T("DCCommon_UI_Supply_WorkerInventoryCarry", "{name} Inventory (Carry {carry} / {capacity})", {
+        name = workerName,
+        carry = carryWeight,
+        capacity = carryCapacity,
+    })
 end
 
 function Internal.getTabButtonTitle(window, tabID)
-    local baseTitle = "Provisions"
+    local baseTitle = T("DCCommon_UI_Supply_Provisions", "Provisions")
     if tabID == Internal.Tabs.Output then
         baseTitle = Internal.getOutputTabLabel(window and window.workerData, window)
     elseif tabID == Internal.Tabs.Equipment then
-        baseTitle = "Equipment"
+        baseTitle = T("DCCommon_UI_Supply_Equipment", "Equipment")
     end
 
     if tabID == Internal.Tabs.Provisions and Internal.isWarehouseView and Internal.isWarehouseView(window) then
-        baseTitle = "Provision"
+        baseTitle = T("DCCommon_UI_Supply_Provision", "Provision")
     end
 
     local weightValue = 0
@@ -91,5 +99,8 @@ function Internal.getTabButtonTitle(window, tabID)
         weightValue = Internal.getWorkerLedgerWeight and Internal.getWorkerLedgerWeight(window and window.workerData, tabID) or 0
     end
 
-    return baseTitle .. " W" .. Internal.formatWeightValue(weightValue)
+    return T("DCCommon_UI_Supply_TabWeight", "{title} W{weight}", {
+        title = baseTitle,
+        weight = Internal.formatWeightValue(weightValue)
+    })
 end

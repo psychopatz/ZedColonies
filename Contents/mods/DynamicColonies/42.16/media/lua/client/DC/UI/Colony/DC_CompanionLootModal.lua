@@ -71,6 +71,25 @@ local function getWorkerLootConfig(worker)
     return cloneLootConfig(companionData.lootConfig)
 end
 
+local function formatFallback(template, params)
+    local text = tostring(template or "")
+    if type(params) ~= "table" then
+        return text
+    end
+
+    return (text:gsub("{([%w_]+)}", function(name)
+        local value = params[name]
+        return value == nil and ("{" .. name .. "}") or tostring(value)
+    end))
+end
+
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return formatFallback(fallback or key, params)
+end
+
 function DC_CompanionLootModal:initialise()
     ISCollapsableWindow.initialise(self)
     self:setResizable(false)
@@ -96,11 +115,11 @@ function DC_CompanionLootModal:applyToggleStyle(button, enabled, onLabel, offLab
 end
 
 function DC_CompanionLootModal:updateContainerButtons()
-    self:applyToggleStyle(self.btnLooseWorldItems, self.includeLooseWorldItems ~= false, "Ground Items: On", "Ground Items: Off")
-    self:applyToggleStyle(self.btnGroundContainers, self.includeGroundContainers ~= false, "Ground Bags: On", "Ground Bags: Off")
-    self:applyToggleStyle(self.btnFurnitureContainers, self.includeFurnitureContainers ~= false, "Furniture: On", "Furniture: Off")
-    self:applyToggleStyle(self.btnCorpseContainers, self.includeCorpseContainers ~= false, "Corpses: On", "Corpses: Off")
-    self:applyToggleStyle(self.btnVehicleContainers, self.includeVehicleContainers ~= false, "Vehicles: On", "Vehicles: Off")
+    self:applyToggleStyle(self.btnLooseWorldItems, self.includeLooseWorldItems ~= false, T("DCCommon_UI_CompanionLoot_GroundItemsOn", "Ground Items: On"), T("DCCommon_UI_CompanionLoot_GroundItemsOff", "Ground Items: Off"))
+    self:applyToggleStyle(self.btnGroundContainers, self.includeGroundContainers ~= false, T("DCCommon_UI_CompanionLoot_GroundBagsOn", "Ground Bags: On"), T("DCCommon_UI_CompanionLoot_GroundBagsOff", "Ground Bags: Off"))
+    self:applyToggleStyle(self.btnFurnitureContainers, self.includeFurnitureContainers ~= false, T("DCCommon_UI_CompanionLoot_FurnitureOn", "Furniture: On"), T("DCCommon_UI_CompanionLoot_FurnitureOff", "Furniture: Off"))
+    self:applyToggleStyle(self.btnCorpseContainers, self.includeCorpseContainers ~= false, T("DCCommon_UI_CompanionLoot_CorpsesOn", "Corpses: On"), T("DCCommon_UI_CompanionLoot_CorpsesOff", "Corpses: Off"))
+    self:applyToggleStyle(self.btnVehicleContainers, self.includeVehicleContainers ~= false, T("DCCommon_UI_CompanionLoot_VehiclesOn", "Vehicles: On"), T("DCCommon_UI_CompanionLoot_VehiclesOff", "Vehicles: Off"))
 end
 
 function DC_CompanionLootModal:setCurrentConfig(config)
@@ -149,7 +168,7 @@ function DC_CompanionLootModal:createChildren()
         pad,
         contentY,
         20,
-        tostring(self.promptText or "Configure companion loot search."),
+        tostring(self.promptText or T("DCCommon_UI_CompanionLoot_Prompt", "Configure companion loot search.")),
         1,
         1,
         1,
@@ -161,7 +180,7 @@ function DC_CompanionLootModal:createChildren()
     self.promptLabel:instantiate()
     self:addChild(self.promptLabel)
 
-    self.radiusLabel = ISLabel:new(pad, contentY + 34, 20, "Search Radius", 0.8, 0.8, 0.8, 1, UIFont.Small, true)
+    self.radiusLabel = ISLabel:new(pad, contentY + 34, 20, T("DCCommon_UI_CompanionLoot_SearchRadius", "Search Radius"), 0.8, 0.8, 0.8, 1, UIFont.Small, true)
     self.radiusLabel:initialise()
     self.radiusLabel:instantiate()
     self:addChild(self.radiusLabel)
@@ -171,12 +190,12 @@ function DC_CompanionLootModal:createChildren()
     self.radiusEntry:instantiate()
     self:addChild(self.radiusEntry)
 
-    self.radiusHint = ISLabel:new(pad + 90, contentY + 60, 20, "tiles around you", 0.7, 0.7, 0.7, 1, UIFont.Small, true)
+    self.radiusHint = ISLabel:new(pad + 90, contentY + 60, 20, T("DCCommon_UI_CompanionLoot_RadiusHint", "tiles around you"), 0.7, 0.7, 0.7, 1, UIFont.Small, true)
     self.radiusHint:initialise()
     self.radiusHint:instantiate()
     self:addChild(self.radiusHint)
 
-    self.sourcesLabel = ISLabel:new(pad, contentY + 100, 20, "Search Sources", 0.8, 0.8, 0.8, 1, UIFont.Small, true)
+    self.sourcesLabel = ISLabel:new(pad, contentY + 100, 20, T("DCCommon_UI_CompanionLoot_SearchSources", "Search Sources"), 0.8, 0.8, 0.8, 1, UIFont.Small, true)
     self.sourcesLabel:initialise()
     self.sourcesLabel:instantiate()
     self:addChild(self.sourcesLabel)
@@ -210,7 +229,7 @@ function DC_CompanionLootModal:createChildren()
         pad,
         noteY,
         20,
-        "Loot filters were removed. Companions now search nearby sources, reveal discoveries, and wait for manual pickup choices.",
+        T("DCCommon_UI_CompanionLoot_Note", "Loot filters were removed. Companions now search nearby sources, reveal discoveries, and wait for manual pickup choices."),
         0.72,
         0.72,
         0.72,
@@ -222,17 +241,17 @@ function DC_CompanionLootModal:createChildren()
     self.noteLabel:instantiate()
     self:addChild(self.noteLabel)
 
-    self.btnReset = ISButton:new(self.width - 310, buttonY, 90, 24, "Defaults", self, self.onResetDefaults)
+    self.btnReset = ISButton:new(self.width - 310, buttonY, 90, 24, T("DCCommon_UI_CompanionLoot_Defaults", "Defaults"), self, self.onResetDefaults)
     self.btnReset:initialise()
     self.btnReset:instantiate()
     self:addChild(self.btnReset)
 
-    self.btnCancel = ISButton:new(self.width - 210, buttonY, 90, 24, "Cancel", self, self.onCancel)
+    self.btnCancel = ISButton:new(self.width - 210, buttonY, 90, 24, T("DCCommon_UI_CompanionLoot_Cancel", "Cancel"), self, self.onCancel)
     self.btnCancel:initialise()
     self.btnCancel:instantiate()
     self:addChild(self.btnCancel)
 
-    self.btnSave = ISButton:new(self.width - 110, buttonY, 90, 24, "Save", self, self.onSave)
+    self.btnSave = ISButton:new(self.width - 110, buttonY, 90, 24, T("DCCommon_UI_CompanionLoot_Save", "Save"), self, self.onSave)
     self.btnSave:initialise()
     self.btnSave:instantiate()
     self:addChild(self.btnSave)
@@ -310,7 +329,7 @@ function DC_CompanionLootModal:new(x, y, width, height, args)
     o.includeFurnitureContainers = true
     o.includeCorpseContainers = true
     o.includeVehicleContainers = true
-    o.title = args.title or "Companion Loot Setup"
+    o.title = args.title or T("DCCommon_UI_CompanionLoot_Title", "Companion Loot Setup")
     return o
 end
 

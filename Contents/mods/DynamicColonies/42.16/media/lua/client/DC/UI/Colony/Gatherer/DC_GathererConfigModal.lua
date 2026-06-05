@@ -26,6 +26,25 @@ local function countSelected(selected)
     return count
 end
 
+local function formatFallback(template, params)
+    local text = tostring(template or "")
+    if type(params) ~= "table" then
+        return text
+    end
+
+    return (text:gsub("{([%w_]+)}", function(name)
+        local value = params[name]
+        return value == nil and ("{" .. name .. "}") or tostring(value)
+    end))
+end
+
+local function T(key, fallback, params)
+    if DC and DC.Text and DC.Text.Get then
+        return DC.Text.Get(key, params, fallback)
+    end
+    return formatFallback(fallback or key, params)
+end
+
 function DC_GathererConfigModal:initialise()
     ISCollapsableWindow.initialise(self)
     self:setResizable(false)
@@ -38,7 +57,7 @@ function DC_GathererConfigModal:createChildren()
     local th = self:titleBarHeight()
     local y = th + pad
 
-    self.promptLabel = ISLabel:new(pad, y, 20, tostring(self.promptText or "Choose resources to gather."), 1, 1, 1, 1, UIFont.Small, true)
+    self.promptLabel = ISLabel:new(pad, y, 20, tostring(self.promptText or T("DCCommon_UI_Gatherer_PromptChooseResources", "Choose resources to gather.")), 1, 1, 1, 1, UIFont.Small, true)
     self.promptLabel:initialise()
     self.promptLabel:instantiate()
     self:addChild(self.promptLabel)
@@ -71,12 +90,12 @@ function DC_GathererConfigModal:createChildren()
     self:addChild(self.statusLabel)
 
     local buttonY = self.height - 36
-    self.btnSave = ISButton:new(pad, buttonY, 90, 24, "Save", self, self.onSave)
+    self.btnSave = ISButton:new(pad, buttonY, 90, 24, T("DCCommon_UI_Gatherer_Save", "Save"), self, self.onSave)
     self.btnSave:initialise()
     self.btnSave:instantiate()
     self:addChild(self.btnSave)
 
-    self.btnCancel = ISButton:new(self.width - 100, buttonY, 90, 24, "Cancel", self, self.onCancel)
+    self.btnCancel = ISButton:new(self.width - 100, buttonY, 90, 24, T("DCCommon_UI_Gatherer_Cancel", "Cancel"), self, self.onCancel)
     self.btnCancel:initialise()
     self.btnCancel:instantiate()
     self:addChild(self.btnCancel)
@@ -98,7 +117,9 @@ function DC_GathererConfigModal:updateResourceButtons()
         self.btnSave:setEnable(selectedCount > 0)
     end
     if self.statusLabel then
-        self.statusLabel:setName(selectedCount > 0 and ("Selected resources: " .. tostring(selectedCount)) or "Select at least one resource.")
+        self.statusLabel:setName(selectedCount > 0
+            and T("DCCommon_UI_Gatherer_SelectedResources", "Selected resources: {count}", { count = selectedCount })
+            or T("DCCommon_UI_Gatherer_SelectOne", "Select at least one resource."))
     end
 end
 
@@ -161,8 +182,8 @@ function DC_GathererConfigModal.Open(args)
     local normalized = gatherer.NormalizeConfig(args.config or args.worker or {})
 
     local modal = DC_GathererConfigModal:new(x, y, width, height)
-    modal.title = tostring(args.title or "Gatherer Setup")
-    modal.promptText = tostring(args.promptText or "Choose what this worker should gather.")
+    modal.title = tostring(args.title or T("DCCommon_UI_Gatherer_Title", "Gatherer Setup"))
+    modal.promptText = tostring(args.promptText or T("DCCommon_UI_Gatherer_PromptChooseWorkerResources", "Choose what this worker should gather."))
     modal.worker = args.worker
     modal.resources = resources
     modal.selectedResources = copySelected(normalized.selectedResources)
@@ -181,9 +202,9 @@ function DC_GathererConfigModal:new(x, y, width, height)
     local o = ISCollapsableWindow:new(x, y, width, height)
     setmetatable(o, self)
     self.__index = self
-    o.title = "Gatherer Setup"
+    o.title = T("DCCommon_UI_Gatherer_Title", "Gatherer Setup")
     o.resizable = false
-    o.promptText = "Choose what this worker should gather."
+    o.promptText = T("DCCommon_UI_Gatherer_PromptChooseWorkerResources", "Choose what this worker should gather.")
     o.resources = {}
     o.selectedResources = {}
     o.onSaveCallback = nil
