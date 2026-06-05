@@ -237,7 +237,12 @@ local function clearUnresolvedWorker(worker)
     local workerID = tostring(worker.workerID or "")
     if ownerState and workerID ~= "" then
         ownerState.workers[workerID] = nil
-        if next(ownerState.workers) == nil then
+        local hasWorkers = false
+        for _, _ in pairs(ownerState.workers or {}) do
+            hasWorkers = true
+            break
+        end
+        if not hasWorkers then
             Bridge.UnresolvedWorkersByOwner[tostring(worker.ownerUsername or "")] = nil
         end
     end
