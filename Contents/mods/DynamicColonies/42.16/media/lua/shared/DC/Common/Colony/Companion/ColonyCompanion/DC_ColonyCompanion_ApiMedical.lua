@@ -7,3 +7,4 @@ local Internal = Companion.Internal
 Companion.ResolveBandageSupply = Internal.ResolveBandageSupply
 Companion.ConsumeBandageSupply = Internal.ConsumeBandageSupply
 Companion.HandleIncapacitatedNPC = Internal.HandleIncapacitatedNPC
+Companion.HandleRevivedNPC = Internal.HandleRevivedNPC
