@@ -29,15 +29,17 @@ MapTransport.CHUNK_PLOT_COUNT = MapTransport.CHUNK_PLOT_COUNT or 10
 MapTransport.MAX_CHUNK_SIZE = MapTransport.MAX_CHUNK_SIZE or 16000
 
 function helpers.LogMap(level, message)
-    if DynamicTrading and DynamicTrading.Log then
+    if DynamicTrading and DynamicTrading.LogLevel then
+        DynamicTrading.LogLevel(string.lower(tostring(level or "info")), "DynamicColonies", "BuildingMap", tostring(level or "Info"), tostring(message or ""))
+    elseif DynamicTrading and DynamicTrading.Log then
         DynamicTrading.Log("DynamicColonies", "BuildingMap", level or "Info", tostring(message or ""))
-    elseif print then
-        print("[DynamicColonies][BuildingMap][" .. tostring(level or "Info") .. "] " .. tostring(message or ""))
     end
 end
 
 function helpers.IsDebugTransportEnabled(player)
-    if DynamicTrading and DynamicTrading.Debug then
+    if DynamicTrading
+        and DynamicTrading.ShouldLogLevel
+        and DynamicTrading.ShouldLogLevel("debug", "DynamicColonies", "BuildingMap") then
         return true
     end
     if isDebugEnabled and isDebugEnabled() then

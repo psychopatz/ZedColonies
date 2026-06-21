@@ -5,8 +5,8 @@ local Bridge = DC_Colony.ResidentBridge
 local Internal = Bridge.Internal or {}
 
 local function logResident(message)
-    if DynamicTrading and DynamicTrading.Debug == true and DynamicTrading.Log then
-        DynamicTrading.Log("DColony", "Resident", "Bridge", tostring(message or ""))
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DColony", "Resident", "Bridge", tostring(message or ""))
     end
 end
 

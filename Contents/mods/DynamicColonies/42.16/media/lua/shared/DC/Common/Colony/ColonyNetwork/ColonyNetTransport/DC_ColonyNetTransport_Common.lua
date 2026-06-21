@@ -24,15 +24,17 @@ Transport.Domains = Transport.Domains or {
 }
 
 function Transport.logTransport(level, message)
-    if DynamicTrading and DynamicTrading.Log then
+    if DynamicTrading and DynamicTrading.LogLevel then
+        DynamicTrading.LogLevel(string.lower(tostring(level or "info")), "DynamicColonies", "Network", tostring(level or "Info"), tostring(message or ""))
+    elseif DynamicTrading and DynamicTrading.Log then
         DynamicTrading.Log("DynamicColonies", "Network", level or "Info", tostring(message or ""))
-    elseif print then
-        print("[DynamicColonies][Network][" .. tostring(level or "Info") .. "] " .. tostring(message or ""))
     end
 end
 
 function Transport.isDebugTransportEnabled(player)
-    if DynamicTrading and DynamicTrading.Debug then
+    if DynamicTrading
+        and DynamicTrading.ShouldLogLevel
+        and DynamicTrading.ShouldLogLevel("debug", "DynamicColonies", "Network") then
         return true
     end
     if isDebugEnabled and isDebugEnabled() then

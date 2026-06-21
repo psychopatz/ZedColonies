@@ -114,10 +114,6 @@ local function buildVersionToken(value, seen)
 end
 
 function Internal.canUseDebug(player)
-    if DynamicTrading and DynamicTrading.Debug then
-        return true
-    end
-
     if isDebugEnabled and isDebugEnabled() then
         return true
     end

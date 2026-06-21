@@ -19,13 +19,9 @@ local function getPerfNowMs()
 end
 
 local function isDebugLoggingEnabled()
-    if DynamicTrading and DynamicTrading.Debug then
-        return true
-    end
-    if isDebugEnabled and isDebugEnabled() then
-        return true
-    end
-    return false
+    return DynamicTrading
+        and DynamicTrading.ShouldLogLevel
+        and DynamicTrading.ShouldLogLevel("trace", "DynamicColonies", "AbstractInventory")
 end
 
 local function debugPerf(tag, startMs, thresholdMs, fields)
@@ -43,7 +39,12 @@ local function debugPerf(tag, startMs, thresholdMs, fields)
         parts[#parts + 1] = tostring(key) .. "=" .. tostring(value)
     end
     table.sort(parts)
-    print("[DynamicColonies][AbstractInventory][" .. tostring(tag or "Perf") .. "] " .. table.concat(parts, " ") .. " ms=" .. tostring(elapsed))
+    local message = table.concat(parts, " ") .. " ms=" .. tostring(elapsed)
+    if DynamicTrading and DynamicTrading.LogTrace then
+        DynamicTrading.LogTrace("DynamicColonies", "AbstractInventory", tostring(tag or "Perf"), message)
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "AbstractInventory", tostring(tag or "Perf"), message)
+    end
     return elapsed
 end
 

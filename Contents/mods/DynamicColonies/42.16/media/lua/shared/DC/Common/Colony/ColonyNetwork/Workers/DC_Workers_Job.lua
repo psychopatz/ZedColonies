@@ -15,10 +15,10 @@ Gatherer = DC_Colony.Gatherer
 Network.Handlers = Network.Handlers or {}
 
 local function debugWorkerJob(message)
-    local text = "[DC Job Debug][Server] " .. tostring(message)
-    print(text)
-    if DynamicTrading and DynamicTrading.Log then
-        DynamicTrading.Log("DTCommons", "DynamicColonies", "Job", tostring(message))
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DynamicColonies", "Job", "Server", tostring(message))
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "Job", "Server", tostring(message))
     end
 end
 

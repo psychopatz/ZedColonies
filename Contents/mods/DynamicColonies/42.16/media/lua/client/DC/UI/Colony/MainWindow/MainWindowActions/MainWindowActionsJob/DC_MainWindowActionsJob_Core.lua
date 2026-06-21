@@ -11,10 +11,10 @@ function JobActions.isFunction(value)
 end
 
 function JobActions.debugJobAction(message)
-    local text = "[DC Job Debug][Client] " .. tostring(message)
-    print(text)
-    if DynamicTrading and DynamicTrading.Log then
-        DynamicTrading.Log("DTCommons", "DynamicColonies", "Job", tostring(message))
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DynamicColonies", "Job", "Client", tostring(message))
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "Job", "Client", tostring(message))
     end
 end
 

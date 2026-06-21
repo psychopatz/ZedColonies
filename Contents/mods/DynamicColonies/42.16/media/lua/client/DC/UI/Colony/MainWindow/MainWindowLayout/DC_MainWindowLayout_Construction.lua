@@ -34,9 +34,6 @@ local function canUseDebug()
         return isDebugEnabled and isDebugEnabled() == true
     end
 
-    if DynamicTrading and DynamicTrading.Debug then
-        return true
-    end
     if isDebugEnabled and isDebugEnabled() then
         return true
     end

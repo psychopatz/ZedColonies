@@ -31,7 +31,11 @@ function DC_ZoneWindow.OpenWithOptions(player, colonyId, options)
 
     DC_ZoneWindow.instance = instance
 
-    print("[DC_ZoneWindow] Opened zone management for colony: " .. tostring(colonyId))
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DynamicColonies", "ZoneWindow", "Lifecycle", "Opened zone management for colony: " .. tostring(colonyId))
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "ZoneWindow", "Lifecycle", "Opened zone management for colony: " .. tostring(colonyId))
+    end
     return instance
 end
 
@@ -63,5 +67,9 @@ function DC_ZoneWindow:close()
         DC_ZoneWindow.instance = nil
     end
 
-    print("[DC_ZoneWindow] Closed.")
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DynamicColonies", "ZoneWindow", "Lifecycle", "Closed.")
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "ZoneWindow", "Lifecycle", "Closed.")
+    end
 end

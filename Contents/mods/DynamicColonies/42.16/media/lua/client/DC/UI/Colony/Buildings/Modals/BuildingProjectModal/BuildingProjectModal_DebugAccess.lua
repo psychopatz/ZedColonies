@@ -1,8 +1,4 @@
 function DC_BuildingProjectModal:canUseDebug()
-    if DynamicTrading and DynamicTrading.Debug then
-        return true
-    end
-
     if isDebugEnabled and isDebugEnabled() then
         return true
     end

@@ -127,14 +127,12 @@ function Text.LogMissing(key)
         return false
     end
 
-    local sandbox = SandboxVars and SandboxVars.DynamicColonies or nil
-    local enabled = sandbox and (sandbox.Debug == true or sandbox.NPCDebug == true)
-    if not enabled and not (DC.Config and DC.Config.DebugText == true) then
-        return false
-    end
-
     Text._missingLogged[normalized] = true
-    print("[DynamicColonies.Text] Missing translation key: " .. normalized)
+    if DynamicTrading and DynamicTrading.LogWarn then
+        DynamicTrading.LogWarn("DynamicColonies", "Text", "Missing", normalized)
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "Warn", "Text", normalized)
+    end
     return true
 end
 

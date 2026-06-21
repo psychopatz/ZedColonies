@@ -28,8 +28,12 @@ local function notifyListeners(eventName, payload)
     for key, callback in pairs(Bridge.listeners or {}) do
         if key and callback then
             local ok, err = pcall(callback, eventName, payload or {})
-            if not ok and print then
-                print("[DynamicColonies] Resources bridge listener failed: " .. tostring(err))
+            if not ok then
+                if DynamicTrading and DynamicTrading.LogWarn then
+                    DynamicTrading.LogWarn("DynamicColonies", "ResourcesBridge", "Listener", "Resources bridge listener failed: " .. tostring(err))
+                elseif DynamicTrading and DynamicTrading.Log then
+                    DynamicTrading.Log("DynamicColonies", "Warn", "ResourcesBridge", "Resources bridge listener failed: " .. tostring(err))
+                end
             end
         end
     end

@@ -4,10 +4,10 @@ DC_Colony.Companion = DC_Colony.Companion or {}
 local Internal = DC_Colony.Companion.Internal
 
 function Internal.Debug(message)
-    local text = "[DC Companion Debug] " .. tostring(message)
-    print(text)
-    if DynamicTrading and DynamicTrading.Log then
-        DynamicTrading.Log("DTCommons", "DynamicColonies", "Companion", tostring(message))
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DynamicColonies", "Companion", "Debug", tostring(message))
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "Companion", "Debug", tostring(message))
     end
 end
 

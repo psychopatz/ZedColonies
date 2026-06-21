@@ -7,10 +7,6 @@ require "DC/UI/Colony/Buildings/Models/DC_BuildingsClientSelectors"
 DC_BuildingsDetailsPanel = ISPanel:derive("DC_BuildingsDetailsPanel")
 
 local function canUseDebug()
-    if DynamicTrading and DynamicTrading.Debug then
-        return true
-    end
-
     if isDebugEnabled and isDebugEnabled() then
         return true
     end

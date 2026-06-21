@@ -63,18 +63,9 @@ function Internal.isTimeBudgetExceeded(startMs, budgetMs)
 end
 
 function Internal.isDebugLoggingEnabled()
-    if DynamicTrading and DynamicTrading.Debug then
-        return true
-    end
-    if isDebugEnabled and isDebugEnabled() then
-        return true
-    end
-    local player = getSpecificPlayer and getSpecificPlayer(0) or getPlayer and getPlayer() or nil
-    if player and player.getAccessLevel then
-        local accessLevel = player:getAccessLevel()
-        return accessLevel and accessLevel ~= "" and accessLevel ~= "None"
-    end
-    return false
+    return DynamicTrading
+        and DynamicTrading.ShouldLogLevel
+        and DynamicTrading.ShouldLogLevel("debug", "DynamicColonies", "SupplyWindow")
 end
 
 local function buildDebugFields(fields)
@@ -92,10 +83,15 @@ function Internal.debugLog(tag, message, fields)
     end
 
     local suffix = buildDebugFields(fields)
+    local payload = tostring(message or "")
     if suffix ~= "" then
-        print("[DynamicColonies][SupplyWindow][" .. tostring(tag or "Log") .. "] " .. tostring(message or "") .. " " .. suffix)
-    else
-        print("[DynamicColonies][SupplyWindow][" .. tostring(tag or "Log") .. "] " .. tostring(message or ""))
+        payload = payload .. " " .. suffix
+    end
+
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DynamicColonies", "SupplyWindow", tostring(tag or "Log"), payload)
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "SupplyWindow", tostring(tag or "Log"), payload)
     end
 end
 

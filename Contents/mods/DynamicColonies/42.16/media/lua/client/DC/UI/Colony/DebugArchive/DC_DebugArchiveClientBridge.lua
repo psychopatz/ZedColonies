@@ -30,8 +30,12 @@ local function notifyListeners(eventName, payload)
     for key, callback in pairs(Bridge.listeners or {}) do
         if key and type(callback) == "function" then
             local ok, err = pcall(callback, eventName, payload or {})
-            if not ok and print then
-                print("[DynamicColonies] Debug archive bridge listener failed: " .. tostring(err))
+            if not ok then
+                if DynamicTrading and DynamicTrading.LogWarn then
+                    DynamicTrading.LogWarn("DynamicColonies", "DebugArchive", "Listener", "Debug archive bridge listener failed: " .. tostring(err))
+                elseif DynamicTrading and DynamicTrading.Log then
+                    DynamicTrading.Log("DynamicColonies", "Warn", "DebugArchive", "Debug archive bridge listener failed: " .. tostring(err))
+                end
             end
         end
     end

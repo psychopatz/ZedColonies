@@ -1,8 +1,10 @@
 require "DC/UI/Colony/System/DC_System"
 
 local function openColonyWindow()
-    if DynamicTrading and DynamicTrading.Log then
-        DynamicTrading.Log("DTCommons", "DynamicColonies", "UI", "Context menu requested Colony Management window.")
+    if DynamicTrading and DynamicTrading.LogDebug then
+        DynamicTrading.LogDebug("DynamicColonies", "UI", "ContextMenu", "Context menu requested Colony Management window.")
+    elseif DynamicTrading and DynamicTrading.Log then
+        DynamicTrading.Log("DynamicColonies", "UI", "ContextMenu", "Context menu requested Colony Management window.")
     end
     DC_System.OpenWindow()
 end
